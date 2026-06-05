@@ -1,0 +1,365 @@
+/* ════════════════════════════════════════════════════════════
+   Vista — design tokens (per DESIGN.md, Airtable editorial system)
+   Haas Grotesk → Inter / Inter Tight substitute.
+   ════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Brand & ink ── */
+  --primary: #181d26;
+  --primary-active: #0d1218;
+  --ink: #181d26;
+  --body: #333840;
+  --muted: #41454d;
+  --hairline: #dddddd;
+  --border-strong: #9297a0;
+
+  /* ── Surfaces ── */
+  --canvas: #ffffff;
+  --surface-soft: #f8fafc;
+  --surface-strong: #e0e2e6;
+  --surface-dark: #181d26;
+  --surface-dark-elevated: #1d1f25;
+
+  /* ── Signature card palette ── */
+  --sig-coral: #aa2d00;
+  --sig-forest: #0a2e0e;
+  --sig-cream: #f5e9d4;
+  --sig-peach: #fcab79;
+  --sig-mint: #a8d8c4;
+  --sig-yellow: #f4d35e;
+  --sig-mustard: #d9a441;
+
+  /* ── On-color text ── */
+  --on-primary: #ffffff;
+  --on-dark: #ffffff;
+
+  /* ── Semantic ── */
+  --link: #1b61c9;
+  --link-active: #1a3866;
+  --info: #254fad;
+  --info-border: #458fff;
+  --success: #006400;
+  --success-border: #39bf45;
+
+  /* ── Radius ── */
+  --r-xs: 2px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 12px;
+  --r-pill: 9999px;
+  --r-full: 9999px;
+
+  /* ── Spacing (4px base) ── */
+  --s-xxs: 4px;
+  --s-xs: 8px;
+  --s-sm: 12px;
+  --s-md: 16px;
+  --s-lg: 24px;
+  --s-xl: 32px;
+  --s-xxl: 48px;
+  --s-section: 96px;
+
+  /* ── Type ── */
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-display: "Inter Tight", "Inter", -apple-system, "Segoe UI", sans-serif;
+
+  --max-w: 1280px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--body);
+  background: var(--canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--on-primary);
+}
+
+a {
+  color: var(--link);
+  text-decoration: none;
+}
+/* DESIGN.md: links have no underline (color is the signal); keep one for
+   keyboard focus only — default/active states, no hover styling. */
+a:focus-visible {
+  text-decoration: underline;
+}
+
+/* ── Layout ── */
+.container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding-left: var(--s-xxl);
+  padding-right: var(--s-xxl);
+}
+
+.section {
+  padding-top: var(--s-section);
+  padding-bottom: var(--s-section);
+}
+
+/* App (authed) pages use the full main-area width, not the marketing 1280 cap. */
+.app-page {
+  padding-left: var(--s-xl);
+  padding-right: var(--s-xl);
+}
+@media (max-width: 768px) {
+  .app-page {
+    padding-left: var(--s-lg);
+    padding-right: var(--s-lg);
+  }
+}
+
+.eyebrow {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.16px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── Display type ── */
+.display-lg {
+  font-family: var(--font-display);
+  font-size: 44px;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.display-md {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.title-lg {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--ink);
+}
+.title-sm {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--ink);
+}
+.lead {
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--body);
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-xs);
+  font-family: var(--font);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.4;
+  border-radius: var(--r-lg);
+  border: 1px solid transparent;
+  padding: 14px 24px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.05s;
+  white-space: nowrap;
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn-primary {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.btn-primary:active {
+  background: var(--primary-active);
+}
+.btn-secondary {
+  background: var(--canvas);
+  color: var(--ink);
+  border-color: var(--hairline);
+}
+.btn-secondary:active {
+  border-color: var(--border-strong);
+}
+.btn-sm {
+  font-size: 14px;
+  padding: 9px 16px;
+  border-radius: var(--r-sm);
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+/* Keyboard focus ring (DESIGN.md documents default/active; this is a11y only) */
+.btn:focus-visible,
+.segmented button:focus-visible {
+  outline: 2px solid var(--info-border);
+  outline-offset: 2px;
+}
+
+/* ── Segmented control (no pill — pill is reserved for the pricing sub-system) ── */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  padding: 3px;
+  background: var(--canvas);
+}
+.segmented button {
+  border: none;
+  background: transparent;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 6px 16px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.segmented button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--on-primary);
+}
+
+/* ── Inputs ── */
+.field-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: var(--s-xs);
+}
+.input,
+.textarea,
+.select {
+  width: 100%;
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+  padding: 12px 16px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.input {
+  height: 44px;
+}
+.textarea {
+  min-height: 130px;
+  resize: vertical;
+  line-height: 1.55;
+}
+.input:focus,
+.textarea:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--info-border);
+  box-shadow: 0 0 0 3px rgba(69, 143, 255, 0.18);
+}
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--border-strong);
+}
+
+/* ── Misc ── */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+.hairline {
+  border: 0;
+  border-top: 1px solid var(--hairline);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Scrollbar (kept light & quiet) ── */
+::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--surface-strong);
+  border-radius: var(--r-sm);
+  border: 2px solid var(--canvas);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
+
+/* ── Responsive container padding ── */
+@media (max-width: 768px) {
+  .container {
+    padding-left: var(--s-lg);
+    padding-right: var(--s-lg);
+  }
+  .section {
+    padding-top: var(--s-xxl);
+    padding-bottom: var(--s-xxl);
+  }
+  .display-lg {
+    font-size: 34px;
+  }
+  .display-md {
+    font-size: 26px;
+  }
+}

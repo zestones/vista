@@ -1,0 +1,15 @@
+{
+  "name": "Vista — Roadmap",
+  "short_name": "Vista",
+  "description": "A shared product roadmap, straight from GitHub milestones and issues.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#181d26",
+  "lang": "fr",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
