@@ -2,17 +2,19 @@ import { env } from '@/config/env'
 import { genRepo, mockDb, PROJECT_PALETTE, type MockDb } from '@/lib/mock'
 import { notImplemented } from '../_shared/not-implemented'
 import type { AuthUser } from '@/services/auth'
-import type { NewProjectInput, OwnedJoinedProjects, ProjectRow, ProjectSummary } from './projects.dto'
+import type { NewProjectInput, OwnedJoinedProjects, ProjectRow, ProjectSummary, ProjectUpdate } from './projects.dto'
 
 export interface ProjectsApi {
   getProjectsForUser(userId: string): Promise<OwnedJoinedProjects>
   getProject(id: string): Promise<ProjectRow | null>
   createProject(input: NewProjectInput, owner: AuthUser): Promise<ProjectRow>
+  updateProject(id: string, patch: ProjectUpdate): Promise<ProjectRow>
 }
 
 function summarize(db: MockDb, project: ProjectRow): ProjectSummary {
   const members = db.members.filter((m) => m.project_id === project.id)
-  const repoIds = new Set(db.projectRepos.filter((r) => r.project_id === project.id).map((r) => r.id))
+  const repos = db.projectRepos.filter((r) => r.project_id === project.id)
+  const repoIds = new Set(repos.map((r) => r.id))
   const issues = db.issues.filter((i) => repoIds.has(i.project_repo_id))
   const closed = issues.filter((i) => i.state === 'closed').length
   return {
@@ -20,6 +22,7 @@ function summarize(db: MockDb, project: ProjectRow): ProjectSummary {
     activeMembers: members.filter((m) => m.status === 'active').length,
     pendingMembers: members.filter((m) => m.status === 'pending').length,
     progress: issues.length > 0 ? { total: issues.length, closed, pct: Math.round((closed / issues.length) * 100) } : null,
+    repos: repos.map((r) => ({ owner: r.owner, repo: r.repo })),
   }
 }
 
@@ -85,12 +88,20 @@ const mock: ProjectsApi = {
 
     return Promise.resolve(project)
   },
+  updateProject(id, patch) {
+    const db = mockDb()
+    const project = db.projects.find((p) => p.id === id)
+    if (!project) throw new Error(`Unknown project: ${id}`)
+    Object.assign(project, patch)
+    return Promise.resolve(project)
+  },
 }
 
 const supabase: ProjectsApi = {
   getProjectsForUser: () => notImplemented('projects.getProjectsForUser'),
   getProject: () => notImplemented('projects.getProject'),
   createProject: () => notImplemented('projects.createProject'),
+  updateProject: () => notImplemented('projects.updateProject'),
 }
 
 export const projects: ProjectsApi = env.backend === 'supabase' ? supabase : mock

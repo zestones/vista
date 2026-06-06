@@ -29,6 +29,13 @@ describe('services — mock branch (issue #8)', () => {
     expect(after.owned.find((s) => s.project.id === created.id)?.progress).not.toBeNull()
   })
 
+  it('projects.updateProject patches availability and visibility in place', async () => {
+    const updated = await projects.updateProject('prj-internal', { available_on_vista: true, visibility: 'shared' })
+    expect(updated.available_on_vista).toBe(true)
+    expect(updated.visibility).toBe('shared')
+    expect((await projects.getProject('prj-internal'))?.visibility).toBe('shared')
+  })
+
   it('roadmap.getRoadmap aggregates across a project multiple repos', async () => {
     const data = await roadmap.getRoadmap('prj-apollo')
     expect(data.milestones.length).toBeGreaterThan(0)

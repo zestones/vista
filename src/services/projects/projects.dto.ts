@@ -14,7 +14,11 @@ export interface ProjectSummary {
   activeMembers: number
   pendingMembers: number
   progress: ProjectProgress | null
+  repos: { owner: string; repo: string }[]
 }
+
+/** Fields the owner can edit from the admin console / settings. */
+export type ProjectUpdate = Partial<Pick<ProjectRow, 'name' | 'description' | 'color' | 'visibility' | 'available_on_vista'>>
 
 export interface OwnedJoinedProjects {
   owned: ProjectSummary[]
