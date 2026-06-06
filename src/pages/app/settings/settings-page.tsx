@@ -21,7 +21,7 @@ export function SettingsPage() {
   if (access.data.project.owner_id !== user?.id) return <Navigate to={`/app/projects/${id}`} replace />
 
   return (
-    <div className='mx-auto max-w-[900px] px-6 py-10 md:px-8'>
+    <div className='max-w-3xl px-8 py-10'>
       <SettingsTabs project={access.data.project} activeMembers={access.data.activeMembers} pendingMembers={access.data.pendingMembers} />
     </div>
   )

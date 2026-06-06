@@ -1,19 +1,23 @@
 import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui'
+import { RequestForm } from './request-form'
 
-/**
- * Request-submission modal shell. The actual form (type / title / body -> submissions service)
- * lands in #53; the dashboard already wires the open state and the "new request" button.
- */
-export function RequestModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+/** Client request-submission modal: type / title / description / name / email -> services/submissions. */
+export function RequestModal({ open, onOpenChange, projectId }: { open: boolean; onOpenChange: (open: boolean) => void; projectId: string }) {
   const { t } = useTranslation()
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-[560px]'>
         <DialogHeader>
-          <DialogTitle>{t('dash.newRequest')}</DialogTitle>
-          <DialogDescription>{t('dash.requestSoon')}</DialogDescription>
+          <DialogTitle>{t('form.title')}</DialogTitle>
+          <DialogDescription>{t('form.subtitle')}</DialogDescription>
         </DialogHeader>
+        <RequestForm
+          projectId={projectId}
+          onClose={() => {
+            onOpenChange(false)
+          }}
+        />
       </DialogContent>
     </Dialog>
   )

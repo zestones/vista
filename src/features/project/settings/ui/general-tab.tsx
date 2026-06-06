@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Check, Trash2 } from 'lucide-react'
-import { Button, Input, Label, Switch, Textarea } from '@/components/ui'
+import { Button, Input, Label, Segmented, Switch, Textarea } from '@/components/ui'
 import { useDeleteProject, useUpdateProject } from '../hooks/use-project-settings'
 import type { ProjectRow } from '@/services/projects'
 import type { ProjectVisibility } from '@/types/database.types'
@@ -61,21 +61,14 @@ export function GeneralTab({ project }: { project: ProjectRow }) {
 
         <div className='flex flex-col gap-1.5'>
           <Label>{t('ps.gen.visibility')}</Label>
-          <div className='inline-flex w-fit gap-0.5 rounded-md border p-0.5'>
-            {(['private', 'shared'] as const).map((k) => (
-              <button
-                key={k}
-                type='button'
-                aria-pressed={visibility === k}
-                onClick={() => {
-                  setVisibility(k)
-                }}
-                className='text-muted-foreground aria-pressed:bg-accent aria-pressed:text-accent-foreground cursor-pointer rounded-sm px-3 py-1 text-sm font-medium'
-              >
-                {k === 'private' ? t('ps.gen.visPrivate') : t('ps.gen.visShared')}
-              </button>
-            ))}
-          </div>
+          <Segmented<ProjectVisibility>
+            value={visibility}
+            onValueChange={setVisibility}
+            options={[
+              { value: 'private', label: t('ps.gen.visPrivate') },
+              { value: 'shared', label: t('ps.gen.visShared') },
+            ]}
+          />
         </div>
 
         <div className='border-hairline flex items-center justify-between gap-4 rounded-md border p-4'>

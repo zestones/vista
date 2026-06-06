@@ -12,6 +12,7 @@ import {
   DialogTitle,
   Input,
   Label,
+  Segmented,
   Switch,
   Textarea,
 } from '@/components/ui'
@@ -140,21 +141,16 @@ function NewProjectForm({ onDone }: { onDone: () => void }) {
 
       <div className='flex flex-col gap-1.5'>
         <Label>{t('np.visibility')}</Label>
-        <div role='group' className='inline-flex w-fit gap-0.5 rounded-md border p-0.5'>
-          {(['private', 'shared'] as const).map((k) => (
-            <button
-              key={k}
-              type='button'
-              aria-pressed={form.visibility === k}
-              onClick={() => {
-                setForm((f) => ({ ...f, visibility: k }))
-              }}
-              className='text-muted-foreground aria-pressed:bg-accent aria-pressed:text-accent-foreground cursor-pointer rounded-sm px-3 py-1 text-sm font-medium'
-            >
-              {k === 'private' ? t('np.visPrivate') : t('np.visShared')}
-            </button>
-          ))}
-        </div>
+        <Segmented<NewProjectInput['visibility']>
+          value={form.visibility}
+          onValueChange={(v) => {
+            setForm((f) => ({ ...f, visibility: v }))
+          }}
+          options={[
+            { value: 'private', label: t('np.visPrivate') },
+            { value: 'shared', label: t('np.visShared') },
+          ]}
+        />
       </div>
 
       <label className='flex cursor-pointer items-center gap-3'>

@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/auth.context'
 import { RoadmapGantt, RoadmapMobile, RoadmapOverview, useRoadmap } from '@/features/project/roadmap'
 import { useProjectAccess } from '@/features/project/dashboard'
 import { RequestModal } from '@/features/project/submission'
-import { Button } from '@/components/ui'
+import { Button, Segmented } from '@/components/ui'
 import { Spinner } from '@/components/feedback'
 import { useMediaQuery } from '@/hooks/use-media-query'
 
@@ -42,12 +42,12 @@ export function RoadmapPage() {
   const isViewer = access.data.membership.role === 'viewer'
 
   return (
-    <div className='mx-auto flex h-full max-w-[1280px] flex-col px-6 py-6 md:px-8'>
-      <Link to='/app' className='text-muted-ink mb-3 inline-flex shrink-0 items-center gap-1.5 text-[13px]'>
+    <div className='flex h-full flex-col px-8 py-8'>
+      <Link to='/app' className='text-muted-ink mb-4 inline-flex shrink-0 items-center gap-1.5 text-[13px]'>
         <ArrowLeft size={14} /> {t('pd.back')}
       </Link>
 
-      <div className='mb-4 flex shrink-0 flex-wrap items-start justify-between gap-3'>
+      <div className='mb-6 flex shrink-0 flex-wrap items-start justify-between gap-3'>
         <div className='min-w-0'>
           <div className='flex items-center gap-3'>
             <span className='size-3.5 shrink-0 rounded' style={{ background: project.color ?? 'var(--color-ink)' }} />
@@ -80,21 +80,16 @@ export function RoadmapPage() {
         </div>
       )}
 
-      <div className='mb-4 shrink-0'>
-        <div role='group' aria-label='View' className='inline-flex gap-1 rounded-md border p-0.5'>
-          {(['gantt', 'overview'] satisfies Tab[]).map((k) => (
-            <button
-              key={k}
-              aria-pressed={tab === k}
-              onClick={() => {
-                setTab(k)
-              }}
-              className='aria-pressed:bg-accent cursor-pointer rounded-sm px-3 py-1 text-sm'
-            >
-              {k === 'gantt' ? t('dash.tab.gantt') : t('dash.tab.overview')}
-            </button>
-          ))}
-        </div>
+      <div className='mb-5 shrink-0'>
+        <Segmented<Tab>
+          aria-label='View'
+          value={tab}
+          onValueChange={setTab}
+          options={[
+            { value: 'gantt', label: t('dash.tab.gantt') },
+            { value: 'overview', label: t('dash.tab.overview') },
+          ]}
+        />
       </div>
 
       {roadmap.isLoading ? (
@@ -115,7 +110,7 @@ export function RoadmapPage() {
         </div>
       )}
 
-      <RequestModal open={requestOpen} onOpenChange={setRequestOpen} />
+      <RequestModal open={requestOpen} onOpenChange={setRequestOpen} projectId={id} />
     </div>
   )
 }

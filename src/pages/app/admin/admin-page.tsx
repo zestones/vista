@@ -14,7 +14,7 @@ export function AdminPage() {
   const [open, setOpen] = useState(false)
 
   return (
-    <div className='mx-auto max-w-[1280px] px-6 py-10 md:px-8'>
+    <div className='px-8 py-10'>
       <div className='mb-8 flex flex-wrap items-end justify-between gap-4'>
         <div>
           <div className='text-muted-ink mb-1 inline-flex items-center gap-1.5 text-[13px] font-medium tracking-wide uppercase'>

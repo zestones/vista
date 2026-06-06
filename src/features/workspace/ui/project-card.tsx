@@ -9,7 +9,7 @@ export function ProjectCard({ summary, isOwner }: { summary: ProjectSummary; isO
   const { project, activeMembers, pendingMembers, progress } = summary
 
   return (
-    <article className='border-hairline bg-card flex h-full flex-col gap-2 rounded-xl border p-6'>
+    <article className='border-hairline bg-card flex h-full flex-col gap-3 rounded-lg border p-6'>
       <div className='flex min-w-0 items-center gap-2.5'>
         <span className='size-2.5 shrink-0 rounded-[3px]' style={{ background: project.color ?? 'var(--color-ink)' }} />
         <h3 className='text-ink flex-1 truncate text-lg font-medium'>{project.name}</h3>
@@ -44,8 +44,8 @@ export function ProjectCard({ summary, isOwner }: { summary: ProjectSummary; isO
             </span>
             <span className='text-ink font-semibold tabular-nums'>{progress.pct}%</span>
           </div>
-          <div className='bg-secondary h-1.5 overflow-hidden rounded-full'>
-            <div className='h-full rounded-full' style={{ width: `${String(progress.pct)}%`, background: project.color ?? 'var(--color-success)' }} />
+          <div className='bg-secondary h-1.5 overflow-hidden rounded-xs'>
+            <div className='h-full rounded-xs' style={{ width: `${String(progress.pct)}%`, background: project.color ?? 'var(--color-success)' }} />
           </div>
         </div>
       )}

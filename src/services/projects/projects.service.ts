@@ -81,25 +81,23 @@ const mock: ProjectsApi = {
       invited_at: now,
     })
 
+    // Mock: every new project gets a sample roadmap so it is never empty.
+    // A github source keeps its owner/repo for the real sync (Phase 3), which will replace the sample.
     const repoId = `${id}-repo-1`
-    if (input.source === 'github' && input.repo.includes('/')) {
-      const [repoOwner = 'owner', rest = 'repo'] = input.repo.trim().split('/')
-      db.projectRepos.push({
-        id: repoId,
-        project_id: id,
-        installation_id: null,
-        owner: repoOwner,
-        repo: rest.replace(/\/.*$/, ''),
-        github_repo_id: null,
-        created_at: now,
-      })
-      // Issues land later, once the repo is synced.
-    } else {
-      db.projectRepos.push({ id: repoId, project_id: id, installation_id: null, owner: 'demo', repo: 'sample', github_repo_id: null, created_at: now })
-      const { milestones, issues } = genRepo(repoId, id)
-      db.milestones.push(...milestones)
-      db.issues.push(...issues)
-    }
+    const [repoOwner = 'owner', repoName = 'repo'] =
+      input.source === 'github' && input.repo.includes('/') ? input.repo.trim().split('/') : ['demo', 'sample']
+    db.projectRepos.push({
+      id: repoId,
+      project_id: id,
+      installation_id: null,
+      owner: repoOwner,
+      repo: repoName.replace(/\/.*$/, ''),
+      github_repo_id: null,
+      created_at: now,
+    })
+    const { milestones, issues } = genRepo(repoId, id)
+    db.milestones.push(...milestones)
+    db.issues.push(...issues)
 
     return Promise.resolve(project)
   },

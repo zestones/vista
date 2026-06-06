@@ -31,7 +31,7 @@ export function WorkspacePage() {
   const empty = owned.length === 0 && joined.length === 0
 
   return (
-    <div className='mx-auto max-w-[1280px] px-6 py-10 md:px-8'>
+    <div className='px-8 py-10'>
       <div className='mb-8 flex flex-wrap items-end justify-between gap-4'>
         <div>
           <h1 className='font-display text-ink mb-1 text-3xl font-medium tracking-[-0.01em]'>{t('ws.title')}</h1>
