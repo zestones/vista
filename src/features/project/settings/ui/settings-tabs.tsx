@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
+import { SharePicker } from '@/features/project/sharing'
 import { GeneralTab } from './general-tab'
 import type { ProjectRow } from '@/services/projects'
 
@@ -22,7 +23,7 @@ export function SettingsTabs({ project, activeMembers, pendingMembers }: { proje
           {t('ps.tab.members')} · {activeMembers}
         </TabsTrigger>
         <TabsTrigger value='requests'>{t('ps.tab.requests')}{pendingMembers > 0 ? ` · ${String(pendingMembers)}` : ''}</TabsTrigger>
-        <TabsTrigger value='invite'>{t('ps.tab.invite')}</TabsTrigger>
+        <TabsTrigger value='sharing'>{t('ps.tab.sharing')}</TabsTrigger>
       </TabsList>
 
       <TabsContent value='general' className='mt-6'>
@@ -34,8 +35,8 @@ export function SettingsTabs({ project, activeMembers, pendingMembers }: { proje
       <TabsContent value='requests' className='mt-6'>
         <Placeholder title={t('ps.req.title')} body={t('ps.soon')} />
       </TabsContent>
-      <TabsContent value='invite' className='mt-6'>
-        <Placeholder title={t('ps.inv.title')} body={t('ps.soon')} />
+      <TabsContent value='sharing' className='mt-6'>
+        <SharePicker projectId={project.id} />
       </TabsContent>
     </Tabs>
   )

@@ -7,6 +7,9 @@ import { filterShared } from './roadmap.visibility'
 
 export interface RoadmapApi {
   getRoadmap(projectId: string): Promise<RoadmapData>
+  /** Owner allowlist curation (#4). `cascade` also flips the milestone's issues ("share whole milestone"). */
+  setMilestoneShared(milestoneId: string, shared: boolean, cascade?: boolean): Promise<void>
+  setIssueShared(issueId: string, shared: boolean): Promise<void>
 }
 
 const mock: RoadmapApi = {
@@ -25,10 +28,31 @@ const mock: RoadmapApi = {
     const isOwner = !me || (project != null && project.owner_id === me.id)
     return Promise.resolve(isOwner ? data : filterShared(data))
   },
+  setMilestoneShared(milestoneId, shared, cascade = false) {
+    const db = mockDb()
+    const milestone = db.milestones.find((m) => m.id === milestoneId)
+    if (milestone) milestone.shared = shared
+    if (cascade) {
+      db.issues
+        .filter((i) => i.milestone_id === milestoneId)
+        .forEach((i) => {
+          i.shared = shared
+        })
+    }
+    return Promise.resolve()
+  },
+  setIssueShared(issueId, shared) {
+    const db = mockDb()
+    const issue = db.issues.find((i) => i.id === issueId)
+    if (issue) issue.shared = shared
+    return Promise.resolve()
+  },
 }
 
 const supabase: RoadmapApi = {
   getRoadmap: () => notImplemented('roadmap.getRoadmap'),
+  setMilestoneShared: () => notImplemented('roadmap.setMilestoneShared'),
+  setIssueShared: () => notImplemented('roadmap.setIssueShared'),
 }
 
 export const roadmap: RoadmapApi = env.backend === 'supabase' ? supabase : mock
