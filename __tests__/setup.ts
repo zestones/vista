@@ -12,3 +12,19 @@ globalThis.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserv
 if (!Element.prototype.scrollTo) {
   Element.prototype.scrollTo = () => {}
 }
+
+if (!window.matchMedia) {
+  window.matchMedia = (q: string) =>
+    ({
+      matches: false,
+      media: q,
+      onchange: null,
+      addEventListener() {},
+      removeEventListener() {},
+      addListener() {},
+      removeListener() {},
+      dispatchEvent() {
+        return false
+      },
+    }) as unknown as MediaQueryList
+}

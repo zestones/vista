@@ -38,6 +38,7 @@ const resources = {
       'roadmap.zoomDay': 'Jour',
       'roadmap.openLabel': 'Ouverte',
       'roadmap.closedLabel': 'Fermée',
+      'milestones.due': 'Échéance',
     },
   },
   en: {
@@ -74,6 +75,7 @@ const resources = {
       'roadmap.zoomDay': 'Day',
       'roadmap.openLabel': 'Open',
       'roadmap.closedLabel': 'Closed',
+      'milestones.due': 'Due',
     },
   },
 }
