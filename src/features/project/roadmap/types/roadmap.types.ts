@@ -1,0 +1,34 @@
+import type { IssueRow } from '@/services/roadmap'
+
+/** A single issue rendered as a bar on the timeline. */
+export interface Bar {
+  id: string
+  number: number
+  title: string
+  state: string | null
+  start: Date
+  end: Date
+  url: string | null
+  author: string | null
+  avatarUrl: string | null
+}
+
+/** A milestone group (one per milestone row — multi-repo safe). */
+export interface Group {
+  id: string
+  number: number
+  title: string
+  description: string | null
+  due: Date | null
+  color: string
+  total: number
+  closed: number
+  pct: number
+  bars: Bar[]
+}
+
+/** Output of the mapper: timeline groups + issues with no milestone. */
+export interface RoadmapView {
+  groups: Group[]
+  unscheduled: IssueRow[]
+}
