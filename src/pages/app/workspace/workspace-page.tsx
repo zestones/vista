@@ -4,6 +4,7 @@ import { Plus } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { NewProjectModal, ProjectCard, useWorkspace } from '@/features/workspace'
 import { Button } from '@/components/ui'
+import { PageHeader } from '@/components/layout'
 import { Spinner } from '@/components/feedback'
 import type { ProjectSummary } from '@/services/projects'
 
@@ -31,42 +32,44 @@ export function WorkspacePage() {
   const empty = owned.length === 0 && joined.length === 0
 
   return (
-    <div className='px-8 py-10'>
-      <div className='mb-8 flex flex-wrap items-end justify-between gap-4'>
-        <div>
-          <h1 className='font-display text-ink mb-1 text-3xl font-medium tracking-[-0.01em]'>{t('ws.title')}</h1>
-          <p className='text-muted-ink'>{t('ws.subtitle')}</p>
-        </div>
-        <Button
-          onClick={() => {
-            setOpen(true)
-          }}
-        >
-          <Plus /> {t('side.newProject')}
-        </Button>
-      </div>
-
-      {isLoading ? (
-        <div className='grid place-items-center py-24'>
-          <Spinner />
-        </div>
-      ) : empty ? (
-        <div className='border-hairline rounded-xl border border-dashed px-6 py-20 text-center'>
-          <p className='text-muted-ink mb-4'>{t('ws.empty')}</p>
+    <div>
+      <PageHeader
+        title={t('ws.title')}
+        description={t('ws.subtitle')}
+        actions={
           <Button
             onClick={() => {
               setOpen(true)
             }}
           >
-            <Plus /> {t('ws.createFirst')}
+            <Plus /> {t('side.newProject')}
           </Button>
-        </div>
-      ) : (
-        <div className='flex flex-col gap-12'>
-          {owned.length > 0 && <Section label={t('ws.owned')} items={owned} isOwner />}
-          {joined.length > 0 && <Section label={t('ws.joined')} items={joined} isOwner={false} />}
-        </div>
-      )}
+        }
+      />
+
+      <div className='px-8 py-8'>
+        {isLoading ? (
+          <div className='grid place-items-center py-24'>
+            <Spinner />
+          </div>
+        ) : empty ? (
+          <div className='border-hairline rounded-xl border border-dashed px-6 py-20 text-center'>
+            <p className='text-muted-ink mb-4'>{t('ws.empty')}</p>
+            <Button
+              onClick={() => {
+                setOpen(true)
+              }}
+            >
+              <Plus /> {t('ws.createFirst')}
+            </Button>
+          </div>
+        ) : (
+          <div className='flex flex-col gap-12'>
+            {owned.length > 0 && <Section label={t('ws.owned')} items={owned} isOwner />}
+            {joined.length > 0 && <Section label={t('ws.joined')} items={joined} isOwner={false} />}
+          </div>
+        )}
+      </div>
 
       <NewProjectModal open={open} onOpenChange={setOpen} />
     </div>
