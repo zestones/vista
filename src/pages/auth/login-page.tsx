@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/contexts/auth.context'
@@ -10,15 +10,20 @@ export function LoginPage() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault()
+  const submit = async () => {
     await signInWithEmail(email)
     void navigate('/app')
   }
 
   return (
     <div className='grid min-h-screen place-items-center p-6'>
-      <form onSubmit={(e) => void submit(e)} className='flex w-full max-w-sm flex-col gap-3'>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          void submit()
+        }}
+        className='flex w-full max-w-sm flex-col gap-3'
+      >
         <h1 className='mb-2 font-display text-2xl font-semibold'>{t('app.name')}</h1>
         <input
           type='email'

@@ -6,5 +6,5 @@ export const env = {
   supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY ?? 'public-anon-key',
   appUrl: import.meta.env.VITE_APP_URL ?? window.location.origin,
   /** mock | supabase — lets the data layer swap without touching the UI. */
-  backend: (import.meta.env.VITE_BACKEND ?? 'mock') as 'mock' | 'supabase',
+  backend: import.meta.env.VITE_BACKEND ?? 'mock',
 } as const

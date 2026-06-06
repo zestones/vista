@@ -28,6 +28,15 @@ export interface Database {
         available_on_vista: boolean
         created_at: string
       }>
+      project_repos: Table<{
+        id: string
+        project_id: string
+        installation_id: number | null
+        owner: string
+        repo: string
+        github_repo_id: number | null
+        created_at: string
+      }>
       project_members: Table<{
         id: string
         project_id: string
