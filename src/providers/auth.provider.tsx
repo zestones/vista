@@ -1,37 +1,26 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { AuthContext, type AuthUser } from '@/contexts/auth.context'
-
-const KEY = 'vista-session'
+import { auth } from '@/services/auth'
 
 /**
- * MOCK auth provider (Phase 1). Backed by localStorage; any email logs in.
- * Swap the body for Supabase Auth in Phase 2 — keep this interface.
- * See docs: Architecture/Backend (Supabase)/Authentification & sessions.
+ * Auth provider. Holds the React session state and delegates persistence to `services/auth`
+ * (mock localStorage now, Supabase Auth in Phase 2 -- the interface stays the same).
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    const raw = localStorage.getItem(KEY)
-    return raw ? (JSON.parse(raw) as AuthUser) : null
-  })
-
-  useEffect(() => {
-    if (user) localStorage.setItem(KEY, JSON.stringify(user))
-    else localStorage.removeItem(KEY)
-  }, [user])
+  const [user, setUser] = useState<AuthUser | null>(() => auth.currentUser())
 
   const value = useMemo(
     () => ({
       user,
       loading: false,
-      signInWithEmail: (email: string) => {
-        setUser({ id: 'mock-user', email, name: email.split('@')[0] ?? 'Vous' })
-        return Promise.resolve()
+      signInWithEmail: async (email: string) => {
+        setUser(await auth.signInWithEmail(email))
       },
-      signInWithGoogle: () => {
-        setUser({ id: 'mock-user', email: 'demo@vista.app', name: 'Demo' })
-        return Promise.resolve()
+      signInWithGoogle: async () => {
+        setUser(await auth.signInWithGoogle())
       },
       signOut: () => {
+        void auth.signOut()
         setUser(null)
       },
     }),

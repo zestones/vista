@@ -1,11 +1,118 @@
-import { useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowRight, Check, Lock, Users } from 'lucide-react'
+import { useAuth } from '@/contexts/auth.context'
+import { invites } from '@/services/invites'
+import { inviteKeys } from '@/lib/query-keys/invites.keys'
+import { Button } from '@/components/ui'
+import { Spinner } from '@/components/feedback'
+import { LangToggle } from '@/components/layout'
+import { VistaMark } from '@/components/brand'
+
+function InlineNote({ tone, title, body }: { tone: 'link' | 'success'; title: string; body: string }) {
+  return (
+    <div className='border-hairline bg-secondary flex items-start gap-3 rounded-lg border p-4'>
+      <Check size={18} className={tone === 'success' ? 'text-success mt-0.5 shrink-0' : 'text-link mt-0.5 shrink-0'} />
+      <div>
+        <div className='text-ink font-semibold'>{title}</div>
+        <div className='text-muted-ink mt-0.5 text-[13px]'>{body}</div>
+      </div>
+    </div>
+  )
+}
 
 export function JoinPage() {
-  const { token } = useParams()
+  const { t } = useTranslation()
+  const { token = '' } = useParams()
+  const { user } = useAuth()
+  const email = user?.email ?? ''
+  const navigate = useNavigate()
+  const qc = useQueryClient()
+
+  const { data, isLoading } = useQuery({
+    queryKey: inviteKeys.byToken(token, email),
+    queryFn: () => invites.getProjectByToken(token, email),
+  })
+
+  const request = useMutation({
+    mutationFn: () => (user ? invites.requestAccess(token, user) : Promise.resolve({ status: 'invalid' as const })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: inviteKeys.byToken(token, email) }),
+  })
+
   return (
-    <div className='p-8'>
-      <h1 className='font-display text-2xl font-semibold'>Rejoindre un projet</h1>
-      <p className='mt-2 text-sm text-muted-foreground'>Invitation : {token}</p>
+    <div className='bg-secondary flex min-h-screen flex-col'>
+      <header className='border-hairline bg-card flex h-16 items-center justify-between border-b px-6'>
+        <Link to='/app' className='text-ink flex items-center gap-2.5'>
+          <VistaMark />
+          <span className='font-display text-[19px] font-semibold tracking-[-0.02em]'>Vista</span>
+        </Link>
+        <LangToggle />
+      </header>
+
+      <div className='grid flex-1 place-items-center p-6'>
+        <div className='bg-card border-hairline w-full max-w-[460px] overflow-hidden rounded-xl border shadow-xl'>
+          {isLoading ? (
+            <div className='grid place-items-center py-24'>
+              <Spinner />
+            </div>
+          ) : !data ? (
+            <div className='px-8 py-12 text-center'>
+              <div className='bg-secondary text-sig-coral mx-auto mb-4 grid size-14 place-items-center rounded-full'>
+                <Lock size={26} />
+              </div>
+              <h1 className='font-display text-ink mb-1.5 text-2xl font-medium'>{t('join.invalid')}</h1>
+              <p className='text-muted-ink mb-6'>{t('join.invalidMsg')}</p>
+              <Button variant='outline' asChild>
+                <Link to='/'>{t('join.home')}</Link>
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className='h-1.5' style={{ background: data.project.color ?? 'var(--color-ink)' }} />
+              <div className='p-8'>
+                <p className='text-muted-ink mb-2 text-[13px] font-medium tracking-wide uppercase'>{t('join.invitedTo')}</p>
+                <h1 className='font-display text-ink mb-1.5 text-2xl font-medium'>{data.project.name}</h1>
+                {data.project.description && <p className='text-muted-ink mb-1'>{data.project.description}</p>}
+                <div className='text-muted-ink mb-6 inline-flex items-center gap-1.5 text-[13px]'>
+                  <Users size={14} /> {data.activeMembers} {t('ws.members')}
+                </div>
+
+                {data.membership === 'member' || request.data?.status === 'member' ? (
+                  <>
+                    <InlineNote tone='success' title={t('join.member')} body={t('join.memberMsg')} />
+                    <Button
+                      className='mt-4 w-full'
+                      onClick={() => {
+                        void navigate(`/app/projects/${data.project.id}`)
+                      }}
+                    >
+                      {t('join.open')} <ArrowRight size={15} />
+                    </Button>
+                  </>
+                ) : request.isSuccess ? (
+                  <InlineNote tone='link' title={t('join.requested')} body={t('join.requestedMsg')} />
+                ) : data.membership === 'pending' ? (
+                  <InlineNote tone='link' title={t('join.pending')} body={t('join.pendingMsg')} />
+                ) : (
+                  <>
+                    <p className='text-body mb-6'>{t('join.intro')}</p>
+                    <Button
+                      className='w-full'
+                      disabled={request.isPending}
+                      onClick={() => {
+                        request.mutate()
+                      }}
+                    >
+                      {request.isPending ? t('join.requesting') : t('join.request')}
+                    </Button>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
