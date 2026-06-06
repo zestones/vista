@@ -1,107 +1,94 @@
-# Milestone audit — Phase 1 (Vista)
+# Milestone audit (re-audit) — Phase 1 - Mock future-ready (#1)
 
-- Repo: `zestones/vista`
-- Date: 2026-06-06
-- Scope audited: all issues in milestone **Phase 1 - Mock future-ready** (#1 closed, #2–#9 open)
-- Method: read each issue via `gh issue view`. No code produced.
+Date: 2026-06-06
+Branch: `restructure/sota-architecture`
+Auditor: technical review (no code produced)
 
 > [!NOTE]
-> Two scope decisions were taken during this audit and drive the verdict:
-> 1. Introduce a **Phase 0 - Readiness** milestone (done before Phase 1) that holds the foundation + porting work — readiness for every later phase.
-> 2. Build the **full `mock | supabase` adapter now** (#8), not a mock-only seam.
+> This **replaces** the earlier Phase 1 audit, which reviewed an older milestone membership (#2-#9, before those moved to "Phase 0 - Readiness"). Phase 1 now holds only the four pillars (#3-#6). This re-audit re-runs the review **after Phase 0 shipped** (services seam, settings shell, design system, animations) to answer: **is Phase 1 still aligned with what now exists?** Short answer: yes, with four concrete deltas.
+
+## Method
+
+- Read the 4 Phase 1 issues (`gh issue list --milestone "Phase 1 - Mock future-ready"`).
+- Cross-checked each against the built code: `getRoadmap` signature, the `submissions` service, the `shared` flag on rows, the settings tabs, and the dashboard viewer banner.
+
+## Snapshot
+
+| # | Title | State | Phase 0 readiness |
+| --- | --- | --- | --- |
+| 3 | Allowlist filtering in mock `getRoadmap` (by role) | open | `shared` flag + seed (default false) ready; `getRoadmap` needs a role param |
+| 4 | Share-picker UI (curate milestones/issues) | open | needs a `setShared` service + a settings home; preview reuses #3 |
+| 5 | Enforce roles: gate request form | open | viewer banner already built (#52); just hide the button |
+| 6 | Moderation inbox UI (submissions) | open | `submissions` service needs approve/deny + a settings home |
+
+## How the pillars slot into the Phase 0 foundations
+
+```mermaid
+graph TD
+  shared["shared flag on milestone/issue rows (seed default false)"] --> i3["#3 allowlist filter in getRoadmap(projectId, role)"]
+  i3 --> hook["useRoadmap passes role from getProjectAccess"]
+  i3 --> i4preview["#4 preview = render as viewer (reuses #3)"]
+  setShared["new: roadmap.setShared(item, shared)"] --> i4["#4 share-picker (settings tab: Visibility)"]
+  i4 --> shared
+  access["getProjectAccess -> membership.role"] --> i5["#5 gate request button (banner already exists)"]
+  subsvc["submissions.list/create + new approve/deny"] --> i6["#6 moderation inbox (settings tab: Submissions)"]
+  shell["settings shell (general/members/requests/invite)"] -.needs 2 new tabs.-> i4
+  shell -.needs 2 new tabs.-> i6
+```
 
 ## Per-issue assessment
 
-| # | Issue | Context | Fit | Architecture | Justification | Recommendation |
-|---|-------|---------|-----|--------------|---------------|----------------|
-| 1 | Scaffold SOTA structure | Complete | Strong | Sound (mirrors ARIA) | Warranted | **Keep** · move to Phase 0 · already closed |
-| 2 | Mock data model | Good | Foundational | Sound | Warranted | **Keep** · move to Phase 0 |
-| 3 | Allowlist filtering (mock) | Good | Pillar 1 | Sound | Warranted | **Keep** in Phase 1 |
-| 4 | Share-picker UI | Gap (preview) | Pillar 1 | Sound | Warranted | **Refine** · keep in Phase 1 |
-| 5 | Enforce roles (UI gate) | Good | Pillar 3 | Sound (UI-level, RLS later) | Warranted | **Keep** in Phase 1 |
-| 6 | Moderation inbox | Gap (mock approve) | Pillar 2 | Sound | Warranted | **Refine** · keep in Phase 1 |
-| 7 | Multi-repo (mock) | Thin | Foundational | Overlaps #2 | Partly redundant | **Merge/Refine** · move to Phase 0 |
-| 8 | Data-access + adapter | Good | Foundational | Sound (caveat) | Warranted | **Refine** · move to Phase 0 |
-| 9 | Port Roadmap Gantt | Good | Core | Sound | Warranted | **Split** · move to Phase 0 |
+### #3 Allowlist filtering in mock `getRoadmap` (by role)
 
-### Flags & details
+- **Context**: clear, testable acceptance (viewer/editor see only `shared`, owner sees all, issue hidden when its milestone is not shared).
+- **Fit**: the keystone of the visibility model and the prerequisite for #4's preview. Fully aligned with the "clients never receive hidden items" promise.
+- **Architecture**: sound -- filtering belongs in `getRoadmap` (data layer), so the mapper/UI never see hidden rows. Verified the `shared: boolean` flag exists on both milestone and issue rows and defaults to false in the seed. **Delta**: `getRoadmap(projectId)` currently takes no role; it must become `getRoadmap(projectId, viewer)` (or take the role), and `useRoadmap` + the dashboard must pass the role from `getProjectAccess`.
+- **Justification**: warranted; without it the `shared` flag is inert.
+- **Risk & recommendation**: **Keep, build first.** Low risk; the signature change ripples to `use-roadmap`, the dashboard, and `services.test` (which calls `getRoadmap('prj-apollo')`). One design decision to pin down: a shared issue under a non-shared milestone is hidden (per acceptance) -> decide whether shared *unscheduled* issues (no milestone) remain visible.
+
+### #4 Share-picker UI (curate milestones/issues)
+
+- **Context**: clear (toggle shared per item, "share whole milestone" helper, preview-as-viewer).
+- **Fit**: the owner's curation surface that feeds #3 -> core product loop.
+- **Architecture**: needs (a) a mutation to set `shared` per item -- not present yet (`roadmap.setShared(...)` or a small visibility service), and (b) a home. **Delta**: the settings shell tabs are general / members / requests / invite -- there is **no Visibility/Share tab**, so #4 adds one. The preview should reuse #3 (render `getRoadmap` as a viewer) rather than re-implement filtering.
+- **Justification**: warranted.
+- **Risk & recommendation**: **Keep, after #3.** Note the naming overlap to clarify: the existing **invite** tab = share *link*; the **share-picker** = item *curation*. They are different surfaces.
+
+### #5 Enforce roles: gate request form to editor/owner
+
+- **Context**: clear, with the right scoping note (UI-level only; RLS is the real barrier in Phase 4/5).
+- **Fit**: aligned and partly **already built** -- the dashboard already renders the viewer read-only banner (`pd.viewerNote`, verified) from `isViewer`.
+- **Architecture**: trivial and consistent -- `isViewer` is already derived from `membership.role`; the only remaining change is to hide/disable the "new request" button for viewers.
+- **Justification**: warranted; smallest pillar.
+- **Risk & recommendation**: **Keep (shrunk).** Effectively a one-line gate since the banner exists. Lowest risk in the milestone.
+
+### #6 Moderation inbox UI (submissions)
+
+- **Context**: clear (list pending submissions, approve/deny, kept distinct from access-requests).
+- **Fit**: closes the client-submission loop (submit -> owner moderates). Aligned; the seed already carries one pending submission for testing.
+- **Architecture**: `services/submissions` has `listSubmissions` + `createSubmission` but **no approve/deny** -> add a status mutation. **Delta**: needs a home; settings has no Submissions/Moderation tab. The existing **requests** tab is *access* requests (pending members) -- moderation (feature/bug submissions) is a separate surface, so the "naming collision fixed" in the acceptance means keeping access-requests and submissions as two clearly-labelled inboxes.
+- **Justification**: warranted.
+- **Risk & recommendation**: **Keep, independent.** Decide the home (a settings "Submissions" tab vs an owner-level admin inbox) before building.
+
+## Cross-cutting alignment findings
+
+> [!NOTE]
+> Phase 0 left the right hooks for Phase 1: the `shared` invariant (seed default false), the services seam, `getProjectAccess` -> `membership.role`, the settings shell, the already-built viewer banner, and a seeded pending submission. The milestone is coherent and the build order is clean.
 
 > [!WARNING]
-> **Screen-porting gap (the main finding).** The pillar issues (#4 share-picker, #5 role-gate, #6 moderation) assume the host screens already exist in the new structure — but there are **no issues** to port the legacy screens (landing, auth, join, workspace, admin, project dashboard + settings, issue form). In the current `src/`, those are stubs. Building pillars on stubs is not viable.
-> Resolution: these ports become **Phase 0 - Readiness** (rebuild the working mock app in the SOTA architecture), then Phase 1 adds the pillars on top.
-
-- **#7 vs #2 overlap.** `project_repos[]` is already in #2's scope. #7 only adds "roadmap aggregates across repos". Keep #7 as the *aggregation* slice or fold it into #2/#9; avoid duplicating the model work.
-- **#8 full adapter (decision).** Building both branches now is the chosen path.
-  > [!WARNING]
-  > The `supabase` branch cannot be functional until Phase 2 (no DB yet). Implement it as a typed, wired stub that throws `NotImplemented` so `VITE_BACKEND=supabase` fails loudly, not silently. Accept that this is some throwaway wiring now in exchange for locking the seam early.
-- **#9 too large.** A 640-LOC Gantt + mobile list + overview is one oversized issue. Split into: (a) desktop Gantt, (b) mobile list, (c) overview (stats + milestones table), (d) wire to `services/roadmap` + mappers. Easier to review and estimate.
-- **#4 context gap.** Specify the "client preview" mechanism (a role-simulation toggle reading the same filtered selector).
-- **#6 context gap.** Define mock "approve" behaviour (status -> approved, simulated issue number, no real GitHub call).
-
-## Recommended reorganization
-
-```mermaid
-flowchart TD
-  subgraph P0["Phase 0 - Readiness (foundation)"]
-    A["#1 Scaffold (done)"]
-    B["#2 Data model"]
-    C["#7 Multi-repo"]
-    D["#8 Data-access + full adapter"]
-    E["#9 Port Roadmap (split)"]
-    F["NEW: port landing / auth / join"]
-    G["NEW: port workspace / admin"]
-    H["NEW: port dashboard + settings shell"]
-    I["NEW: port issue form + shared UI"]
-  end
-  subgraph P1["Phase 1 - Product pillars (mock)"]
-    J["#3 Allowlist filtering"]
-    K["#4 Share-picker"]
-    L["#5 Role gate"]
-    M["#6 Moderation inbox"]
-  end
-  P0 --> P1
-  P1 --> P2["Phase 2 - Backend & auth"]
-```
-
-## Dependencies & build order
-
-```mermaid
-flowchart LR
-  s["#1 scaffold"] --> dm["#2 data model"]
-  dm --> da["#8 data-access + adapter"]
-  da --> ports["Phase 0 screen ports"]
-  dm --> road["#9 roadmap port"]
-  da --> road
-  ports --> pillars
-  road --> al["#3 allowlist"]
-  al --> sp["#4 share-picker"]
-  ports --> sp
-  ports --> mod["#6 moderation"]
-  ports --> rg["#5 role gate"]
-  subgraph pillars["Phase 1"]
-    al
-    sp
-    rg
-    mod
-  end
-```
-
-Build order: **#2 → #8 → (screen ports ‖ #9 roadmap) → #3 → #4 → #5/#6.**
+> Four deltas to fold into Phase 1 (none are blockers):
+> 1. **`getRoadmap` gains a role/viewer parameter** (#3) -> ripples to `use-roadmap`, the dashboard, and the services test.
+> 2. **The settings shell needs two new tabs** -- Visibility (#4) and Submissions/Moderation (#6). The current tabs (general/members/requests/invite) do not host them; #52 anticipated this ("settings hosts the pillars") but the built tabs stopped at the access side.
+> 3. **#5 shrank** -- the viewer banner is already shipped, so #5 is just gating the button.
+> 4. **`submissions` needs approve/deny** (#6); **visibility needs `setShared`** (#4).
+>
+> Unchanged debt (not Phase 1's job): the mock keys identity on email and treats the invite token as the project id. Neither blocks Phase 1 (role, `shared`, submissions all work), but both must be reconciled in Phase 2 (Supabase auth/ids) and Phase 4 (opaque tokens).
 
 ## Verdict
 
 > [!IMPORTANT]
-> **No-go** to start **Phase 1 as it originally stood** — it mixed foundation/porting with new features and had no issues for the host screens the pillars need.
->
-> **Go** once the backlog is reorganized: do **Phase 0 - Readiness** first (rebuild the mock app in the SOTA architecture: data model, data-access + adapter, and port every screen incl. the Gantt), then **Phase 1** adds the three pillars (allowlist, roles, moderation) on a real baseline.
+> **GO** -- Phase 1 is still aligned. Build it with the four deltas above.
 
-### Actions applied after this audit
-- Create milestone **Phase 0 - Readiness** (due before Phase 1).
-- Move #1, #2, #7, #8, #9 to Phase 0; add the screen-port issues to Phase 0.
-- Update #8 to "full adapter now" (with the NotImplemented-stub caveat).
-- Keep #3, #4, #5, #6 in Phase 1 (the pillars).
-
-### Still recommended (optional)
-- Split #9 into 3–4 sub-issues.
-- Fold #7 into #2/#9 to remove the model overlap.
-- Tighten #4 and #6 acceptance with the gaps noted above.
+- **Coherence**: high; the four pillars map cleanly onto the Phase 0 foundations.
+- **Build order**: #3 (filter) first -> #4 (curation UI + `setShared`, preview via #3). #5 (gate button) and #6 (moderation: add approve/deny + inbox) are independent and can run in parallel.
+- **Before starting**: (a) extend `getRoadmap` with a role; (b) decide the two new settings tabs (Visibility, Submissions) and confirm the access-requests vs submissions naming; (c) add `setShared` and submission approve/deny to the services; (d) pin the shared-unscheduled-issue rule.
