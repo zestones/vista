@@ -142,6 +142,14 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  /* Pointer affordance on hover for interactive controls (Tailwind v4 Preflight resets it to default). */
+  button:not(:disabled),
+  [role='button']:not(:disabled),
+  [role='switch']:not(:disabled),
+  [role='tab']:not(:disabled) {
+    cursor: pointer;
+  }
+
   /* Quiet, thin scrollbars (DESIGN.md). */
   ::-webkit-scrollbar {
     width: 10px;

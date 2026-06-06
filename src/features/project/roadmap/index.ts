@@ -1,4 +1,5 @@
 export * from './hooks/use-roadmap'
+export * from './hooks/use-roadmap-data'
 export * from './lib/roadmap.mappers'
 export * from './lib/roadmap.sort'
 export * from './lib/roadmap.dates'

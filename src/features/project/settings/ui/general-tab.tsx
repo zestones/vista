@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Check, Trash2 } from 'lucide-react'
@@ -6,6 +6,19 @@ import { Button, Input, Label, Segmented, Switch, Textarea } from '@/components/
 import { useDeleteProject, useUpdateProject } from '../hooks/use-project-settings'
 import type { ProjectRow } from '@/services/projects'
 import type { ProjectVisibility } from '@/types/database.types'
+
+/** One settings row: a label column (title + hint) beside its controls -- fills the width while keeping inputs readable. */
+function Row({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
+  return (
+    <div className='grid gap-x-10 gap-y-3 p-6 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]'>
+      <div>
+        <h3 className='text-ink text-sm font-semibold'>{title}</h3>
+        <p className='text-muted-ink mt-1 text-[13px]'>{hint}</p>
+      </div>
+      <div className='flex max-w-xl flex-col gap-4'>{children}</div>
+    </div>
+  )
+}
 
 export function GeneralTab({ project }: { project: ProjectRow }) {
   const { t } = useTranslation()
@@ -35,32 +48,32 @@ export function GeneralTab({ project }: { project: ProjectRow }) {
   }
 
   return (
-    <div className='flex flex-col gap-6'>
-      <section className='border-hairline bg-card flex flex-col gap-5 rounded-xl border p-6'>
-        <div className='flex flex-col gap-1.5'>
-          <Label htmlFor='ps-name'>{t('ps.gen.name')}</Label>
-          <Input
-            id='ps-name'
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value)
-            }}
-          />
-        </div>
+    <div className='flex flex-col gap-8'>
+      <div className='border-hairline bg-card divide-hairline divide-y overflow-hidden rounded-xl border'>
+        <Row title={t('ps.gen.secIdentity')} hint={t('ps.gen.secIdentityHint')}>
+          <div className='flex flex-col gap-1.5'>
+            <Label htmlFor='ps-name'>{t('ps.gen.name')}</Label>
+            <Input
+              id='ps-name'
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value)
+              }}
+            />
+          </div>
+          <div className='flex flex-col gap-1.5'>
+            <Label htmlFor='ps-desc'>{t('ps.gen.desc')}</Label>
+            <Textarea
+              id='ps-desc'
+              value={description}
+              onChange={(e) => {
+                setDescription(e.target.value)
+              }}
+            />
+          </div>
+        </Row>
 
-        <div className='flex flex-col gap-1.5'>
-          <Label htmlFor='ps-desc'>{t('ps.gen.desc')}</Label>
-          <Textarea
-            id='ps-desc'
-            value={description}
-            onChange={(e) => {
-              setDescription(e.target.value)
-            }}
-          />
-        </div>
-
-        <div className='flex flex-col gap-1.5'>
-          <Label>{t('ps.gen.visibility')}</Label>
+        <Row title={t('ps.gen.visibility')} hint={t('ps.gen.visibilityHint')}>
           <Segmented<ProjectVisibility>
             value={visibility}
             onValueChange={setVisibility}
@@ -69,13 +82,9 @@ export function GeneralTab({ project }: { project: ProjectRow }) {
               { value: 'shared', label: t('ps.gen.visShared') },
             ]}
           />
-        </div>
+        </Row>
 
-        <div className='border-hairline flex items-center justify-between gap-4 rounded-md border p-4'>
-          <div>
-            <div className='text-ink text-sm font-semibold'>{t('ps.gen.available')}</div>
-            <div className='text-muted-ink mt-0.5 text-xs'>{t('ps.gen.availableHint')}</div>
-          </div>
+        <Row title={t('ps.gen.available')} hint={t('ps.gen.availableHint')}>
           <Switch
             checked={available}
             onCheckedChange={(v) => {
@@ -83,19 +92,19 @@ export function GeneralTab({ project }: { project: ProjectRow }) {
             }}
             aria-label={t('ps.gen.available')}
           />
-        </div>
+        </Row>
 
-        <div className='flex items-center gap-3'>
-          <Button onClick={save} disabled={update.isPending}>
-            {t('ps.gen.save')}
-          </Button>
+        <div className='bg-surface-soft flex items-center justify-end gap-3 px-6 py-4'>
           {update.isSuccess && (
             <span className='text-success inline-flex items-center gap-1.5 text-[13px] font-semibold'>
               <Check size={15} /> {t('ps.gen.saved')}
             </span>
           )}
+          <Button onClick={save} disabled={update.isPending}>
+            {t('ps.gen.save')}
+          </Button>
         </div>
-      </section>
+      </div>
 
       <section className='rounded-xl border border-[color-mix(in_oklch,var(--color-sig-coral)_30%,transparent)] bg-[color-mix(in_oklch,var(--color-sig-coral)_4%,transparent)] p-6'>
         <h2 className='text-sig-coral text-lg font-medium'>{t('ps.danger')}</h2>

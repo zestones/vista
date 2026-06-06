@@ -4,6 +4,11 @@ import { addDays, daysBetween } from './roadmap.dates'
 
 const MS_COLORS = ['#1b61c9', '#aa2d00', '#0a2e0e', '#d9a441', '#254fad', '#006400']
 
+/** The Gantt color for the milestone at `index` in the roadmap data. Reused by the share-picker so colors match. */
+export function milestoneColor(index: number): string {
+  return MS_COLORS[index % MS_COLORS.length]
+}
+
 /**
  * Transform normalized Rows into the Gantt view model.
  *
@@ -63,7 +68,7 @@ export function buildGanttData(data: RoadmapData): RoadmapView {
       title: m.title,
       description: m.description,
       due: m.due_on ? new Date(m.due_on) : null,
-      color: MS_COLORS[idx % MS_COLORS.length],
+      color: milestoneColor(idx),
       total: bars.length,
       closed,
       pct: bars.length > 0 ? Math.round((closed / bars.length) * 100) : 0,
