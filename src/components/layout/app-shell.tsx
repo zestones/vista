@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useAutoAnimate } from '@formkit/auto-animate/react'
 import { LayoutGrid, Menu, Plus, Shield } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { SidebarContext } from '@/contexts/sidebar.context'
@@ -55,6 +56,7 @@ function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; 
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { data } = useWorkspace(user?.id ?? '')
+  const [projectsRef] = useAutoAnimate<HTMLDivElement>()
   const projects = [...(data?.owned ?? []), ...(data?.joined ?? [])]
   const pendingTotal = (data?.owned ?? []).reduce((n, s) => n + s.pendingMembers, 0)
   const initial = (user?.name ?? user?.email ?? '?').charAt(0).toUpperCase()
@@ -94,7 +96,7 @@ function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; 
             <Plus size={14} />
           </button>
         </div>
-        <div className='flex max-h-[40vh] flex-col gap-0.5 overflow-y-auto'>
+        <div ref={projectsRef} className='flex max-h-[40vh] flex-col gap-0.5 overflow-y-auto'>
           {projects.map((s) => (
             <NavItem
               key={s.project.id}

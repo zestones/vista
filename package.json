@@ -17,6 +17,7 @@
     "format:check": "prettier --check 'src/**/*.{ts,tsx,css}'"
   },
   "dependencies": {
+    "@formkit/auto-animate": "^0.9.0",
     "@supabase/supabase-js": "^2.47.10",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-query": "^5.90.21",
@@ -25,6 +26,7 @@
     "date-fns": "^4.1.0",
     "i18next": "^24.2.1",
     "lucide-react": "^0.563.0",
+    "motion": "^12.40.0",
     "radix-ui": "^1.4.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

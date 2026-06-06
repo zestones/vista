@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useAutoAnimate } from '@formkit/auto-animate/react'
 import { Plus } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { NewProjectModal, ProjectCard, useWorkspace } from '@/features/workspace'
@@ -9,10 +10,11 @@ import { Spinner } from '@/components/feedback'
 import type { ProjectSummary } from '@/services/projects'
 
 function Section({ label, items, isOwner }: { label: string; items: ProjectSummary[]; isOwner: boolean }) {
+  const [gridRef] = useAutoAnimate<HTMLDivElement>()
   return (
     <section>
       <div className='text-muted-ink mb-4 text-[13px] font-medium tracking-wide uppercase'>{label}</div>
-      <div className='grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6'>
+      <div ref={gridRef} className='grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6'>
         {items.map((s) => (
           <ProjectCard key={s.project.id} summary={s} isOwner={isOwner} />
         ))}

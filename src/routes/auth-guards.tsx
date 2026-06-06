@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/auth.context'
 import { AppShell } from '@/components/layout'
+import { PageTransition } from '@/components/motion'
 import { ErrorBoundary, Spinner } from '@/components/feedback'
 
 export function RequireAuth() {
@@ -22,7 +23,9 @@ export function RequireAuth() {
   return (
     <AppShell>
       <ErrorBoundary variant='inline' resetKeys={[location.pathname]}>
-        <Outlet />
+        <PageTransition>
+          <Outlet />
+        </PageTransition>
       </ErrorBoundary>
     </AppShell>
   )

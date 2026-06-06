@@ -18,6 +18,7 @@ import {
   TriangleAlert,
   X,
 } from 'lucide-react'
+import { Segmented } from '@/components/ui'
 import { addDays, daysBetween, fmtFull, fmtMonth, fmtShort } from '../lib/roadmap.dates'
 import { type IssueSort, type MilestoneSort, sortRoadmap } from '../lib/roadmap.sort'
 import type { Bar, Group } from '../types'
@@ -447,18 +448,17 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560 }: Props
           </div>
 
           {/* Filter */}
-          <div role='group' aria-label='Filter' style={{ display: 'inline-flex', border: '1px solid var(--hairline)', borderRadius: 'var(--r-md)', padding: 2, gap: 2 }}>
-            {([['all', t('roadmap.all')], ['open', t('roadmap.open')], ['closed', t('roadmap.closed')]] as [Filter, string][]).map(([k, label]) => (
-              <button
-                key={k}
-                aria-pressed={filter === k}
-                onClick={() => setFilter(k)}
-                style={{ border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 13, padding: '5px 12px', borderRadius: 'var(--r-sm)', color: filter === k ? 'var(--on-primary, #fff)' : 'var(--body)', background: filter === k ? 'var(--ink)' : 'transparent' }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <Segmented<Filter>
+            aria-label='Filter'
+            size='sm'
+            value={filter}
+            onValueChange={setFilter}
+            options={[
+              { value: 'all', label: t('roadmap.all') },
+              { value: 'open', label: t('roadmap.open') },
+              { value: 'closed', label: t('roadmap.closed') },
+            ]}
+          />
         </div>
 
         {/* Chart */}

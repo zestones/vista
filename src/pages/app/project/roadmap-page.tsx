@@ -8,6 +8,7 @@ import { useProjectAccess } from '@/features/project/dashboard'
 import { RequestModal } from '@/features/project/submission'
 import { Button, Segmented } from '@/components/ui'
 import { PageHeader } from '@/components/layout'
+import { TabTransition } from '@/components/motion'
 import { Spinner } from '@/components/feedback'
 import { useMediaQuery } from '@/hooks/use-media-query'
 
@@ -41,6 +42,18 @@ export function RoadmapPage() {
   const { project } = access.data
   const isOwner = project.owner_id === user?.id
   const isViewer = access.data.membership.role === 'viewer'
+
+  const view = roadmap.isLoading
+    ? 'loading'
+    : roadmap.isError
+      ? 'error'
+      : groups.length === 0
+        ? 'empty'
+        : tab === 'overview'
+          ? 'overview'
+          : isMobile
+            ? 'mobile'
+            : 'gantt'
 
   return (
     <div className='flex h-full flex-col'>
@@ -89,23 +102,23 @@ export function RoadmapPage() {
           />
         </div>
 
-        {roadmap.isLoading ? (
-          <div className='grid flex-1 place-items-center'>
-            <Spinner />
-          </div>
-        ) : roadmap.isError ? (
-          <p className='text-muted-ink text-sm'>{t('state.errorTitle')}</p>
-        ) : groups.length === 0 ? (
-          <p className='text-muted-ink text-sm'>{t('state.empty')}</p>
-        ) : tab === 'overview' ? (
-          <RoadmapOverview groups={groups} unscheduled={unscheduled} />
-        ) : isMobile ? (
-          <RoadmapMobile groups={groups} />
-        ) : (
-          <div className='flex min-h-0 flex-1 flex-col'>
+        <TabTransition activeKey={view} className='flex min-h-0 flex-1 flex-col'>
+          {view === 'loading' ? (
+            <div className='grid flex-1 place-items-center'>
+              <Spinner />
+            </div>
+          ) : view === 'error' ? (
+            <p className='text-muted-ink text-sm'>{t('state.errorTitle')}</p>
+          ) : view === 'empty' ? (
+            <p className='text-muted-ink text-sm'>{t('state.empty')}</p>
+          ) : view === 'overview' ? (
+            <RoadmapOverview groups={groups} unscheduled={unscheduled} />
+          ) : view === 'mobile' ? (
+            <RoadmapMobile groups={groups} />
+          ) : (
             <RoadmapGantt groups={groups} />
-          </div>
-        )}
+          )}
+        </TabTransition>
       </div>
 
       <RequestModal open={requestOpen} onOpenChange={setRequestOpen} projectId={id} />

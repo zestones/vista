@@ -13,6 +13,19 @@ if (!Element.prototype.scrollTo) {
   Element.prototype.scrollTo = () => {}
 }
 
+// jsdom has no Web Animations API; auto-animate calls el.animate() and listens on the result.
+if (!Element.prototype.animate) {
+  Element.prototype.animate = () =>
+    ({
+      cancel() {},
+      finish() {},
+      onfinish: null,
+      finished: Promise.resolve(),
+      addEventListener() {},
+      removeEventListener() {},
+    }) as unknown as Animation
+}
+
 if (!window.matchMedia) {
   window.matchMedia = (q: string) =>
     ({
