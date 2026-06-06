@@ -29,6 +29,23 @@ describe('services — mock branch (issue #8)', () => {
     expect(after.owned.find((s) => s.project.id === created.id)?.progress).not.toBeNull()
   })
 
+  it('projects.getProjectAccess reports the owner membership and null for a stranger', async () => {
+    const owner = await projects.getProjectAccess('prj-apollo', 'you@vista.app')
+    expect(owner?.membership?.role).toBe('owner')
+    expect(owner?.membership?.status).toBe('active')
+    expect(owner?.activeMembers).toBeGreaterThanOrEqual(1)
+
+    const stranger = await projects.getProjectAccess('prj-apollo', 'stranger@x.com')
+    expect(stranger?.membership).toBeNull()
+  })
+
+  it('projects.deleteProject removes the project and its rows', async () => {
+    await projects.deleteProject('prj-apollo')
+    expect(await projects.getProject('prj-apollo')).toBeNull()
+    const { owned } = await projects.getProjectsForUser('you@vista.app')
+    expect(owned.some((s) => s.project.id === 'prj-apollo')).toBe(false)
+  })
+
   it('projects.updateProject patches availability and visibility in place', async () => {
     const updated = await projects.updateProject('prj-internal', { available_on_vista: true, visibility: 'shared' })
     expect(updated.available_on_vista).toBe(true)

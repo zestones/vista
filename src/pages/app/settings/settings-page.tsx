@@ -1,11 +1,28 @@
-import { useParams } from 'react-router-dom'
+import { Navigate, useParams } from 'react-router-dom'
+import { useAuth } from '@/contexts/auth.context'
+import { useProjectAccess } from '@/features/project/dashboard'
+import { SettingsTabs } from '@/features/project/settings'
+import { Spinner } from '@/components/feedback'
 
 export function SettingsPage() {
-  const { id } = useParams()
+  const { id = '' } = useParams()
+  const { user } = useAuth()
+  const access = useProjectAccess(id, user?.id ?? '')
+
+  if (access.isLoading) {
+    return (
+      <div className='grid h-full place-items-center'>
+        <Spinner />
+      </div>
+    )
+  }
+  if (!access.data) return <Navigate to='/app' replace />
+  // Owner-only console.
+  if (access.data.project.owner_id !== user?.id) return <Navigate to={`/app/projects/${id}`} replace />
+
   return (
-    <div className='p-8'>
-      <h1 className='font-display text-2xl font-semibold'>Réglages du projet</h1>
-      <p className='mt-2 text-sm text-muted-foreground'>Projet {id} — membres, partage, invitations, modération (à porter).</p>
+    <div className='mx-auto max-w-[900px] px-6 py-10 md:px-8'>
+      <SettingsTabs project={access.data.project} activeMembers={access.data.activeMembers} pendingMembers={access.data.pendingMembers} />
     </div>
   )
 }

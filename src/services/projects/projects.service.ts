@@ -2,13 +2,15 @@ import { env } from '@/config/env'
 import { genRepo, mockDb, PROJECT_PALETTE, type MockDb } from '@/lib/mock'
 import { notImplemented } from '../_shared/not-implemented'
 import type { AuthUser } from '@/services/auth'
-import type { NewProjectInput, OwnedJoinedProjects, ProjectRow, ProjectSummary, ProjectUpdate } from './projects.dto'
+import type { NewProjectInput, OwnedJoinedProjects, ProjectAccess, ProjectRow, ProjectSummary, ProjectUpdate } from './projects.dto'
 
 export interface ProjectsApi {
   getProjectsForUser(userId: string): Promise<OwnedJoinedProjects>
   getProject(id: string): Promise<ProjectRow | null>
+  getProjectAccess(id: string, userId: string): Promise<ProjectAccess | null>
   createProject(input: NewProjectInput, owner: AuthUser): Promise<ProjectRow>
   updateProject(id: string, patch: ProjectUpdate): Promise<ProjectRow>
+  deleteProject(id: string): Promise<void>
 }
 
 function summarize(db: MockDb, project: ProjectRow): ProjectSummary {
@@ -36,6 +38,19 @@ const mock: ProjectsApi = {
   },
   getProject(id) {
     return Promise.resolve(mockDb().projects.find((p) => p.id === id) ?? null)
+  },
+  getProjectAccess(id, userId) {
+    const db = mockDb()
+    const project = db.projects.find((p) => p.id === id)
+    if (!project) return Promise.resolve(null)
+    const members = db.members.filter((m) => m.project_id === id)
+    const mine = members.find((m) => m.user_id === userId)
+    return Promise.resolve({
+      project,
+      membership: mine ? { role: mine.role, status: mine.status } : null,
+      activeMembers: members.filter((m) => m.status === 'active').length,
+      pendingMembers: members.filter((m) => m.status === 'pending').length,
+    })
   },
   createProject(input, owner) {
     const db = mockDb()
@@ -95,13 +110,26 @@ const mock: ProjectsApi = {
     Object.assign(project, patch)
     return Promise.resolve(project)
   },
+  deleteProject(id) {
+    const db = mockDb()
+    const repoIds = new Set(db.projectRepos.filter((r) => r.project_id === id).map((r) => r.id))
+    db.projects = db.projects.filter((p) => p.id !== id)
+    db.projectRepos = db.projectRepos.filter((r) => r.project_id !== id)
+    db.milestones = db.milestones.filter((m) => !repoIds.has(m.project_repo_id))
+    db.issues = db.issues.filter((i) => !repoIds.has(i.project_repo_id))
+    db.members = db.members.filter((m) => m.project_id !== id)
+    db.submissions = db.submissions.filter((s) => s.project_id !== id)
+    return Promise.resolve()
+  },
 }
 
 const supabase: ProjectsApi = {
   getProjectsForUser: () => notImplemented('projects.getProjectsForUser'),
   getProject: () => notImplemented('projects.getProject'),
+  getProjectAccess: () => notImplemented('projects.getProjectAccess'),
   createProject: () => notImplemented('projects.createProject'),
   updateProject: () => notImplemented('projects.updateProject'),
+  deleteProject: () => notImplemented('projects.deleteProject'),
 }
 
 export const projects: ProjectsApi = env.backend === 'supabase' ? supabase : mock

@@ -1,6 +1,14 @@
-import type { Database, ProjectVisibility } from '@/types/database.types'
+import type { Database, MemberRole, MemberStatus, ProjectVisibility } from '@/types/database.types'
 
 export type ProjectRow = Database['public']['Tables']['projects']['Row']
+
+/** A project plus the current user's relationship to it, for access guards and headers. */
+export interface ProjectAccess {
+  project: ProjectRow
+  membership: { role: MemberRole; status: MemberStatus } | null
+  activeMembers: number
+  pendingMembers: number
+}
 
 export interface ProjectProgress {
   total: number
