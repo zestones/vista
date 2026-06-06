@@ -34,6 +34,8 @@ coverage/
 .vercel/
 .netlify/
 
+docs/WORKFLOW.md
+
 # Editor / OS
 .vscode/*
 !.vscode/extensions.json

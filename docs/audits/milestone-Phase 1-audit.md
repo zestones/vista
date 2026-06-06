@@ -92,3 +92,48 @@ graph TD
 - **Coherence**: high; the four pillars map cleanly onto the Phase 0 foundations.
 - **Build order**: #3 (filter) first -> #4 (curation UI + `setShared`, preview via #3). #5 (gate button) and #6 (moderation: add approve/deny + inbox) are independent and can run in parallel.
 - **Before starting**: (a) extend `getRoadmap` with a role; (b) decide the two new settings tabs (Visibility, Submissions) and confirm the access-requests vs submissions naming; (c) add `setShared` and submission approve/deny to the services; (d) pin the shared-unscheduled-issue rule.
+
+## Build decisions (locked)
+
+Resolving every flagged item so the build is mechanical.
+
+### D1 - `getRoadmap(projectId)` signature stays unchanged; the mock filters by identity
+
+The mock branch resolves the current user via `auth.currentUser()` and the project owner:
+`isOwner = me != null && project.owner_id === me.id` -> returns `isOwner ? data : filterShared(data)`.
+
+- Rationale: this is the signature Supabase needs too (RLS filters server-side by `auth.uid()`), so the seam never changes -- **no ripple** to `use-roadmap`, the dashboard, or the existing tests.
+- No-session (tests, future server contexts) is treated as unfiltered. `getRoadmap` is only reached behind the auth + access guards in-app, so this is a documented mock-only convenience; real RLS denies unauthenticated reads in Phase 2.
+- `services/roadmap` importing `services/auth` is service-to-service (allowed), and mirrors "data filtered by the current identity".
+
+### D2 - One pure `filterShared(data)` helper (the cascade rule)
+
+`filterShared(data: RoadmapData): RoadmapData`:
+- keep a milestone iff `milestone.shared`;
+- keep an issue iff `issue.shared && (issue.milestone_id == null || its milestone is shared)`.
+
+So: a shared issue under an unshared milestone is **hidden**; a shared **unscheduled** issue (no milestone) is **visible** (nothing gates it). Lives in `services/roadmap` (data layer), unit-tested, reused by both the mock `getRoadmap` (non-owner) and the #4 preview -> zero duplicated filter logic.
+
+### D3 - Settings tabs: General / Members / Access requests / Sharing / Submissions
+
+- **Sharing** (new) absorbs the old standalone *invite* tab: the share link + the **#4 share-picker** (toggle shared, "share whole milestone", preview-as-viewer). One coherent "what/how you share" surface.
+- **Submissions** (new) = the **#6** moderation inbox.
+- Naming collision resolved: **Access requests** = pending members; **Submissions** = feature/bug requests. Two clearly-labelled inboxes. (Approving *access* requests is not a Phase 1 issue -> Members/Access-requests stay basic placeholders this phase.)
+
+### D4 - Service additions
+
+- `services/roadmap.setMilestoneShared(id, shared, cascade = false)` (cascade also flips the milestone's issues -> the "share whole milestone" helper) and `setIssueShared(id, shared)`. Mock mutates rows; supabase stub `notImplemented`.
+- `services/submissions.setStatus(id, 'approved' | 'denied')`. Mock updates the row; supabase stub. (Real backend opens the GitHub issue + fills `github_issue_number` later.)
+- Query keys: reuse `roadmapKeys` (invalidate after `setShared` so the picker preview and the live roadmap refresh); add `submissionKeys.byProject(id)` for the inbox.
+
+### D5 - #5 gate
+
+Hide the "new request" button for viewers (`!isViewer && <Button>`); the read-only banner already exists. No service change.
+
+### D6 - Feature folders
+
+`features/project/sharing/` (#4) and `features/project/moderation/` (#6), mirroring the existing `features/project/*` layout, mounted in the Sharing / Submissions settings tabs.
+
+### Locked build order
+
+`#3` (filterShared + mock getRoadmap, with its tests) -> `#4` (setShared service + Sharing tab + share-picker + preview reusing `filterShared`). `#5` (one-line gate) and `#6` (setStatus + `useSubmissions` + moderation inbox in the Submissions tab) are independent and run in parallel.
