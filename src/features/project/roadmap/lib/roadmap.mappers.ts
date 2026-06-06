@@ -1,15 +1,8 @@
 import type { RoadmapData } from '@/services/roadmap'
 import type { Bar, Group, RoadmapView } from '../types'
+import { addDays, daysBetween } from './roadmap.dates'
 
-const DAY = 86_400_000
 const MS_COLORS = ['#1b61c9', '#aa2d00', '#0a2e0e', '#d9a441', '#254fad', '#006400']
-
-function addDays(d: Date, n: number): Date {
-  return new Date(d.getTime() + n * DAY)
-}
-function daysBetween(a: Date, b: Date): number {
-  return Math.round((b.getTime() - a.getTime()) / DAY)
-}
 
 /**
  * Transform normalized Rows into the Gantt view model.

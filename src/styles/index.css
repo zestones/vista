@@ -44,6 +44,30 @@
   --color-sig-peach: #f3c4a0;
   --color-sig-mint: #bfe3c0;
   --color-sig-yellow: #e8c14a;
+
+  /* Editorial token bridge — consumed by ported bespoke components (the Gantt). */
+  --canvas: #ffffff;
+  --ink: #181d26;
+  --body: #3a3f47;
+  --muted: #6b7280;
+  --border-strong: #aab1bb;
+  --hairline: #ececec;
+  --surface-soft: #f6f7f9;
+  --surface-strong: #eceef1;
+  --link: #1b61c9;
+  --success: #006400;
+  --sig-coral: #aa2d00;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --font: 'Inter', system-ui, sans-serif;
+  --s-xs: 4px;
+  --s-sm: 8px;
+  --s-md: 16px;
+  --s-lg: 24px;
+  --s-xl: 32px;
+  --s-xxl: 48px;
+  --s-section: 64px;
 }
 
 @theme inline {
