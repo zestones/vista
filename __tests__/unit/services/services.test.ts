@@ -8,10 +8,25 @@ describe('services — mock branch (issue #8)', () => {
     resetMockDb()
   })
 
-  it('projects.getProjectsForUser returns owned projects', async () => {
-    const { owned, joined } = await projects.getProjectsForUser('user-me')
+  it('projects.getProjectsForUser returns owned project summaries', async () => {
+    const { owned, joined } = await projects.getProjectsForUser('you@vista.app')
     expect(owned.length).toBeGreaterThan(0)
+    expect(owned[0].project.name).toBeTruthy()
+    expect(owned[0].activeMembers).toBeGreaterThanOrEqual(1)
     expect(Array.isArray(joined)).toBe(true)
+  })
+
+  it('projects.createProject adds an owned project with a mock roadmap', async () => {
+    const owner = { id: 'you@vista.app', email: 'you@vista.app', name: 'You' }
+    const before = (await projects.getProjectsForUser(owner.id)).owned.length
+    const created = await projects.createProject(
+      { name: 'Fresh thing', description: '', source: 'mock', repo: '', visibility: 'private', availableOnVista: true },
+      owner,
+    )
+    expect(created.name).toBe('Fresh thing')
+    const after = await projects.getProjectsForUser(owner.id)
+    expect(after.owned.length).toBe(before + 1)
+    expect(after.owned.find((s) => s.project.id === created.id)?.progress).not.toBeNull()
   })
 
   it('roadmap.getRoadmap aggregates across a project multiple repos', async () => {

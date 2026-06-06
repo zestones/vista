@@ -37,7 +37,7 @@ function rng(seedStr: string): () => number {
 }
 
 const DAY = 86_400_000
-const PALETTE = ['#aa2d00', '#1b61c9', '#0a2e0e', '#d9a441']
+export const PROJECT_PALETTE = ['#aa2d00', '#1b61c9', '#0a2e0e', '#d9a441']
 const AUTHORS = ['marie', 'tom', 'sofia', 'ken', 'nora', 'liam']
 const MS_TITLES = ['Scoping & specs', 'UI design', 'Development', 'Private beta', 'Launch', 'Optimization']
 const ISSUE_TITLES = [
@@ -57,7 +57,7 @@ const ISSUE_TITLES = [
 
 // Generate GitHub-shaped milestones + issues for one repo, as normalized rows.
 // Allowlist invariant: shared defaults to false on every item.
-function genRepo(projectRepoId: string, seedKey: string): { milestones: MilestoneRow[]; issues: IssueRow[] } {
+export function genRepo(projectRepoId: string, seedKey: string): { milestones: MilestoneRow[]; issues: IssueRow[] } {
   const r = rng('vista:' + seedKey)
   const now = Date.now()
   const start = now - (90 + Math.floor(r() * 60)) * DAY
@@ -139,7 +139,8 @@ const PROJECT_DEFS: ProjectDef[] = [
 /** Build a fresh, deterministic, normalized mock database. */
 export function buildSeed(): MockDb {
   const now = new Date().toISOString()
-  const ownerId = 'user-me'
+  // Mock identity = email (see services/auth). The demo owner is you@vista.app.
+  const ownerId = 'you@vista.app'
   const db: MockDb = { projects: [], projectRepos: [], milestones: [], issues: [], members: [], submissions: [] }
 
   PROJECT_DEFS.forEach((d, di) => {
@@ -148,7 +149,7 @@ export function buildSeed(): MockDb {
       owner_id: ownerId,
       name: d.name,
       description: null,
-      color: PALETTE[di % PALETTE.length],
+      color: PROJECT_PALETTE[di % PROJECT_PALETTE.length],
       visibility: d.visibility,
       available_on_vista: d.visibility === 'shared',
       created_at: now,

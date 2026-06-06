@@ -30,11 +30,13 @@ const mock: AuthApi = {
     }
   },
   signInWithEmail(email) {
+    // Identity = email, so the session lines up with the email-keyed mock data.
     const key = email.trim().toLowerCase()
-    return Promise.resolve(persist({ id: `mock-${key}`, email: key, name: key.split('@')[0] ?? 'Vous' }))
+    return Promise.resolve(persist({ id: key, email: key, name: key.split('@')[0] ?? 'Vous' }))
   },
   signInWithGoogle() {
-    return Promise.resolve(persist({ id: 'mock-google', email: 'demo@vista.app', name: 'Demo' }))
+    // The Google button drops you into the seeded demo account (owns the sample projects).
+    return Promise.resolve(persist({ id: 'you@vista.app', email: 'you@vista.app', name: 'You' }))
   },
   signOut() {
     localStorage.removeItem(SESSION_KEY)
