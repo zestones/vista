@@ -71,14 +71,16 @@ export function RoadmapPage() {
                 </Link>
               </Button>
             )}
-            <Button
-              size='sm'
-              onClick={() => {
-                setRequestOpen(true)
-              }}
-            >
-              <Plus /> {t('dash.newRequest')}
-            </Button>
+            {!isViewer && (
+              <Button
+                size='sm'
+                onClick={() => {
+                  setRequestOpen(true)
+                }}
+              >
+                <Plus /> {t('dash.newRequest')}
+              </Button>
+            )}
           </>
         }
       />

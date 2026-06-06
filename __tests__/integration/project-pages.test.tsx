@@ -8,7 +8,7 @@ import { AuthProvider } from '@/providers/auth.provider'
 import { RoadmapPage } from '@/pages/app/project/roadmap-page'
 import { SettingsPage } from '@/pages/app/settings/settings-page'
 import { auth } from '@/services/auth'
-import { resetMockDb } from '@/lib/mock'
+import { mockDb, resetMockDb } from '@/lib/mock'
 
 function renderAt(path: string) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -40,6 +40,28 @@ describe('project dashboard + settings (#52)', () => {
     renderAt('/app/projects/prj-apollo')
     expect(await screen.findByRole('heading', { name: 'Platform redesign' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Nouvelle demande|New request/ })).toBeInTheDocument()
+  })
+
+  it('hides the request button for a viewer and shows the read-only banner (#5)', async () => {
+    // The seed only carries owners; add an active viewer for prj-apollo (identity = email).
+    mockDb().members.push({
+      id: 'prj-apollo-mem-viewer',
+      project_id: 'prj-apollo',
+      user_id: 'viewer@client.com',
+      email: 'viewer@client.com',
+      name: 'Viewer',
+      role: 'viewer',
+      status: 'active',
+      invited_at: new Date().toISOString(),
+    })
+    await auth.signInWithEmail('viewer@client.com')
+    renderAt('/app/projects/prj-apollo')
+
+    // The viewer still reaches the project (active member)...
+    expect(await screen.findByRole('heading', { name: 'Platform redesign' })).toBeInTheDocument()
+    // ...but the request action is gated, and the read-only banner is shown.
+    expect(screen.queryByRole('button', { name: /Nouvelle demande|New request/ })).toBeNull()
+    expect(screen.getByText(/lecture seule|read-only/i)).toBeInTheDocument()
   })
 
   it('redirects a non-member away from the dashboard', async () => {
