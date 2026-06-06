@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, Shield } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { NewProjectModal } from '@/features/workspace'
 import { AdminStats, AdminTable, useOwnedProjects } from '@/features/admin'
@@ -17,11 +17,6 @@ export function AdminPage() {
   return (
     <div>
       <PageHeader
-        eyebrow={
-          <>
-            <Shield size={13} /> {t('side.admin')}
-          </>
-        }
         title={t('admin.title')}
         description={t('admin.subtitle')}
         actions={
@@ -35,7 +30,7 @@ export function AdminPage() {
         }
       />
 
-      <div className='px-8 py-8'>
+      <div className='px-6 py-8'>
         {isLoading || !rows ? (
           <div className='grid place-items-center py-24'>
             <Spinner />

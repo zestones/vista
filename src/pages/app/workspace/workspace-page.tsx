@@ -47,7 +47,7 @@ export function WorkspacePage() {
         }
       />
 
-      <div className='px-8 py-8'>
+      <div className='px-6 py-8'>
         {isLoading ? (
           <div className='grid place-items-center py-24'>
             <Spinner />

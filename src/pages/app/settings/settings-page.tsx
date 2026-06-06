@@ -32,7 +32,7 @@ export function SettingsPage() {
         leading={<span className='size-3.5 shrink-0 rounded' style={{ background: project.color ?? 'var(--color-ink)' }} />}
         title={project.name}
       />
-      <div className='max-w-3xl px-8 py-8'>
+      <div className='max-w-3xl px-6 py-8'>
         <SettingsTabs project={project} activeMembers={activeMembers} pendingMembers={pendingMembers} />
       </div>
     </div>

@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { LayoutGrid, Menu, Plus, Shield } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
+import { SidebarContext } from '@/contexts/sidebar.context'
 import { NewProjectModal, useWorkspace } from '@/features/workspace'
 import { Button } from '@/components/ui'
 import { LangToggle } from './lang-toggle'
@@ -32,7 +33,7 @@ function NavItem({
       onClick={onNavigate}
       className={cn(
         'flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
-        active ? 'bg-surface-strong text-ink font-semibold' : 'text-body hover:bg-surface-strong/60 font-medium',
+        active ? 'bg-background text-ink font-semibold shadow-sm' : 'text-body hover:bg-background/70 font-medium',
       )}
     >
       {dot ? (
@@ -137,53 +138,74 @@ function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; 
 export function AppShell({ children }: { children: ReactNode }) {
   const [newOpen, setNewOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
+
+  const sidebar = useMemo(
+    () => ({
+      collapsed,
+      toggle: () => {
+        setCollapsed((c) => !c)
+      },
+    }),
+    [collapsed],
+  )
 
   return (
-    <div className='bg-background flex h-screen overflow-hidden'>
-      <aside className='border-hairline bg-surface-soft hidden w-66 shrink-0 flex-col border-r p-4 lg:flex'>
-        <SidebarContent
-          onNavigate={() => undefined}
-          onNewProject={() => {
-            setNewOpen(true)
-          }}
-        />
-      </aside>
-
-      <div className='border-hairline bg-background/90 fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b px-5 backdrop-blur lg:hidden'>
-        <Link to='/app' className='text-ink flex items-center gap-2'>
-          <VistaMark size={20} />
-          <span className='font-display text-[17px] font-semibold'>Vista</span>
-        </Link>
-        <Button
-          variant='outline'
-          size='sm'
-          aria-expanded={drawerOpen}
-          aria-label='Menu'
-          onClick={() => {
-            setDrawerOpen((d) => !d)
-          }}
+    <SidebarContext value={sidebar}>
+      {/* The page background carries the sidebar; the content sits on top as an inset panel. */}
+      <div className='bg-surface-sunken flex h-screen overflow-hidden lg:gap-2 lg:p-2'>
+        <aside
+          className={cn(
+            'hidden shrink-0 flex-col overflow-hidden transition-[width] duration-200 lg:flex',
+            collapsed ? 'w-0' : 'w-60',
+          )}
         >
-          <Menu size={18} />
-        </Button>
-      </div>
-
-      {drawerOpen && (
-        <div className='border-hairline bg-surface-soft fixed inset-x-0 top-14 z-30 max-h-[80vh] overflow-y-auto border-b p-4 lg:hidden'>
           <SidebarContent
-            onNavigate={() => {
-              setDrawerOpen(false)
-            }}
+            onNavigate={() => undefined}
             onNewProject={() => {
               setNewOpen(true)
-              setDrawerOpen(false)
             }}
           />
+        </aside>
+
+        <div className='border-hairline bg-background/90 fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b px-5 backdrop-blur lg:hidden'>
+          <Link to='/app' className='text-ink flex items-center gap-2'>
+            <VistaMark size={20} />
+            <span className='font-display text-[17px] font-semibold'>Vista</span>
+          </Link>
+          <Button
+            variant='outline'
+            size='sm'
+            aria-expanded={drawerOpen}
+            aria-label='Menu'
+            onClick={() => {
+              setDrawerOpen((d) => !d)
+            }}
+          >
+            <Menu size={18} />
+          </Button>
         </div>
-      )}
 
-      <main className='flex-1 overflow-y-auto pt-14 lg:pt-0'>{children}</main>
+        {drawerOpen && (
+          <div className='border-hairline bg-surface-sunken fixed inset-x-0 top-14 z-30 max-h-[80vh] overflow-y-auto border-b p-4 lg:hidden'>
+            <SidebarContent
+              onNavigate={() => {
+                setDrawerOpen(false)
+              }}
+              onNewProject={() => {
+                setNewOpen(true)
+                setDrawerOpen(false)
+              }}
+            />
+          </div>
+        )}
 
-      <NewProjectModal open={newOpen} onOpenChange={setNewOpen} />
-    </div>
+        <main className='bg-background flex-1 overflow-y-auto pt-14 lg:rounded-xl lg:border lg:border-hairline lg:pt-0 lg:shadow-sm'>
+          {children}
+        </main>
+
+        <NewProjectModal open={newOpen} onOpenChange={setNewOpen} />
+      </div>
+    </SidebarContext>
   )
 }

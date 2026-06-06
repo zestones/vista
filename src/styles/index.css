@@ -57,6 +57,7 @@
   --border-strong: #aab1bb;
   --hairline: #ececec;
   --surface-soft: #f6f7f9;
+  --surface-sunken: #e7eaf0;
   --surface-strong: #eceef1;
   --link: #1b61c9;
   --success: #006400;
@@ -118,6 +119,7 @@
   --color-surface-dark: var(--color-surface-dark);
   --color-on-dark: var(--color-on-dark);
   --color-surface-soft: var(--surface-soft);
+  --color-surface-sunken: var(--surface-sunken);
   --color-surface-strong: var(--surface-strong);
   --color-border-strong: var(--border-strong);
 
