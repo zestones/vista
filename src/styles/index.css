@@ -41,9 +41,13 @@
   --color-link: #1b61c9;
   --color-success: #006400;
   --color-sig-coral: #aa2d00;
+  --color-sig-forest: #0a2e0e;
+  --color-sig-cream: #f5e9d4;
   --color-sig-peach: #f3c4a0;
   --color-sig-mint: #bfe3c0;
   --color-sig-yellow: #e8c14a;
+  --color-surface-dark: #181d26;
+  --color-on-dark: #ffffff;
 
   /* Editorial token bridge — consumed by ported bespoke components (the Gantt). */
   --canvas: #ffffff;
@@ -100,7 +104,19 @@
   --color-sidebar-ring: var(--sidebar-ring);
 
   --color-ink: var(--color-ink);
+  --color-body: var(--color-body);
+  --color-muted-ink: var(--color-muted-ink);
+  --color-hairline: var(--color-hairline);
+  --color-link: var(--color-link);
+  --color-success: var(--color-success);
   --color-sig-coral: var(--color-sig-coral);
+  --color-sig-forest: var(--color-sig-forest);
+  --color-sig-cream: var(--color-sig-cream);
+  --color-sig-peach: var(--color-sig-peach);
+  --color-sig-mint: var(--color-sig-mint);
+  --color-sig-yellow: var(--color-sig-yellow);
+  --color-surface-dark: var(--color-surface-dark);
+  --color-on-dark: var(--color-on-dark);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
