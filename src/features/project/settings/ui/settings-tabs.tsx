@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
 import { SharePicker } from '@/features/project/sharing'
 import { ModerationInbox, useSubmissions } from '@/features/project/moderation'
+import { GithubTab } from '@/features/project/github'
 import { GeneralTab } from './general-tab'
 import type { ProjectRow } from '@/services/projects'
 
@@ -22,6 +23,7 @@ export function SettingsTabs({ project, activeMembers, pendingMembers }: { proje
     <Tabs defaultValue='general'>
       <TabsList variant='line'>
         <TabsTrigger value='general'>{t('ps.tab.general')}</TabsTrigger>
+        <TabsTrigger value='github'>{t('ps.tab.github')}</TabsTrigger>
         <TabsTrigger value='members'>
           {t('ps.tab.members')} · {activeMembers}
         </TabsTrigger>
@@ -35,6 +37,9 @@ export function SettingsTabs({ project, activeMembers, pendingMembers }: { proje
 
       <TabsContent value='general' className='mt-6'>
         <GeneralTab project={project} />
+      </TabsContent>
+      <TabsContent value='github' className='mt-6'>
+        <GithubTab projectId={project.id} />
       </TabsContent>
       <TabsContent value='members' className='mt-6'>
         <Placeholder title={t('ps.mem.title')} body={t('ps.soon')} />

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { resetMockDb } from '@/lib/mock'
-import { projects, roadmap, submissions } from '@/services'
+import { connections, projects, roadmap, submissions } from '@/services'
 import { notImplemented } from '@/services/_shared/not-implemented'
 
 describe('services — mock branch (issue #8)', () => {
@@ -20,7 +20,7 @@ describe('services — mock branch (issue #8)', () => {
     const owner = { id: 'you@vista.app', email: 'you@vista.app', name: 'You' }
     const before = (await projects.getProjectsForUser(owner.id)).owned.length
     const created = await projects.createProject(
-      { name: 'Fresh thing', description: '', source: 'mock', repo: '', visibility: 'private', availableOnVista: true },
+      { name: 'Fresh thing', description: '', source: 'mock', visibility: 'private', availableOnVista: true },
       owner,
     )
     expect(created.name).toBe('Fresh thing')
@@ -29,17 +29,22 @@ describe('services — mock branch (issue #8)', () => {
     expect(after.owned.find((s) => s.project.id === created.id)?.progress).not.toBeNull()
   })
 
-  it('projects.createProject (github source) records the repo and a sample roadmap', async () => {
+  it('projects.createProject (github source) starts empty; attachRepo records the repo + roadmap', async () => {
     const owner = { id: 'admin@gmail.com', email: 'admin@gmail.com', name: 'admin' }
     const created = await projects.createProject(
-      { name: 'Aria', description: '', source: 'github', repo: 'zestones/Aria', visibility: 'private', availableOnVista: true },
+      { name: 'Aria', description: '', source: 'github', visibility: 'private', availableOnVista: true },
       owner,
     )
     expect(created.name).toBe('Aria')
-    const summary = (await projects.getProjectsForUser(owner.id)).owned.find((s) => s.project.id === created.id)
-    expect(summary).toBeDefined()
+    // A github project starts empty -- repos are attached via the connect flow (#20), not at create.
+    let summary = (await projects.getProjectsForUser(owner.id)).owned.find((s) => s.project.id === created.id)
+    expect(summary?.repos).toEqual([])
+    expect(summary?.progress).toBeNull()
+
+    await connections.attachRepo({ projectId: created.id, installationId: 1, owner: 'zestones', repo: 'Aria' })
+    summary = (await projects.getProjectsForUser(owner.id)).owned.find((s) => s.project.id === created.id)
     expect(summary?.repos).toEqual([{ owner: 'zestones', repo: 'Aria' }])
-    expect(summary?.progress).not.toBeNull() // mock seeds a sample roadmap until real sync (Phase 3)
+    expect(summary?.progress).not.toBeNull() // mock attach seeds a sample roadmap
   })
 
   it('projects.getProjectAccess reports the owner membership and null for a stranger', async () => {

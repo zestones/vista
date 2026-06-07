@@ -1,0 +1,90 @@
+import { useTranslation } from 'react-i18next'
+import { ExternalLink, Plus, X } from 'lucide-react'
+import { Button } from '@/components/ui'
+import { GitHubMark } from '@/components/brand'
+import { GITHUB_INSTALL_URL, type AvailableRepo } from '@/services/connections'
+import { useAttachRepo, useAttachedRepos, useDetachRepo, useInstallationRepos } from '../hooks/use-connections'
+
+export function GithubTab({ projectId }: { projectId: string }) {
+  const { t } = useTranslation()
+  const available = useInstallationRepos()
+  const attached = useAttachedRepos(projectId)
+  const attach = useAttachRepo(projectId)
+  const detach = useDetachRepo(projectId)
+
+  const attachedKeys = new Set((attached.data ?? []).map((r) => `${r.owner}/${r.repo}`))
+  const toAttach = (available.data ?? []).filter((r) => !attachedKeys.has(`${r.owner}/${r.repo}`))
+
+  const attachOne = (r: AvailableRepo) =>
+    attach.mutate({ projectId, installationId: r.installation_id, owner: r.owner, repo: r.repo })
+
+  return (
+    <div className='flex flex-col gap-8'>
+      <section className='border-hairline bg-card flex items-center justify-between rounded-xl border p-6'>
+        <div>
+          <h2 className='text-ink text-lg font-medium'>{t('ps.gh.title')}</h2>
+          <p className='text-muted-ink mt-1 text-[13px]'>{t('ps.gh.hint')}</p>
+        </div>
+        <Button variant='outline' size='sm' asChild>
+          <a href={GITHUB_INSTALL_URL} target='_blank' rel='noreferrer'>
+            <GitHubMark size={15} /> {t('ps.gh.manage')} <ExternalLink size={13} />
+          </a>
+        </Button>
+      </section>
+
+      <section className='border-hairline bg-card overflow-hidden rounded-xl border'>
+        <header className='border-hairline border-b px-6 py-4'>
+          <h3 className='text-ink text-sm font-semibold'>{t('ps.gh.attached')}</h3>
+        </header>
+        {attached.data && attached.data.length > 0 ? (
+          <ul className='divide-hairline divide-y'>
+            {attached.data.map((r) => (
+              <li key={r.id} className='flex items-center justify-between px-6 py-3'>
+                <span className='text-ink text-sm'>
+                  {r.owner}/{r.repo}
+                </span>
+                <Button variant='ghost' size='sm' onClick={() => detach.mutate(r.id)} disabled={detach.isPending}>
+                  <X size={15} /> {t('ps.gh.detach')}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className='text-muted-ink px-6 py-4 text-[13px]'>{t('ps.gh.noneAttached')}</p>
+        )}
+      </section>
+
+      <section className='border-hairline bg-card overflow-hidden rounded-xl border'>
+        <header className='border-hairline border-b px-6 py-4'>
+          <h3 className='text-ink text-sm font-semibold'>{t('ps.gh.available')}</h3>
+        </header>
+        {available.isLoading ? (
+          <p className='text-muted-ink px-6 py-4 text-[13px]'>{t('ps.gh.loading')}</p>
+        ) : toAttach.length > 0 ? (
+          <ul className='divide-hairline divide-y'>
+            {toAttach.map((r) => (
+              <li key={`${r.owner}/${r.repo}`} className='flex items-center justify-between px-6 py-3'>
+                <span className='text-ink text-sm'>
+                  {r.owner}/{r.repo}
+                  {r.private ? <span className='text-muted-ink ml-2 text-xs'>{t('ps.gh.private')}</span> : null}
+                </span>
+                <Button variant='outline' size='sm' onClick={() => attachOne(r)} disabled={attach.isPending}>
+                  <Plus size={15} /> {t('ps.gh.attach')}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className='px-6 py-5'>
+            <p className='text-muted-ink text-[13px]'>{t('ps.gh.noRepos')}</p>
+            <Button variant='outline' size='sm' className='mt-3' asChild>
+              <a href={GITHUB_INSTALL_URL} target='_blank' rel='noreferrer'>
+                <GitHubMark size={15} /> {t('ps.gh.connect')}
+              </a>
+            </Button>
+          </div>
+        )}
+      </section>
+    </div>
+  )
+}

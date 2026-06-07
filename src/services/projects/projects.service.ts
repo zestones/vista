@@ -82,23 +82,23 @@ const mock: ProjectsApi = {
       decided_at: null,
     })
 
-    // Mock: every new project gets a sample roadmap so it is never empty.
-    // A github source keeps its owner/repo for the real sync (Phase 3), which will replace the sample.
-    const repoId = `${id}-repo-1`
-    const [repoOwner = 'owner', repoName = 'repo'] =
-      input.source === 'github' && input.repo.includes('/') ? input.repo.trim().split('/') : ['demo', 'sample']
-    db.projectRepos.push({
-      id: repoId,
-      project_id: id,
-      installation_id: 0, // mock sentinel; the real installation_id is set by the GitHub App (Phase 3)
-      owner: repoOwner,
-      repo: repoName.replace(/\/.*$/, ''),
-      github_repo_id: null,
-      created_at: now,
-    })
-    const { milestones, issues } = genRepo(repoId, id)
-    db.milestones.push(...milestones)
-    db.issues.push(...issues)
+    // Demo seeds a sample roadmap so the project isn't empty; a github source starts empty
+    // and gets its repos via the connect flow (#20, connections.attachRepo).
+    if (input.source === 'mock') {
+      const repoId = `${id}-repo-1`
+      db.projectRepos.push({
+        id: repoId,
+        project_id: id,
+        installation_id: 0, // mock sentinel; the real id comes from the GitHub App
+        owner: 'demo',
+        repo: 'sample',
+        github_repo_id: null,
+        created_at: now,
+      })
+      const { milestones, issues } = genRepo(repoId, id)
+      db.milestones.push(...milestones)
+      db.issues.push(...issues)
+    }
 
     return Promise.resolve(project)
   },
