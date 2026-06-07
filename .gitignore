@@ -13,6 +13,7 @@ build/
 .env
 .env.*
 !.env.example
+*.pem
 
 # Vite / tooling caches
 .vite/
@@ -46,3 +47,4 @@ docs/WORKFLOW.md
 *.sln
 .DS_Store
 Thumbs.db
+*Zone.Identifier
