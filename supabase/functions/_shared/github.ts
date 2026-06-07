@@ -116,3 +116,82 @@ export async function listInstallationRepos(token: string): Promise<Installation
   if (!res.ok) throw new Error(`list installation repositories failed: ${res.status} ${await res.text()}`)
   return ((await res.json()) as { repositories: InstallationRepo[] }).repositories
 }
+
+// --- Repo sync (#22) ---------------------------------------------------------
+
+function ghHeaders(token: string, extra?: Record<string, string>): Record<string, string> {
+  return { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...extra }
+}
+
+/** Parse the `rel="next"` URL from a GitHub Link header, if any. */
+function nextLink(link: string | null): string | null {
+  for (const part of (link ?? '').split(',')) {
+    const m = /<([^>]+)>;\s*rel="next"/.exec(part)
+    if (m) return m[1]
+  }
+  return null
+}
+
+export interface GhMilestone {
+  number: number
+  title: string
+  description: string | null
+  due_on: string | null
+  state: string
+  open_issues: number
+  closed_issues: number
+}
+
+export interface GhIssue {
+  number: number
+  title: string
+  state: string
+  labels: Array<{ name: string } | string>
+  user: { login: string; avatar_url: string } | null
+  html_url: string
+  created_at: string
+  closed_at: string | null
+  milestone: { number: number } | null
+  pull_request?: unknown // present => entry is a PR, not an issue
+}
+
+export interface MilestonesResult {
+  notModified: boolean
+  etag: string | null
+  milestones: GhMilestone[]
+}
+
+/** All milestones (state=all), conditional on `etag` (304 => notModified). Follows pagination. */
+export async function listMilestones(token: string, owner: string, repo: string, etag?: string | null): Promise<MilestonesResult> {
+  const res = await fetch(`${GITHUB_API}/repos/${owner}/${repo}/milestones?state=all&per_page=100`, {
+    headers: ghHeaders(token, etag ? { 'If-None-Match': etag } : undefined),
+  })
+  if (res.status === 304) return { notModified: true, etag: etag ?? null, milestones: [] }
+  if (!res.ok) throw new Error(`list milestones failed: ${res.status} ${await res.text()}`)
+  const firstEtag = res.headers.get('ETag')
+  const milestones = (await res.json()) as GhMilestone[]
+  let url = nextLink(res.headers.get('Link'))
+  while (url) {
+    const r = await fetch(url, { headers: ghHeaders(token) })
+    if (!r.ok) throw new Error(`list milestones page failed: ${r.status} ${await r.text()}`)
+    milestones.push(...((await r.json()) as GhMilestone[]))
+    url = nextLink(r.headers.get('Link'))
+  }
+  return { notModified: false, etag: firstEtag, milestones }
+}
+
+/** Issues (state=all, sort=updated asc), optionally `since` (ISO). Excludes PRs. Follows pagination. */
+export async function listIssues(token: string, owner: string, repo: string, since?: string | null): Promise<GhIssue[]> {
+  const base = `${GITHUB_API}/repos/${owner}/${repo}/issues?state=all&sort=updated&direction=asc&per_page=100`
+  let url: string | null = since ? `${base}&since=${encodeURIComponent(since)}` : base
+  const out: GhIssue[] = []
+  while (url) {
+    const r = await fetch(url, { headers: ghHeaders(token) })
+    if (!r.ok) throw new Error(`list issues failed: ${r.status} ${await r.text()}`)
+    for (const it of (await r.json()) as GhIssue[]) {
+      if (!it.pull_request) out.push(it) // drop PRs
+    }
+    url = nextLink(r.headers.get('Link'))
+  }
+  return out
+}
