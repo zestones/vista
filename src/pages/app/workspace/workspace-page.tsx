@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAutoAnimate } from '@formkit/auto-animate/react'
 import { Plus } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { NewProjectModal, ProjectCard, useWorkspace } from '@/features/workspace'
+import { PENDING_INSTALL_KEY } from '@/features/project/github'
 import { Button } from '@/components/ui'
 import { PageHeader } from '@/components/layout'
 import { Spinner } from '@/components/feedback'
@@ -26,8 +28,18 @@ function Section({ label, items, isOwner }: { label: string; items: ProjectSumma
 export function WorkspacePage() {
   const { t } = useTranslation()
   const { user } = useAuth()
+  const navigate = useNavigate()
   const { data, isLoading } = useWorkspace(user?.id ?? '')
   const [open, setOpen] = useState(false)
+
+  // Resume a GitHub install link stashed before a login round-trip (#77).
+  useEffect(() => {
+    const pending = sessionStorage.getItem(PENDING_INSTALL_KEY)
+    if (user && pending) {
+      sessionStorage.removeItem(PENDING_INSTALL_KEY)
+      void navigate(`/github/callback?installation_id=${pending}`, { replace: true })
+    }
+  }, [user, navigate])
 
   const owned = data?.owned ?? []
   const joined = data?.joined ?? []
