@@ -7,6 +7,7 @@
 // Auth: a shared SYNC_TRIGGER_SECRET (the #24 cron passes it as a Bearer). Not owner-facing.
 import { admin } from '../_shared/supabaseAdmin.ts'
 import { installationToken, listIssues, listMilestones } from '../_shared/github.ts'
+import { upsertIssues, upsertMilestones } from '../_shared/projection.ts'
 import { jsonResponse, preflight } from '../_shared/cors.ts'
 
 Deno.serve(async (req) => {
@@ -46,51 +47,17 @@ Deno.serve(async (req) => {
   // Use the START time as the next `since` so a change during this run is caught next time (safe overlap).
   const startedAt = new Date().toISOString()
 
-  // --- Milestones (conditional on ETag) ---
+  // --- Milestones (conditional on ETag) + Issues (incremental via `since`, PRs excluded) ---
   const ms = await listMilestones(token, repo.owner, repo.repo, state?.last_etag ?? null)
-  let milestonesUpserted = 0
-  if (!ms.notModified && ms.milestones.length > 0) {
-    const rows = ms.milestones.map((m) => ({
-      project_repo_id: projectRepoId,
-      number: m.number,
-      title: m.title,
-      description: m.description,
-      due_on: m.due_on,
-      state: m.state,
-      open_issues: m.open_issues,
-      closed_issues: m.closed_issues,
-      updated_at: startedAt,
-    }))
-    const { error } = await admin.from('milestones').upsert(rows, { onConflict: 'project_repo_id,number' })
-    if (error) return jsonResponse({ error: `milestone upsert failed: ${error.message}` }, 500)
-    milestonesUpserted = rows.length
-  }
-
-  // Map milestone number -> id for issue linkage.
-  const { data: msRows } = await admin.from('milestones').select('id, number').eq('project_repo_id', projectRepoId)
-  const msByNumber = new Map<number, string>((msRows ?? []).map((m) => [m.number, m.id]))
-
-  // --- Issues (incremental via `since`), PRs already excluded by the helper ---
   const issues = await listIssues(token, repo.owner, repo.repo, state?.last_synced_at ?? null)
+  let milestonesUpserted = 0
   let issuesUpserted = 0
-  if (issues.length > 0) {
-    const rows = issues.map((i) => ({
-      project_repo_id: projectRepoId,
-      number: i.number,
-      title: i.title,
-      state: i.state,
-      labels: i.labels.map((l) => (typeof l === 'string' ? l : l.name)),
-      author_login: i.user?.login ?? null,
-      author_avatar_url: i.user?.avatar_url ?? null,
-      html_url: i.html_url,
-      created_at: i.created_at,
-      closed_at: i.closed_at,
-      milestone_id: i.milestone ? (msByNumber.get(i.milestone.number) ?? null) : null,
-      updated_at: startedAt,
-    }))
-    const { error } = await admin.from('issues').upsert(rows, { onConflict: 'project_repo_id,number' })
-    if (error) return jsonResponse({ error: `issue upsert failed: ${error.message}` }, 500)
-    issuesUpserted = rows.length
+  try {
+    // Upsert milestones first so upsertIssues can resolve milestone linkage. Both omit `shared`.
+    if (!ms.notModified) milestonesUpserted = await upsertMilestones(admin, projectRepoId, ms.milestones, startedAt)
+    issuesUpserted = await upsertIssues(admin, projectRepoId, issues, startedAt)
+  } catch (e) {
+    return jsonResponse({ error: e instanceof Error ? e.message : 'upsert failed' }, 500)
   }
 
   const { error: stateErr } = await admin
