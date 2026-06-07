@@ -1,60 +1,49 @@
-# Milestone Audit — Phase 2 · Backend Supabase & auth
+# Milestone Audit (closing) — Phase 2 · Backend Supabase & auth
 
 > [!NOTE]
-> Date: 2026-06-07 (re-confirmation after #13 + #14). Supersedes prior Phase 2 audits.
-> Progress: **6 of 9 closed** — #10, #11, #64, #12, #13, #14. Remaining: **#16, #17, #15**.
-> Nothing changed in the open issues since the last audit; the plan holds.
+> Date: 2026-06-07. Closing pass — **8 of 9 closed**; only **#15 (wire services)** remains, the integration finale.
+> Done: #10 setup, #11 core schema, #64 projection schema, #12 auth, #13 reconcile, #14 RLS, #16 token RPC, #17 gen types.
 
 ## 1. Snapshot
 
-| # | Title | State |
-|---|---|---|
-| 10 | Supabase setup | CLOSED |
-| 11 | core schema | CLOSED |
-| 64 | projection schema | CLOSED |
-| 12 | auth (magic link + Google + trigger) | CLOSED |
-| 13 | reconcile invitations by email | CLOSED |
-| 14 | base RLS policies | CLOSED |
-| 16 | RPC `get_project_by_token` | OPEN |
-| 17 | generate `database.types.ts` | OPEN |
-| 15 | wire services/* to Supabase | OPEN |
-
 ```mermaid
 graph LR
-  subgraph Done
-    D["#10 #11 #64 #12 #13 #14"]
+  subgraph "Shipped (8)"
+    A["#10 #11 #64 setup+schema"] --> B["#12 #13 auth+reconcile"]
+    B --> C["#14 RLS"] --> D["#16 RPC"] --> E["#17 gen types"]
   end
-  D --> I16["#16 token RPC"]
-  D --> I17["#17 gen types"]
-  I16 --> I15["#15 wire services (LAST)"]
-  I17 --> I15
+  E --> F["#15 WIRE (final)"]
   classDef done fill:#dcfce7,stroke:#16a34a,color:#14532d;
-  class D done;
+  classDef last fill:#fde68a,stroke:#d97706,color:#78350f;
+  class A,B,C,D,E done; class F last;
 ```
 
-## 2. Per-issue (re-confirmation)
+The foundation is verified and backend-ready: schema (10 tables) + RLS (pgTAP 14) + auth (magic link/Google/trigger) + reconciliation + the token RPC + generated types (which now also type the SQL functions).
 
-### #16 — RPC `get_project_by_token` (KEEP, next)
-- `security definer` RPC returning only public fields (name, description, color, member count); revoked token -> invalid.
-- **Interaction with #14 (new):** invites are not directly selectable by clients (only `invites_manage` for owners), so the `security definer` RPC is exactly the controlled read path for `/join/:token`. Sound.
-- Must precede #15 (the invites service calls it).
+## 2. #15 — Wire services/* to Supabase (the only open issue)
 
-### #17 — Generate `database.types.ts` (KEEP)
-- `supabase gen types typescript --local` (comment posted). All 10 tables exist -> complete regen.
-- **Carry-forward:** fix the two mock sites that set `installation_id: null` (`seed.ts`, `projects.service.ts:92`) now that the generated type is non-null. Must precede #15.
+- **Context**: Adequate ("replace mock bodies with Supabase, signatures stable; UI unchanged"). The migration-plan doc is the spec.
+- **Wiring surface (11 methods)** — the `notImplemented` supabase stubs:
+  - `projects` (6): getProjectsForUser, getProject, getProjectAccess, createProject, updateProject, deleteProject
+  - `invites` (2): getProjectByToken (wraps the #16 RPC), requestAccess
+  - `submissions` (3): listSubmissions, createSubmission, setStatus
+  - **Out of scope:** `roadmap` (getRoadmap, set*Shared) stays mock/`notImplemented` — Phase 3 (sync) + Phase 4 (allowlist).
+- **Fit / architecture**: Sound — the services-adapter seam was built for exactly this; reads are tenant-filtered by RLS (#14), so service code is thin queries. Generated types (#17) type the RPCs.
+- **Justification**: The milestone's payoff. Warranted.
+- **Risk & recommendation**: **KEEP** — large but mechanical, except two decisions below.
 
-### #15 — Wire services/* to Supabase (KEEP, LAST)
-- Replace mock bodies for projects/members/invites/submissions with Supabase calls; signatures stable.
-- **Interaction with #14 (new):** wired reads run **under RLS as the authenticated user** — tenant filtering is enforced by the policies (the service just queries; RLS scopes the rows), mirroring the mock's `filterShared` intent. Simplifies the service code.
-- Depends on #12/#13 (auth/session), #14 (RLS), #16 (RPC), #17 (types).
-- **Cutover:** keep `VITE_BACKEND=mock` as the dev default; exercise the wired services via contract/integration tests against the local stack. Full app flip stays clean (projection empty until Phase 3).
+> [!WARNING]
+> **Two decisions to resolve in #15's issue-audit:**
+> 1. **`requestAccess` under RLS** — a non-member can't insert their own pending row (`members_manage` is owner-only, #14). Needs a `request_access(token)` **security-definer RPC** (preferred, mirrors #16) or a narrow self-request policy.
+> 2. **Cutover / roadmap** — `roadmap.getRoadmap` stays `notImplemented`, so a global `VITE_BACKEND=supabase` flip would crash the roadmap page (breaking "UI unchanged"). Either (A) keep `mock` as the dev default and contract-test the 11 wired methods against the local stack, or (B) give roadmap a minimal empty supabase impl (reads the deny-all projection -> []) so the flip is clean app-wide. (B) is small given #64 exists.
+
+> [!NOTE]
+> Size: 11 methods across 3 domains. Could be tackled domain-by-domain within the one issue (projects -> invites -> submissions), each with a contract/integration test signing into the local stack.
 
 ## 3. Build order
-
-> [!IMPORTANT]
-> **#16 -> #17 -> #15** (#15 last). #16 and #17 are independent and may interleave; the invariant is #15 last, after RPC + types exist.
+`#15` is last; everything it depends on (auth, RLS, RPC, types) is shipped. No other open work.
 
 ## 4. Verdict
 
 > [!IMPORTANT]
-> **GO — continue with #16.** No new ambiguities, no scope changes. The foundation (auth, schema, RLS, reconciliation) is verified; the remaining three are well-specified and unblocked. Two clean issues (#16, #17) then the integration (#15).
+> **GO — build #15 to close Phase 2.** The foundation is complete and verified; #15 is the well-scoped integration finale. Resolve the two flagged decisions (requestAccess RPC, roadmap cutover) during #15's audit. After #15 merges, Phase 2 is done and Phase 3 (GitHub App & sync) becomes the next front — the projection tables and their types already exist, so Phase 3 fills them.
