@@ -2,7 +2,6 @@ import { env } from '@/config/env'
 import { mockDb } from '@/lib/mock'
 import { supabase } from '@/lib/supabase/client'
 import { auth } from '@/services/auth'
-import { notImplemented } from '../_shared/not-implemented'
 import type { RoadmapData } from './roadmap.dto'
 import { filterShared } from './roadmap.visibility'
 
@@ -50,9 +49,8 @@ const mock: RoadmapApi = {
   },
 }
 
-// Supabase: the projection is empty until the Phase 3 sync and deny-all until the Phase 4 allowlist,
-// so getRoadmap returns empty here -- enough for the app to run under VITE_BACKEND=supabase.
-// The share-picker writes stay notImplemented (unreachable with an empty roadmap; wired in Phase 4).
+// Supabase: getRoadmap reads the projection filtered by RLS (#26 -- owner sees all, member sees
+// only shared). The share-picker writes go through the owner-gated RPCs (#27).
 const supabaseApi: RoadmapApi = {
   async getRoadmap(projectId) {
     const { data: repos, error } = await supabase.from('project_repos').select('id').eq('project_id', projectId)
@@ -67,8 +65,18 @@ const supabaseApi: RoadmapApi = {
     if (iss.error) throw iss.error
     return { milestones: ms.data, issues: iss.data }
   },
-  setMilestoneShared: () => notImplemented('roadmap.setMilestoneShared'),
-  setIssueShared: () => notImplemented('roadmap.setIssueShared'),
+  async setMilestoneShared(milestoneId, shared, cascade = false) {
+    const { error } = await supabase.rpc('set_milestone_shared', { m: milestoneId, value: shared })
+    if (error) throw error
+    if (cascade) {
+      const { error: cascadeError } = await supabase.rpc('set_milestone_issues_shared', { m: milestoneId, value: shared })
+      if (cascadeError) throw cascadeError
+    }
+  },
+  async setIssueShared(issueId, shared) {
+    const { error } = await supabase.rpc('set_issue_shared', { i: issueId, value: shared })
+    if (error) throw error
+  },
 }
 
 export const roadmap: RoadmapApi = env.backend === 'supabase' ? supabaseApi : mock
