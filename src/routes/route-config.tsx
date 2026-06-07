@@ -7,10 +7,13 @@ import { WorkspacePage } from '@/pages/app/workspace/workspace-page'
 import { AdminPage } from '@/pages/app/admin/admin-page'
 import { RoadmapPage } from '@/pages/app/project/roadmap-page'
 import { SettingsPage } from '@/pages/app/settings/settings-page'
+import { GithubCallbackPage } from '@/pages/github/github-callback-page'
 
 export const routeConfig: RouteObject[] = [
   { path: '/', element: <LandingPage /> },
   { element: <GuestOnly />, children: [{ path: '/login', element: <LoginPage /> }] },
+  // Public: GitHub App post-install redirect target (#77). Handles auth itself.
+  { path: '/github/callback', element: <GithubCallbackPage /> },
   {
     element: <RequireAuth />,
     children: [

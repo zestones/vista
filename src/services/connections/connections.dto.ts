@@ -17,3 +17,10 @@ export interface AttachRepoInput {
   owner: string
   repo: string
 }
+
+/** A linked GitHub App installation, returned by connect-installation (#19/#77). */
+export interface InstallationLink {
+  id: string
+  installation_id: number
+  account_login: string
+}

@@ -1,7 +1,7 @@
 import { env } from '@/config/env'
 import { genRepo, mockDb } from '@/lib/mock'
 import { supabase } from '@/lib/supabase/client'
-import type { AttachRepoInput, AvailableRepo, ProjectRepoRow } from './connections.dto'
+import type { AttachRepoInput, AvailableRepo, InstallationLink, ProjectRepoRow } from './connections.dto'
 
 // Dev GitHub App install URL. Prod uses its own slug -- revisit when the prod App is registered (Phase 6).
 export const GITHUB_INSTALL_URL = 'https://github.com/apps/vista-local-dev/installations/new'
@@ -12,6 +12,8 @@ export interface ConnectionsApi {
   getAttachedRepos(projectId: string): Promise<ProjectRepoRow[]>
   attachRepo(input: AttachRepoInput): Promise<ProjectRepoRow>
   detachRepo(projectRepoId: string): Promise<void>
+  /** Link a GitHub App installation to the current owner (post-install callback, #77). */
+  connectInstallation(installationId: number): Promise<InstallationLink>
 }
 
 const MOCK_INSTALLATION_ID = 1
@@ -52,24 +54,28 @@ const mock: ConnectionsApi = {
     db.issues = db.issues.filter((i) => i.project_repo_id !== projectRepoId)
     return Promise.resolve()
   },
+  connectInstallation(installationId) {
+    // Mock has no real installations; return a stub so the callback flow works under mock.
+    return Promise.resolve({ id: crypto.randomUUID(), installation_id: installationId, account_login: 'mock-org' })
+  },
 }
 
 // Supabase: writes go through the connect-repos Edge function (service role, validated);
 // reads of attached repos use owner-read RLS (#20). Installation tokens never reach the client.
-async function invoke<T>(body: Record<string, unknown>): Promise<T> {
+async function invoke<T>(fn: string, body: Record<string, unknown>): Promise<T> {
   // supabase-js types the failure `error` as `any`; re-type it to keep the destructure safe.
-  const { data, error } = (await supabase.functions.invoke<T>('connect-repos', { body })) as {
+  const { data, error } = (await supabase.functions.invoke<T>(fn, { body })) as {
     data: T | null
     error: Error | null
   }
   if (error) throw error
-  if (data == null) throw new Error('connect-repos: empty response')
+  if (data == null) throw new Error(`${fn}: empty response`)
   return data
 }
 
 const supabaseApi: ConnectionsApi = {
   async listInstallationRepos() {
-    return (await invoke<{ repos: AvailableRepo[] }>({ action: 'list' })).repos
+    return (await invoke<{ repos: AvailableRepo[] }>('connect-repos', { action: 'list' })).repos
   },
   async getAttachedRepos(projectId) {
     const { data, error } = await supabase.from('project_repos').select('*').eq('project_id', projectId)
@@ -78,7 +84,7 @@ const supabaseApi: ConnectionsApi = {
   },
   async attachRepo({ projectId, installationId, owner, repo }) {
     return (
-      await invoke<{ projectRepo: ProjectRepoRow }>({
+      await invoke<{ projectRepo: ProjectRepoRow }>('connect-repos', {
         action: 'attach',
         project_id: projectId,
         installation_id: installationId,
@@ -88,7 +94,11 @@ const supabaseApi: ConnectionsApi = {
     ).projectRepo
   },
   async detachRepo(projectRepoId) {
-    await invoke<{ ok: true }>({ action: 'detach', project_repo_id: projectRepoId })
+    await invoke<{ ok: true }>('connect-repos', { action: 'detach', project_repo_id: projectRepoId })
+  },
+  async connectInstallation(installationId) {
+    return (await invoke<{ installation: InstallationLink }>('connect-installation', { installation_id: installationId }))
+      .installation
   },
 }
 
