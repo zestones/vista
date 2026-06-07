@@ -6,6 +6,7 @@ import { useCreateProject } from '../hooks/use-create-project'
 import { useInstallationRepos } from '@/features/project/github'
 import {
   Button,
+  Combobox,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -14,11 +15,6 @@ import {
   Input,
   Label,
   Segmented,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Switch,
   Textarea,
 } from '@/components/ui'
@@ -146,18 +142,15 @@ function NewProjectForm({ onDone }: { onDone: () => void }) {
               <p className='text-muted-ink text-xs'>{t('np.repoLoading')}</p>
             ) : repos.length > 0 ? (
               <>
-                <Select value={repoKey ?? undefined} onValueChange={setRepoKey}>
-                  <SelectTrigger aria-invalid={repoInvalid}>
-                    <SelectValue placeholder={t('np.repoSelectPh')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {repos.map((r) => (
-                      <SelectItem key={`${r.owner}/${r.repo}`} value={`${r.owner}/${r.repo}`}>
-                        {r.owner}/{r.repo}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Combobox
+                  value={repoKey}
+                  onChange={setRepoKey}
+                  options={repos.map((r) => ({ value: `${r.owner}/${r.repo}`, label: `${r.owner}/${r.repo}` }))}
+                  placeholder={t('np.repoSelectPh')}
+                  searchPlaceholder={t('np.repoSearch')}
+                  emptyText={t('np.repoNoMatch')}
+                  invalid={repoInvalid}
+                />
                 {repoInvalid && <span className='text-sig-coral text-xs'>{t('np.repoPick')}</span>}
               </>
             ) : (
