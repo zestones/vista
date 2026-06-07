@@ -33,12 +33,28 @@ export function SharePicker({ projectId }: { projectId: string }) {
   const preview = filterShared(data)
   const previewEmpty = preview.milestones.length === 0 && preview.issues.length === 0
   const previewUnscheduled = preview.issues.filter((i) => i.milestone_id === null).length
+  const hasItems = data.milestones.length > 0 || data.issues.length > 0
+  const allShared = hasItems && data.milestones.every((m) => m.shared) && data.issues.every((i) => i.shared)
 
   return (
     <div className='flex flex-col gap-6'>
-      <section>
-        <h2 className='text-ink text-lg font-medium'>{t('share.title')}</h2>
-        <p className='text-muted-ink mt-1 text-sm'>{t('share.subtitle')}</p>
+      <section className='flex items-start justify-between gap-4'>
+        <div>
+          <h2 className='text-ink text-lg font-medium'>{t('share.title')}</h2>
+          <p className='text-muted-ink mt-1 text-sm'>{t('share.subtitle')}</p>
+        </div>
+        {hasItems && (
+          <Button
+            variant={allShared ? 'secondary' : 'outline'}
+            size='sm'
+            className='shrink-0'
+            onClick={() => {
+              setShared.mutate({ kind: 'project', projectId, shared: !allShared })
+            }}
+          >
+            {allShared ? t('share.unshareEverything') : t('share.shareEverything')}
+          </Button>
+        )}
       </section>
 
       <div className='grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]'>
@@ -82,7 +98,8 @@ export function SharePicker({ projectId }: { projectId: string }) {
                           className={SWITCH_ON}
                           style={onColor(color)}
                           onCheckedChange={(v) => {
-                            setShared.mutate({ kind: 'issue', id: i.id, shared: v })
+                            // Coherence (#30): sharing an issue also shares its milestone, else it stays hidden.
+                            setShared.mutate({ kind: 'issue', id: i.id, shared: v, milestoneId: milestone.id })
                           }}
                         />
                         <span className='text-body min-w-0 truncate text-sm'>{i.title}</span>
@@ -122,7 +139,7 @@ export function SharePicker({ projectId }: { projectId: string }) {
           {previewEmpty ? (
             <p className='border-hairline text-muted-ink rounded-xl border border-dashed p-4 text-sm'>{t('share.previewEmpty')}</p>
           ) : (
-            <ul className='border-hairline bg-card overflow-hidden rounded-xl border'>
+            <ul className='border-hairline bg-card max-h-[calc(100vh-9rem)] overflow-y-auto rounded-xl border'>
               {preview.milestones.map((m) => (
                 <li key={m.id} className='border-hairline flex items-center gap-2.5 border-b p-3 text-sm last:border-b-0'>
                   <span className='size-2 shrink-0 rounded-[3px]' style={{ background: colorById.get(m.id) ?? INK }} />

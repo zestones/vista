@@ -10,6 +10,8 @@ export interface RoadmapApi {
   /** Owner allowlist curation (#4). `cascade` also flips the milestone's issues ("share whole milestone"). */
   setMilestoneShared(milestoneId: string, shared: boolean, cascade?: boolean): Promise<void>
   setIssueShared(issueId: string, shared: boolean): Promise<void>
+  /** Flip every milestone + issue under a project ("share everything"). */
+  setProjectShared(projectId: string, shared: boolean): Promise<void>
 }
 
 const mock: RoadmapApi = {
@@ -47,6 +49,13 @@ const mock: RoadmapApi = {
     if (issue) issue.shared = shared
     return Promise.resolve()
   },
+  setProjectShared(projectId, shared) {
+    const db = mockDb()
+    const repoIds = new Set(db.projectRepos.filter((r) => r.project_id === projectId).map((r) => r.id))
+    db.milestones.filter((m) => repoIds.has(m.project_repo_id)).forEach((m) => (m.shared = shared))
+    db.issues.filter((i) => repoIds.has(i.project_repo_id)).forEach((i) => (i.shared = shared))
+    return Promise.resolve()
+  },
 }
 
 // Supabase: getRoadmap reads the projection filtered by RLS (#26 -- owner sees all, member sees
@@ -57,9 +66,11 @@ const supabaseApi: RoadmapApi = {
     if (error) throw error
     const repoIds = repos.map((r) => r.id)
     if (repoIds.length === 0) return { milestones: [], issues: [] }
+    // Stable order (#4): without it Postgres returns rows in an arbitrary order that shifts after a
+    // `shared` UPDATE, making the share-picker/roadmap reshuffle on every toggle.
     const [ms, iss] = await Promise.all([
-      supabase.from('milestones').select('*').in('project_repo_id', repoIds),
-      supabase.from('issues').select('*').in('project_repo_id', repoIds),
+      supabase.from('milestones').select('*').in('project_repo_id', repoIds).order('number', { ascending: true }),
+      supabase.from('issues').select('*').in('project_repo_id', repoIds).order('number', { ascending: true }),
     ])
     if (ms.error) throw ms.error
     if (iss.error) throw iss.error
@@ -75,6 +86,10 @@ const supabaseApi: RoadmapApi = {
   },
   async setIssueShared(issueId, shared) {
     const { error } = await supabase.rpc('set_issue_shared', { i: issueId, value: shared })
+    if (error) throw error
+  },
+  async setProjectShared(projectId, shared) {
+    const { error } = await supabase.rpc('set_project_shared', { p: projectId, value: shared })
     if (error) throw error
   },
 }

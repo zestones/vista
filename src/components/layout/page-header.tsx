@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, PanelLeft } from 'lucide-react'
 import { useSidebar } from '@/contexts/sidebar.context'
@@ -26,6 +26,13 @@ interface PageHeaderProps {
 export function PageHeader({ title, description, actions, backTo, leading, center, className }: PageHeaderProps) {
   const { t } = useTranslation()
   const { toggle } = useSidebar()
+  const navigate = useNavigate()
+  const location = useLocation()
+  // Go to the actual previous page; fall back to `backTo.to` on a fresh load (no in-app history).
+  const goBack = () => {
+    if (location.key !== 'default') void navigate(-1)
+    else if (backTo) void navigate(backTo.to)
+  }
 
   const toggleEl = (
     <div className='hidden shrink-0 items-center gap-2.5 pt-0.5 lg:flex'>
@@ -43,14 +50,12 @@ export function PageHeader({ title, description, actions, backTo, leading, cente
           <Button
             variant='ghost'
             size='icon-sm'
-            asChild
+            onClick={goBack}
             aria-label={backTo.label}
             title={backTo.label}
             className='text-muted-ink -ml-1.5 shrink-0'
           >
-            <Link to={backTo.to}>
-              <ArrowLeft />
-            </Link>
+            <ArrowLeft />
           </Button>
         )}
         {leading}
