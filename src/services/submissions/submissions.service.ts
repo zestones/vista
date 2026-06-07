@@ -1,11 +1,13 @@
 import { env } from '@/config/env'
 import { mockDb } from '@/lib/mock'
 import { notImplemented } from '../_shared/not-implemented'
-import type { CreateSubmissionInput, SubmissionRow } from './submissions.dto'
+import type { CreateSubmissionInput, SubmissionRow, SubmissionStatus } from './submissions.dto'
 
 export interface SubmissionsApi {
   listSubmissions(projectId: string): Promise<SubmissionRow[]>
   createSubmission(input: CreateSubmissionInput): Promise<SubmissionRow>
+  /** Owner moderation (#6). Mock flips the row status; the real backend opens the GitHub issue in a later phase. */
+  setStatus(submissionId: string, status: SubmissionStatus): Promise<void>
 }
 
 let seq = 0
@@ -31,11 +33,17 @@ const mock: SubmissionsApi = {
     mockDb().submissions.push(row)
     return Promise.resolve(row)
   },
+  setStatus(submissionId, status) {
+    const sub = mockDb().submissions.find((s) => s.id === submissionId)
+    if (sub) sub.status = status
+    return Promise.resolve()
+  },
 }
 
 const supabase: SubmissionsApi = {
   listSubmissions: () => notImplemented('submissions.listSubmissions'),
   createSubmission: () => notImplemented('submissions.createSubmission'),
+  setStatus: () => notImplemented('submissions.setStatus'),
 }
 
 export const submissions: SubmissionsApi = env.backend === 'supabase' ? supabase : mock
