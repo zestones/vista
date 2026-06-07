@@ -10,6 +10,7 @@ import { Button } from '@/components/ui'
 import { LangToggle } from './lang-toggle'
 import { VistaMark } from '@/components/brand'
 import { cn } from '@/lib/utils'
+import { env } from '@/config/env'
 
 function NavItem({
   to,
@@ -66,9 +67,11 @@ function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; 
       <Link to='/app' onClick={onNavigate} className='text-ink mb-6 flex items-center gap-2.5 px-2'>
         <VistaMark />
         <span className='font-display text-[19px] font-semibold tracking-[-0.02em]'>Vista</span>
-        <span className='border-hairline text-muted-ink ml-auto rounded-sm border px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase'>
-          {t('side.mockBadge')}
-        </span>
+        {env.backend === 'mock' && (
+          <span className='border-hairline text-muted-ink ml-auto rounded-sm border px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase'>
+            {t('side.mockBadge')}
+          </span>
+        )}
       </Link>
 
       <nav className='flex flex-col gap-0.5'>
