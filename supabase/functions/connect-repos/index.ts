@@ -4,6 +4,7 @@
 // attach. Installation tokens never reach the browser.
 import { admin, requireUser, UnauthorizedError } from '../_shared/supabaseAdmin.ts'
 import { installationToken, listInstallationRepos } from '../_shared/github.ts'
+import { syncRepo } from '../_shared/sync.ts'
 import { jsonResponse, preflight } from '../_shared/cors.ts'
 
 interface AvailableRepo {
@@ -59,6 +60,14 @@ async function handleAttach(userId: string, body: Record<string, unknown>): Prom
   if (error) {
     if (error.code === '23505') return jsonResponse({ error: 'repo already attached' }, 409)
     return jsonResponse({ error: 'failed to attach repo' }, 500)
+  }
+
+  // Backfill immediately so the roadmap isn't empty until the hourly cron runs. A backfill
+  // hiccup must not fail the attach (the row is in; the cron will catch it) -- log and move on.
+  try {
+    await syncRepo(admin, data.id)
+  } catch (e) {
+    console.error('attach backfill failed', e instanceof Error ? e.message : e)
   }
   return jsonResponse({ projectRepo: data }, 201)
 }

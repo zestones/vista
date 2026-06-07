@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Lock, Plus, Settings } from 'lucide-react'
+import { Eye, Lock, Plus, Settings } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
+import { usePreview } from '@/contexts/preview.context'
 import { RoadmapGantt, RoadmapMobile, RoadmapOverview, useRoadmap } from '@/features/project/roadmap'
 import { useProjectAccess } from '@/features/project/dashboard'
 import { RequestModal } from '@/features/project/submission'
@@ -21,9 +22,18 @@ export function RoadmapPage() {
   const isMobile = useMediaQuery('(max-width: 700px)')
   const [tab, setTab] = useState<Tab>('gantt')
   const [requestOpen, setRequestOpen] = useState(false)
+  // Owner-only "render as a viewer" mode (#29). Lifted to the AppShell so the whole panel is framed.
+  const { active: preview, setActive: setPreview } = usePreview()
+  // Reset on project switch and when leaving the roadmap, so the frame never leaks to another page.
+  useEffect(() => {
+    setPreview(false)
+    return () => {
+      setPreview(false)
+    }
+  }, [id, setPreview])
 
   const access = useProjectAccess(id, user?.id ?? '')
-  const roadmap = useRoadmap(id)
+  const roadmap = useRoadmap(id, preview)
   const groups = roadmap.data?.groups ?? []
   const unscheduled = roadmap.data?.unscheduled ?? []
 
@@ -62,8 +72,30 @@ export function RoadmapPage() {
         leading={<span className='size-3.5 shrink-0 rounded' style={{ background: project.color ?? 'var(--color-ink)' }} />}
         title={project.name}
         description={project.description ?? undefined}
+        center={
+          preview ? (
+            <div className='flex items-center gap-2.5'>
+              <span className='bg-link inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-[11px] font-semibold tracking-wide text-white uppercase'>
+                <Eye size={12} /> {t('pd.clientView')}
+              </span>
+              <span className='text-muted-ink text-[13px]'>{t('pd.previewBanner')}</span>
+            </div>
+          ) : undefined
+        }
         actions={
           <>
+            {isOwner && (
+              <Button
+                variant={preview ? 'secondary' : 'outline'}
+                size='sm'
+                aria-pressed={preview}
+                onClick={() => {
+                  setPreview(!preview)
+                }}
+              >
+                <Eye /> {preview ? t('pd.exitPreview') : t('pd.previewAsClient')}
+              </Button>
+            )}
             {isOwner && (
               <Button variant='outline' size='sm' asChild>
                 <Link to={`/app/projects/${id}/settings`}>

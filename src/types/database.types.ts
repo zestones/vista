@@ -540,6 +540,10 @@ export type Database = {
         Args: { m: string; value: boolean }
         Returns: undefined
       }
+      set_project_shared: {
+        Args: { p: string; value: boolean }
+        Returns: undefined
+      }
     }
     Enums: {
       member_role: "owner" | "editor" | "viewer"

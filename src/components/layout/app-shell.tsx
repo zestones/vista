@@ -5,6 +5,7 @@ import { useAutoAnimate } from '@formkit/auto-animate/react'
 import { LayoutGrid, Menu, Plus, Shield } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { SidebarContext } from '@/contexts/sidebar.context'
+import { PreviewContext } from '@/contexts/preview.context'
 import { NewProjectModal, useWorkspace } from '@/features/workspace'
 import { Button } from '@/components/ui'
 import { LangToggle } from './lang-toggle'
@@ -75,7 +76,13 @@ function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; 
       </Link>
 
       <nav className='flex flex-col gap-0.5'>
-        <NavItem to='/app' active={pathname === '/app'} icon={<LayoutGrid size={16} />} label={t('side.overview')} onNavigate={onNavigate} />
+        <NavItem
+          to='/app'
+          active={pathname === '/app'}
+          icon={<LayoutGrid size={16} />}
+          label={t('side.overview')}
+          onNavigate={onNavigate}
+        />
         <NavItem
           to='/app/admin'
           active={pathname.startsWith('/app/admin')}
@@ -115,7 +122,9 @@ function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; 
 
       <div className='border-hairline mt-auto border-t pt-4'>
         <div className='flex items-center gap-2.5 px-1 py-2'>
-          <span className='bg-ink font-display grid size-9 shrink-0 place-items-center rounded-full font-semibold text-white'>{initial}</span>
+          <span className='bg-ink font-display grid size-9 shrink-0 place-items-center rounded-full font-semibold text-white'>
+            {initial}
+          </span>
           <div className='min-w-0 flex-1'>
             <div className='text-ink truncate text-[13px] font-semibold'>{user?.name}</div>
             <div className='text-muted-ink truncate text-[11px]'>{user?.email}</div>
@@ -144,6 +153,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [newOpen, setNewOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+  const [previewActive, setPreviewActive] = useState(false)
 
   const sidebar = useMemo(
     () => ({
@@ -154,63 +164,78 @@ export function AppShell({ children }: { children: ReactNode }) {
     }),
     [collapsed],
   )
+  const preview = useMemo(() => ({ active: previewActive, setActive: setPreviewActive }), [previewActive])
 
   return (
     <SidebarContext value={sidebar}>
-      {/* The page background carries the sidebar; the content sits on top as an inset panel. */}
-      <div className='bg-surface-sunken flex h-screen overflow-hidden lg:gap-2 lg:p-2'>
-        <aside
-          className={cn(
-            'hidden shrink-0 flex-col overflow-hidden transition-[width] duration-200 lg:flex',
-            collapsed ? 'w-0' : 'w-60',
-          )}
-        >
-          <SidebarContent
-            onNavigate={() => undefined}
-            onNewProject={() => {
-              setNewOpen(true)
-            }}
-          />
-        </aside>
-
-        <div className='border-hairline bg-background/90 fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b px-5 backdrop-blur lg:hidden'>
-          <Link to='/app' className='text-ink flex items-center gap-2'>
-            <VistaMark size={20} />
-            <span className='font-display text-[17px] font-semibold'>Vista</span>
-          </Link>
-          <Button
-            variant='outline'
-            size='sm'
-            aria-expanded={drawerOpen}
-            aria-label='Menu'
-            onClick={() => {
-              setDrawerOpen((d) => !d)
-            }}
+      <PreviewContext value={preview}>
+        {/* The page background carries the sidebar; the content sits on top as an inset panel. */}
+        <div className='bg-surface-sunken relative flex h-screen overflow-hidden lg:gap-2 lg:p-2'>
+          <aside
+            className={cn('hidden shrink-0 flex-col overflow-hidden transition-[width] duration-200 lg:flex', collapsed ? 'w-0' : 'w-60')}
           >
-            <Menu size={18} />
-          </Button>
-        </div>
-
-        {drawerOpen && (
-          <div className='border-hairline bg-surface-sunken fixed inset-x-0 top-14 z-30 max-h-[80vh] overflow-y-auto border-b p-4 lg:hidden'>
             <SidebarContent
-              onNavigate={() => {
-                setDrawerOpen(false)
-              }}
+              onNavigate={() => undefined}
               onNewProject={() => {
                 setNewOpen(true)
-                setDrawerOpen(false)
               }}
             />
+          </aside>
+
+          <div className='border-hairline bg-background/90 fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b px-5 backdrop-blur lg:hidden'>
+            <Link to='/app' className='text-ink flex items-center gap-2'>
+              <VistaMark size={20} />
+              <span className='font-display text-[17px] font-semibold'>Vista</span>
+            </Link>
+            <Button
+              variant='outline'
+              size='sm'
+              aria-expanded={drawerOpen}
+              aria-label='Menu'
+              onClick={() => {
+                setDrawerOpen((d) => !d)
+              }}
+            >
+              <Menu size={18} />
+            </Button>
           </div>
-        )}
 
-        <main className='bg-background flex-1 overflow-y-auto pt-14 lg:rounded-xl lg:border lg:border-hairline lg:pt-0 lg:shadow-sm'>
-          {children}
-        </main>
+          {drawerOpen && (
+            <div className='border-hairline bg-surface-sunken fixed inset-x-0 top-14 z-30 max-h-[80vh] overflow-y-auto border-b p-4 lg:hidden'>
+              <SidebarContent
+                onNavigate={() => {
+                  setDrawerOpen(false)
+                }}
+                onNewProject={() => {
+                  setNewOpen(true)
+                  setDrawerOpen(false)
+                }}
+              />
+            </div>
+          )}
 
-        <NewProjectModal open={newOpen} onOpenChange={setNewOpen} />
-      </div>
+          {/* Preview "spotlight": dim the sidebar + surrounding canvas so the client-view panel pops (#29). */}
+          <div
+            aria-hidden='true'
+            className={cn(
+              'pointer-events-none absolute inset-0 z-10 bg-black/60 transition-opacity duration-300',
+              previewActive ? 'opacity-100' : 'opacity-0',
+            )}
+          />
+
+          {/* In owner preview (#29) the panel takes a bright link-accent hairline + soft ring glow, lifted above the dim. */}
+          <main
+            className={cn(
+              'bg-background relative z-20 flex-1 overflow-y-auto pt-14 transition-[border-color,box-shadow] duration-300 lg:rounded-xl lg:border lg:pt-0 lg:shadow-sm',
+              previewActive ? 'lg:border-link/80 lg:ring-2 lg:ring-link/40' : 'lg:border-hairline',
+            )}
+          >
+            {children}
+          </main>
+
+          <NewProjectModal open={newOpen} onOpenChange={setNewOpen} />
+        </div>
+      </PreviewContext>
     </SidebarContext>
   )
 }
