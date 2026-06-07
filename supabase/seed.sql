@@ -1,0 +1,3 @@
+-- Local seed data for `supabase db reset` (config: [db.seed] sql_paths = ["./seed.sql"]).
+-- Placeholder for #10: the harness is in place but there are no tables yet.
+-- Real seed rows (mirroring src/lib/mock/seed.ts) land alongside the schema in #11.
