@@ -1,6 +1,6 @@
 import { env } from '@/config/env'
 import { mockDb } from '@/lib/mock'
-import { notImplemented } from '../_shared/not-implemented'
+import { supabase } from '@/lib/supabase/client'
 import type { CreateSubmissionInput, SubmissionRow, SubmissionStatus } from './submissions.dto'
 
 export interface SubmissionsApi {
@@ -42,10 +42,37 @@ const mock: SubmissionsApi = {
   },
 }
 
-const supabase: SubmissionsApi = {
-  listSubmissions: () => notImplemented('submissions.listSubmissions'),
-  createSubmission: () => notImplemented('submissions.createSubmission'),
-  setStatus: () => notImplemented('submissions.setStatus'),
+// Supabase: RLS gates these (insert -> editor+, read -> owner/author, update -> owner).
+const supabaseApi: SubmissionsApi = {
+  async listSubmissions(projectId) {
+    const { data, error } = await supabase
+      .from('submissions')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data
+  },
+  async createSubmission(input) {
+    const { data, error } = await supabase
+      .from('submissions')
+      .insert({
+        project_id: input.projectId,
+        type: input.type,
+        title: input.title,
+        body: input.body ?? null,
+        submitter_name: input.submitterName ?? null,
+        submitter_email: input.submitterEmail ?? null,
+      })
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+  async setStatus(submissionId, status) {
+    const { error } = await supabase.from('submissions').update({ status }).eq('id', submissionId)
+    if (error) throw error
+  },
 }
 
-export const submissions: SubmissionsApi = env.backend === 'supabase' ? supabase : mock
+export const submissions: SubmissionsApi = env.backend === 'supabase' ? supabaseApi : mock

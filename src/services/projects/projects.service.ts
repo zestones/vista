@@ -1,6 +1,6 @@
 import { env } from '@/config/env'
 import { genRepo, mockDb, PROJECT_PALETTE, type MockDb } from '@/lib/mock'
-import { notImplemented } from '../_shared/not-implemented'
+import { supabase } from '@/lib/supabase/client'
 import type { AuthUser } from '@/services/auth'
 import type { NewProjectInput, OwnedJoinedProjects, ProjectAccess, ProjectRow, ProjectSummary, ProjectUpdate } from './projects.dto'
 
@@ -122,13 +122,51 @@ const mock: ProjectsApi = {
   },
 }
 
-const supabase: ProjectsApi = {
-  getProjectsForUser: () => notImplemented('projects.getProjectsForUser'),
-  getProject: () => notImplemented('projects.getProject'),
-  getProjectAccess: () => notImplemented('projects.getProjectAccess'),
-  createProject: () => notImplemented('projects.createProject'),
-  updateProject: () => notImplemented('projects.updateProject'),
-  deleteProject: () => notImplemented('projects.deleteProject'),
+// Supabase: thin queries (RLS scopes the rows); aggregates + the atomic create go through RPCs.
+const supabaseApi: ProjectsApi = {
+  async getProjectsForUser() {
+    const { data, error } = await supabase.rpc('get_projects_for_user')
+    if (error) throw error
+    return (data ?? { owned: [], joined: [] }) as unknown as OwnedJoinedProjects
+  },
+  async getProject(id) {
+    const { data, error } = await supabase.from('projects').select('*').eq('id', id).maybeSingle()
+    if (error) throw error
+    return data
+  },
+  async getProjectAccess(id, userId) {
+    const { data: project, error } = await supabase.from('projects').select('*').eq('id', id).maybeSingle()
+    if (error) throw error
+    if (!project) return null
+    const { data: members, error: mErr } = await supabase.from('project_members').select('role, status, user_id').eq('project_id', id)
+    if (mErr) throw mErr
+    const mine = members.find((m) => m.user_id === userId)
+    return {
+      project,
+      membership: mine ? { role: mine.role, status: mine.status } : null,
+      activeMembers: members.filter((m) => m.status === 'active').length,
+      pendingMembers: members.filter((m) => m.status === 'pending').length,
+    }
+  },
+  async createProject(input) {
+    const { data, error } = await supabase.rpc('create_project', {
+      p_name: input.name.trim(),
+      p_description: input.description.trim(),
+      p_visibility: input.visibility,
+      p_available: input.availableOnVista,
+    })
+    if (error) throw error
+    return data
+  },
+  async updateProject(id, patch) {
+    const { data, error } = await supabase.from('projects').update(patch).eq('id', id).select().single()
+    if (error) throw error
+    return data
+  },
+  async deleteProject(id) {
+    const { error } = await supabase.from('projects').delete().eq('id', id)
+    if (error) throw error
+  },
 }
 
-export const projects: ProjectsApi = env.backend === 'supabase' ? supabase : mock
+export const projects: ProjectsApi = env.backend === 'supabase' ? supabaseApi : mock
