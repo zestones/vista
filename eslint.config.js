@@ -7,7 +7,8 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', 'legacy', 'src/types/database.types.ts']),
+  // supabase/functions is Deno (npm:/Deno globals); linted by `deno lint`, not eslint.
+  globalIgnores(['dist', 'legacy', 'src/types/database.types.ts', 'supabase/functions']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
