@@ -163,10 +163,11 @@ export function buildSeed(): MockDb {
       role: 'owner',
       status: 'active',
       invited_at: now,
+      decided_at: null,
     })
     d.repos.forEach(([owner, repo], ri) => {
       const prId = `${d.id}-repo-${String(ri + 1)}`
-      db.projectRepos.push({ id: prId, project_id: d.id, installation_id: null, owner, repo, github_repo_id: null, created_at: now })
+      db.projectRepos.push({ id: prId, project_id: d.id, installation_id: 0, owner, repo, github_repo_id: null, created_at: now })
       const { milestones, issues } = genRepo(prId, `${d.id}:${owner}/${repo}`)
       db.milestones.push(...milestones)
       db.issues.push(...issues)
@@ -186,6 +187,8 @@ export function buildSeed(): MockDb {
     status: 'pending',
     github_issue_number: null,
     created_at: now,
+    decided_at: null,
+    decided_by: null,
   })
 
   return db

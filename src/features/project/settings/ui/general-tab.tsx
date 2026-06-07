@@ -5,7 +5,7 @@ import { Check, Trash2 } from 'lucide-react'
 import { Button, Input, Label, Segmented, Switch, Textarea } from '@/components/ui'
 import { useDeleteProject, useUpdateProject } from '../hooks/use-project-settings'
 import type { ProjectRow } from '@/services/projects'
-import type { ProjectVisibility } from '@/types/database.types'
+import type { ProjectVisibility } from '@/services/projects'
 
 /** One settings row: a label column (title + hint) beside its controls -- fills the width while keeping inputs readable. */
 function Row({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {

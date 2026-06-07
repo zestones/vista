@@ -79,6 +79,7 @@ const mock: ProjectsApi = {
       role: 'owner',
       status: 'active',
       invited_at: now,
+      decided_at: null,
     })
 
     // Mock: every new project gets a sample roadmap so it is never empty.
@@ -89,7 +90,7 @@ const mock: ProjectsApi = {
     db.projectRepos.push({
       id: repoId,
       project_id: id,
-      installation_id: null,
+      installation_id: 0, // mock sentinel; the real installation_id is set by the GitHub App (Phase 3)
       owner: repoOwner,
       repo: repoName.replace(/\/.*$/, ''),
       github_repo_id: null,

@@ -29,6 +29,8 @@ const mock: SubmissionsApi = {
       status: 'pending',
       github_issue_number: null,
       created_at: new Date().toISOString(),
+      decided_at: null,
+      decided_by: null,
     }
     mockDb().submissions.push(row)
     return Promise.resolve(row)

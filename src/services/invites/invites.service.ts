@@ -41,6 +41,7 @@ const mock: InvitesApi = {
       role: 'viewer',
       status: 'pending',
       invited_at: new Date().toISOString(),
+      decided_at: null,
     })
     return Promise.resolve({ status: 'requested' })
   },
