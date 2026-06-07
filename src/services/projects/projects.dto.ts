@@ -41,9 +41,8 @@ export interface OwnedJoinedProjects {
 export interface NewProjectInput {
   name: string
   description: string
+  /** Demo seeds a sample roadmap; github starts empty and attaches repos via the connect flow (#20). */
   source: 'mock' | 'github'
-  /** "owner/repo" when source is github; ignored otherwise. */
-  repo: string
   visibility: ProjectVisibility
   availableOnVista: boolean
 }

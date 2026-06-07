@@ -92,3 +92,27 @@ export async function getInstallation(installationId: number): Promise<Installat
   if (!res.ok) throw new Error(`get installation ${installationId} failed: ${res.status} ${await res.text()}`)
   return (await res.json()) as Installation
 }
+
+export interface InstallationRepo {
+  id: number
+  name: string
+  full_name: string
+  owner: { login: string }
+  private: boolean
+}
+
+/**
+ * Repositories an installation can access (installation-token auth, not the App JWT).
+ * One page (<=100) -- enough for the MVP; paginate here if an install exceeds that.
+ */
+export async function listInstallationRepos(token: string): Promise<InstallationRepo[]> {
+  const res = await fetch(`${GITHUB_API}/installation/repositories?per_page=100`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  })
+  if (!res.ok) throw new Error(`list installation repositories failed: ${res.status} ${await res.text()}`)
+  return ((await res.json()) as { repositories: InstallationRepo[] }).repositories
+}

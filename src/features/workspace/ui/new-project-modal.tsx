@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { LayoutGrid } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { useCreateProject } from '../hooks/use-create-project'
+import { useInstallationRepos } from '@/features/project/github'
 import {
   Button,
   Dialog,
@@ -13,14 +14,20 @@ import {
   Input,
   Label,
   Segmented,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Switch,
   Textarea,
 } from '@/components/ui'
 import { GitHubMark } from '@/components/brand'
 import { cn } from '@/lib/utils'
+import { GITHUB_INSTALL_URL } from '@/services/connections'
 import type { NewProjectInput } from '@/services/projects'
 
-const EMPTY: NewProjectInput = { name: '', description: '', source: 'mock', repo: '', visibility: 'private', availableOnVista: true }
+const EMPTY: NewProjectInput = { name: '', description: '', source: 'mock', visibility: 'private', availableOnVista: true }
 
 function SourceCard({
   active,
@@ -57,15 +64,24 @@ function NewProjectForm({ onDone }: { onDone: () => void }) {
   const { user } = useAuth()
   const create = useCreateProject()
   const [form, setForm] = useState<NewProjectInput>(EMPTY)
+  const [repoKey, setRepoKey] = useState<string | null>(null)
   const [touched, setTouched] = useState(false)
 
+  // Fetch the installation's repos only once the GitHub source is chosen.
+  const reposQuery = useInstallationRepos(form.source === 'github')
+  const repos = reposQuery.data ?? []
+  const selectedRepo = repos.find((r) => `${r.owner}/${r.repo}` === repoKey)
+
   const nameInvalid = touched && form.name.trim() === ''
-  const repoInvalid = touched && form.source === 'github' && !form.repo.includes('/')
+  // A github project with repos available must pick one; with none available, create empty + connect later.
+  const repoInvalid = touched && form.source === 'github' && repos.length > 0 && !selectedRepo
 
   const submit = () => {
     setTouched(true)
-    if (form.name.trim() === '' || (form.source === 'github' && !form.repo.includes('/')) || !user) return
-    create.mutate({ input: form, owner: user }, { onSuccess: onDone })
+    if (form.name.trim() === '' || !user) return
+    if (form.source === 'github' && repos.length > 0 && !selectedRepo) return
+    const repo = form.source === 'github' ? selectedRepo : undefined
+    create.mutate({ input: form, owner: user, repo }, { onSuccess: onDone })
   }
 
   return (
@@ -126,15 +142,34 @@ function NewProjectForm({ onDone }: { onDone: () => void }) {
         </div>
         {form.source === 'github' && (
           <div className='mt-1 flex flex-col gap-1.5'>
-            <Input
-              value={form.repo}
-              onChange={(e) => {
-                setForm((f) => ({ ...f, repo: e.target.value }))
-              }}
-              placeholder={t('np.repoPh')}
-              aria-invalid={repoInvalid}
-            />
-            {repoInvalid && <span className='text-sig-coral text-xs'>{t('np.repo')}</span>}
+            {reposQuery.isLoading ? (
+              <p className='text-muted-ink text-xs'>{t('np.repoLoading')}</p>
+            ) : repos.length > 0 ? (
+              <>
+                <Select value={repoKey ?? undefined} onValueChange={setRepoKey}>
+                  <SelectTrigger aria-invalid={repoInvalid}>
+                    <SelectValue placeholder={t('np.repoSelectPh')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {repos.map((r) => (
+                      <SelectItem key={`${r.owner}/${r.repo}`} value={`${r.owner}/${r.repo}`}>
+                        {r.owner}/{r.repo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {repoInvalid && <span className='text-sig-coral text-xs'>{t('np.repoPick')}</span>}
+              </>
+            ) : (
+              <div className='border-hairline flex flex-col items-start gap-2 rounded-md border p-3'>
+                <p className='text-muted-ink text-xs'>{t('np.repoConnectHint')}</p>
+                <Button variant='outline' size='sm' asChild>
+                  <a href={GITHUB_INSTALL_URL} target='_blank' rel='noreferrer'>
+                    <GitHubMark size={14} /> {t('np.repoConnect')}
+                  </a>
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
