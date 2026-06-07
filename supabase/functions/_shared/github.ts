@@ -71,3 +71,24 @@ export async function installationToken(installationId: number): Promise<string>
   tokenCache.set(installationId, { token: body.token, expiresAt: Date.parse(body.expires_at) })
   return body.token
 }
+
+export interface Installation {
+  id: number
+  account: { login: string } | null
+}
+
+/**
+ * Fetch an installation by id (App JWT auth). Used by connect-installation (#19) to
+ * verify the install exists and read the account it targets. Throws on non-2xx.
+ */
+export async function getInstallation(installationId: number): Promise<Installation> {
+  const res = await fetch(`${GITHUB_API}/app/installations/${installationId}`, {
+    headers: {
+      Authorization: `Bearer ${await appJwt()}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  })
+  if (!res.ok) throw new Error(`get installation ${installationId} failed: ${res.status} ${await res.text()}`)
+  return (await res.json()) as Installation
+}
