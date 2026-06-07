@@ -53,6 +53,7 @@ describe('project dashboard + settings (#52)', () => {
       role: 'viewer',
       status: 'active',
       invited_at: new Date().toISOString(),
+      decided_at: null,
     })
     await auth.signInWithEmail('viewer@client.com')
     renderAt('/app/projects/prj-apollo')

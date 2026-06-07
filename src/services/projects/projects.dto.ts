@@ -1,4 +1,9 @@
-import type { Database, MemberRole, MemberStatus, ProjectVisibility } from '@/types/database.types'
+import type { Database, Enums } from '@/types/database.types'
+
+// Convenience enum aliases, derived from the generated types (which expose enums under `Enums`).
+export type MemberRole = Enums<'member_role'>
+export type MemberStatus = Enums<'member_status'>
+export type ProjectVisibility = Enums<'project_visibility'>
 
 export type ProjectRow = Database['public']['Tables']['projects']['Row']
 
