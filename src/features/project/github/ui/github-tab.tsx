@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ExternalLink, Plus, X } from 'lucide-react'
-import { Button } from '@/components/ui'
+import { Button, Input } from '@/components/ui'
 import { GitHubMark } from '@/components/brand'
 import { GITHUB_INSTALL_URL, type AvailableRepo } from '@/services/connections'
 import { useAttachRepo, useAttachedRepos, useDetachRepo, useInstallationRepos } from '../hooks/use-connections'
@@ -11,9 +12,11 @@ export function GithubTab({ projectId }: { projectId: string }) {
   const attached = useAttachedRepos(projectId)
   const attach = useAttachRepo(projectId)
   const detach = useDetachRepo(projectId)
+  const [query, setQuery] = useState('')
 
   const attachedKeys = new Set((attached.data ?? []).map((r) => `${r.owner}/${r.repo}`))
   const toAttach = (available.data ?? []).filter((r) => !attachedKeys.has(`${r.owner}/${r.repo}`))
+  const visible = toAttach.filter((r) => `${r.owner}/${r.repo}`.toLowerCase().includes(query.trim().toLowerCase()))
 
   const attachOne = (r: AvailableRepo) =>
     attach.mutate({ projectId, installationId: r.installation_id, owner: r.owner, repo: r.repo })
@@ -61,19 +64,35 @@ export function GithubTab({ projectId }: { projectId: string }) {
         {available.isLoading ? (
           <p className='text-muted-ink px-6 py-4 text-[13px]'>{t('ps.gh.loading')}</p>
         ) : toAttach.length > 0 ? (
-          <ul className='divide-hairline divide-y'>
-            {toAttach.map((r) => (
-              <li key={`${r.owner}/${r.repo}`} className='flex items-center justify-between px-6 py-3'>
-                <span className='text-ink text-sm'>
-                  {r.owner}/{r.repo}
-                  {r.private ? <span className='text-muted-ink ml-2 text-xs'>{t('ps.gh.private')}</span> : null}
-                </span>
-                <Button variant='outline' size='sm' onClick={() => attachOne(r)} disabled={attach.isPending}>
-                  <Plus size={15} /> {t('ps.gh.attach')}
-                </Button>
-              </li>
-            ))}
-          </ul>
+          <div>
+            <div className='border-hairline border-b p-3'>
+              <Input
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value)
+                }}
+                placeholder={t('ps.gh.search')}
+                className='h-8'
+              />
+            </div>
+            {visible.length > 0 ? (
+              <ul className='divide-hairline divide-y'>
+                {visible.map((r) => (
+                  <li key={`${r.owner}/${r.repo}`} className='flex items-center justify-between px-6 py-3'>
+                    <span className='text-ink text-sm'>
+                      {r.owner}/{r.repo}
+                      {r.private ? <span className='text-muted-ink ml-2 text-xs'>{t('ps.gh.private')}</span> : null}
+                    </span>
+                    <Button variant='outline' size='sm' onClick={() => attachOne(r)} disabled={attach.isPending}>
+                      <Plus size={15} /> {t('ps.gh.attach')}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className='text-muted-ink px-6 py-4 text-[13px]'>{t('ps.gh.noMatch')}</p>
+            )}
+          </div>
         ) : (
           <div className='px-6 py-5'>
             <p className='text-muted-ink text-[13px]'>{t('ps.gh.noRepos')}</p>
