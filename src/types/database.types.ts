@@ -480,6 +480,30 @@ export type Database = {
         Args: { p_email: string; p_uid: string }
         Returns: undefined
       }
+      create_project: {
+        Args: {
+          p_available: boolean
+          p_description: string
+          p_name: string
+          p_visibility: Database["public"]["Enums"]["project_visibility"]
+        }
+        Returns: {
+          available_on_vista: boolean
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          owner_id: string
+          visibility: Database["public"]["Enums"]["project_visibility"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "projects"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_project_by_token: {
         Args: { p_token: string }
         Returns: {
@@ -490,6 +514,7 @@ export type Database = {
           name: string
         }[]
       }
+      get_projects_for_user: { Args: never; Returns: Json }
       has_role: {
         Args: {
           min_role: Database["public"]["Enums"]["member_role"]
@@ -499,6 +524,7 @@ export type Database = {
       }
       is_active_member: { Args: { p: string }; Returns: boolean }
       is_owner: { Args: { p: string }; Returns: boolean }
+      request_access: { Args: { p_token: string }; Returns: string }
     }
     Enums: {
       member_role: "owner" | "editor" | "viewer"

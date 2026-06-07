@@ -1,5 +1,6 @@
 import { env } from '@/config/env'
 import { mockDb } from '@/lib/mock'
+import { supabase } from '@/lib/supabase/client'
 import { auth } from '@/services/auth'
 import { notImplemented } from '../_shared/not-implemented'
 import type { RoadmapData } from './roadmap.dto'
@@ -49,10 +50,25 @@ const mock: RoadmapApi = {
   },
 }
 
-const supabase: RoadmapApi = {
-  getRoadmap: () => notImplemented('roadmap.getRoadmap'),
+// Supabase: the projection is empty until the Phase 3 sync and deny-all until the Phase 4 allowlist,
+// so getRoadmap returns empty here -- enough for the app to run under VITE_BACKEND=supabase.
+// The share-picker writes stay notImplemented (unreachable with an empty roadmap; wired in Phase 4).
+const supabaseApi: RoadmapApi = {
+  async getRoadmap(projectId) {
+    const { data: repos, error } = await supabase.from('project_repos').select('id').eq('project_id', projectId)
+    if (error) throw error
+    const repoIds = repos.map((r) => r.id)
+    if (repoIds.length === 0) return { milestones: [], issues: [] }
+    const [ms, iss] = await Promise.all([
+      supabase.from('milestones').select('*').in('project_repo_id', repoIds),
+      supabase.from('issues').select('*').in('project_repo_id', repoIds),
+    ])
+    if (ms.error) throw ms.error
+    if (iss.error) throw iss.error
+    return { milestones: ms.data, issues: iss.data }
+  },
   setMilestoneShared: () => notImplemented('roadmap.setMilestoneShared'),
   setIssueShared: () => notImplemented('roadmap.setIssueShared'),
 }
 
-export const roadmap: RoadmapApi = env.backend === 'supabase' ? supabase : mock
+export const roadmap: RoadmapApi = env.backend === 'supabase' ? supabaseApi : mock

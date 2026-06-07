@@ -1,6 +1,6 @@
 import { env } from '@/config/env'
 import { mockDb } from '@/lib/mock'
-import { notImplemented } from '../_shared/not-implemented'
+import { supabase } from '@/lib/supabase/client'
 import type { AuthUser } from '@/services/auth'
 import type { JoinProjectView, MembershipStatus, RequestAccessResult } from './invites.dto'
 
@@ -12,7 +12,7 @@ export interface InvitesApi {
 }
 
 // MOCK: the token is the project id, and only projects exposed on Vista are joinable.
-// The real backend will resolve opaque, revocable invite tokens via an `invites` table.
+// The real backend resolves opaque, revocable invite tokens via the `project_invites` table.
 const mock: InvitesApi = {
   getProjectByToken(token, userEmail) {
     const db = mockDb()
@@ -47,9 +47,31 @@ const mock: InvitesApi = {
   },
 }
 
-const supabase: InvitesApi = {
-  getProjectByToken: () => notImplemented('invites.getProjectByToken'),
-  requestAccess: () => notImplemented('invites.requestAccess'),
+// Supabase: the token RPC (#16) returns only public fields; membership is the caller's own row.
+const supabaseApi: InvitesApi = {
+  async getProjectByToken(token, userEmail) {
+    const { data, error } = await supabase.rpc('get_project_by_token', { p_token: token })
+    if (error) throw error
+    const row = data.at(0)
+    if (!row) return null
+    const { data: mine } = await supabase
+      .from('project_members')
+      .select('status')
+      .eq('project_id', row.id)
+      .ilike('email', userEmail)
+      .maybeSingle()
+    const membership: MembershipStatus = mine?.status === 'active' ? 'member' : mine?.status === 'pending' ? 'pending' : 'idle'
+    return {
+      project: { id: row.id, name: row.name, description: row.description, color: row.color },
+      activeMembers: row.member_count,
+      membership,
+    }
+  },
+  async requestAccess(token) {
+    const { data, error } = await supabase.rpc('request_access', { p_token: token })
+    if (error) throw error
+    return { status: data as RequestAccessResult['status'] }
+  },
 }
 
-export const invites: InvitesApi = env.backend === 'supabase' ? supabase : mock
+export const invites: InvitesApi = env.backend === 'supabase' ? supabaseApi : mock
