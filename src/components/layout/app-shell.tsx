@@ -170,7 +170,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <SidebarContext value={sidebar}>
       <PreviewContext value={preview}>
         {/* The page background carries the sidebar; the content sits on top as an inset panel. */}
-        <div className='bg-surface-sunken flex h-screen overflow-hidden lg:gap-2 lg:p-2'>
+        <div className='bg-surface-sunken relative flex h-screen overflow-hidden lg:gap-2 lg:p-2'>
           <aside
             className={cn('hidden shrink-0 flex-col overflow-hidden transition-[width] duration-200 lg:flex', collapsed ? 'w-0' : 'w-60')}
           >
@@ -214,10 +214,19 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           )}
 
-          {/* In owner preview (#29) the panel takes a bright link-accent hairline + soft ring glow. */}
+          {/* Preview "spotlight": dim the sidebar + surrounding canvas so the client-view panel pops (#29). */}
+          <div
+            aria-hidden='true'
+            className={cn(
+              'pointer-events-none absolute inset-0 z-10 bg-black/60 transition-opacity duration-300',
+              previewActive ? 'opacity-100' : 'opacity-0',
+            )}
+          />
+
+          {/* In owner preview (#29) the panel takes a bright link-accent hairline + soft ring glow, lifted above the dim. */}
           <main
             className={cn(
-              'bg-background flex-1 overflow-y-auto pt-14 transition-[border-color,box-shadow] duration-300 lg:rounded-xl lg:border lg:pt-0 lg:shadow-sm',
+              'bg-background relative z-20 flex-1 overflow-y-auto pt-14 transition-[border-color,box-shadow] duration-300 lg:rounded-xl lg:border lg:pt-0 lg:shadow-sm',
               previewActive ? 'lg:border-link/80 lg:ring-2 lg:ring-link/40' : 'lg:border-hairline',
             )}
           >
