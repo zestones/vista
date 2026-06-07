@@ -5,7 +5,6 @@ export type Json =
   | null
   | { [key: string]: Json | undefined }
   | Json[]
-
 export type Database = {
   graphql_public: {
     Tables: {
@@ -523,8 +522,24 @@ export type Database = {
         Returns: boolean
       }
       is_active_member: { Args: { p: string }; Returns: boolean }
+      is_milestone_shared: { Args: { m: string }; Returns: boolean }
       is_owner: { Args: { p: string }; Returns: boolean }
+      is_project_published: { Args: { p: string }; Returns: boolean }
+      is_repo_visible_to_member: { Args: { pr: string }; Returns: boolean }
       request_access: { Args: { p_token: string }; Returns: string }
+      resync_all_repos: { Args: never; Returns: undefined }
+      set_issue_shared: {
+        Args: { i: string; value: boolean }
+        Returns: undefined
+      }
+      set_milestone_issues_shared: {
+        Args: { m: string; value: boolean }
+        Returns: undefined
+      }
+      set_milestone_shared: {
+        Args: { m: string; value: boolean }
+        Returns: undefined
+      }
     }
     Enums: {
       member_role: "owner" | "editor" | "viewer"
@@ -538,11 +553,8 @@ export type Database = {
     }
   }
 }
-
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
-
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
@@ -571,7 +583,6 @@ export type Tables<
       ? R
       : never
     : never
-
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
@@ -596,7 +607,6 @@ export type TablesInsert<
       ? I
       : never
     : never
-
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
@@ -621,7 +631,6 @@ export type TablesUpdate<
       ? U
       : never
     : never
-
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
@@ -638,7 +647,6 @@ export type Enums<
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
-
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
@@ -655,7 +663,6 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
-
 export const Constants = {
   graphql_public: {
     Enums: {},
@@ -670,4 +677,3 @@ export const Constants = {
     },
   },
 } as const
-
