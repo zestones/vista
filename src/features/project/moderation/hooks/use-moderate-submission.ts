@@ -1,14 +1,20 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { submissions, type SubmissionStatus } from '@/services/submissions'
+import { submissions, type ApproveOptions } from '@/services/submissions'
 import { submissionKeys } from '@/lib/query-keys/submission.keys'
 
-type ModerateVars = { id: string; status: SubmissionStatus }
+export type ModerateVars = ({ decision: 'approve'; id: string } & ApproveOptions) | { decision: 'deny'; id: string }
 
-/** Approve/deny a submission (#6), then refresh the project's inbox. */
+/**
+ * Approve or deny a submission (#32), then refresh the inbox.
+ * Approve goes through the `create-issue` edge (opens the GitHub issue); deny is a status flip.
+ */
 export function useModerateSubmission(projectId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (v: ModerateVars) => submissions.setStatus(v.id, v.status),
+    mutationFn: (v: ModerateVars) =>
+      v.decision === 'approve'
+        ? submissions.approveSubmission(v.id, { projectRepoId: v.projectRepoId, milestoneNumber: v.milestoneNumber })
+        : submissions.setStatus(v.id, 'denied'),
     onSuccess: () => qc.invalidateQueries({ queryKey: submissionKeys.byProject(projectId) }),
   })
 }

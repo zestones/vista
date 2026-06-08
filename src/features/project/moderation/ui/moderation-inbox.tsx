@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import toast from 'react-hot-toast'
 import { Check, X } from 'lucide-react'
 import type { SubmissionRow, SubmissionType } from '@/services/submissions'
 import { Badge, Button } from '@/components/ui'
@@ -45,8 +46,12 @@ export function ModerationInbox({ projectId }: { projectId: string }) {
               key={s.id}
               sub={s}
               disabled={moderate.isPending}
-              onModerate={(status) => {
-                moderate.mutate({ id: s.id, status })
+              onModerate={(decision) => {
+                // Target repo: #32 auto-resolves a sole repo; the #33 picker will supply it for multi-repo.
+                moderate.mutate(decision === 'approve' ? { decision: 'approve', id: s.id } : { decision: 'deny', id: s.id }, {
+                  onSuccess: () => toast.success(t(decision === 'approve' ? 'mod.approved' : 'mod.denied')),
+                  onError: (e) => toast.error(e instanceof Error && e.message ? e.message : t('mod.error')),
+                })
               }}
             />
           ))}
@@ -63,7 +68,7 @@ function SubmissionCard({
 }: {
   sub: SubmissionRow
   disabled: boolean
-  onModerate: (status: 'approved' | 'denied') => void
+  onModerate: (decision: 'approve' | 'deny') => void
 }) {
   const { t } = useTranslation()
   const author = sub.submitter_name ?? sub.submitter_email ?? t('mod.anon')
@@ -84,7 +89,7 @@ function SubmissionCard({
           size='sm'
           disabled={disabled}
           onClick={() => {
-            onModerate('denied')
+            onModerate('deny')
           }}
         >
           <X /> {t('mod.deny')}
@@ -93,7 +98,7 @@ function SubmissionCard({
           size='sm'
           disabled={disabled}
           onClick={() => {
-            onModerate('approved')
+            onModerate('approve')
           }}
         >
           <Check /> {t('mod.approve')}

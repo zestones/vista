@@ -3,11 +3,19 @@ import { mockDb } from '@/lib/mock'
 import { supabase } from '@/lib/supabase/client'
 import type { CreateSubmissionInput, SubmissionRow, SubmissionStatus } from './submissions.dto'
 
+/** Approve options (#32): the owner picks the target repo (a sole repo is auto-resolved) + an optional milestone. */
+export interface ApproveOptions {
+  projectRepoId?: string
+  milestoneNumber?: number
+}
+
 export interface SubmissionsApi {
   listSubmissions(projectId: string): Promise<SubmissionRow[]>
   createSubmission(input: CreateSubmissionInput): Promise<SubmissionRow>
-  /** Owner moderation (#6). Mock flips the row status; the real backend opens the GitHub issue in a later phase. */
+  /** Deny (or other status flips). Owner-gated by RLS. Approval goes through `approveSubmission`. */
   setStatus(submissionId: string, status: SubmissionStatus): Promise<void>
+  /** Approve (#32): opens the GitHub issue via the `create-issue` edge, stores the number, sets `approved`. */
+  approveSubmission(submissionId: string, opts?: ApproveOptions): Promise<void>
 }
 
 let seq = 0
@@ -38,6 +46,14 @@ const mock: SubmissionsApi = {
   setStatus(submissionId, status) {
     const sub = mockDb().submissions.find((s) => s.id === submissionId)
     if (sub) sub.status = status
+    return Promise.resolve()
+  },
+  approveSubmission(submissionId) {
+    const sub = mockDb().submissions.find((s) => s.id === submissionId)
+    if (sub) {
+      sub.status = 'approved'
+      sub.github_issue_number = 1000 + Math.floor(Math.random() * 9000) // simulate the GitHub write-back
+    }
     return Promise.resolve()
   },
 }
@@ -71,6 +87,13 @@ const supabaseApi: SubmissionsApi = {
   },
   async setStatus(submissionId, status) {
     const { error } = await supabase.from('submissions').update({ status }).eq('id', submissionId)
+    if (error) throw error
+  },
+  async approveSubmission(submissionId, opts) {
+    // The edge re-checks owner, opens the issue, stores the number, and sets `approved` (idempotent).
+    const { error } = (await supabase.functions.invoke('create-issue', {
+      body: { submission_id: submissionId, project_repo_id: opts?.projectRepoId, milestone_number: opts?.milestoneNumber },
+    })) as { data: unknown; error: Error | null }
     if (error) throw error
   },
 }

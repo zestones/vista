@@ -180,6 +180,31 @@ export async function listMilestones(token: string, owner: string, repo: string,
   return { notModified: false, etag: firstEtag, milestones }
 }
 
+export interface CreatedIssue {
+  number: number
+  html_url: string
+}
+
+/**
+ * Create an issue via the App (moderation write-back #32). GitHub auto-creates a missing label,
+ * so `via:vista` needs no separate ensure step. `milestone` is the GitHub milestone number.
+ */
+export async function createIssue(
+  token: string,
+  owner: string,
+  repo: string,
+  input: { title: string; body?: string; labels?: string[]; milestone?: number },
+): Promise<CreatedIssue> {
+  const res = await fetch(`${GITHUB_API}/repos/${owner}/${repo}/issues`, {
+    method: 'POST',
+    headers: ghHeaders(token, { 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ title: input.title, body: input.body, labels: input.labels, milestone: input.milestone }),
+  })
+  if (!res.ok) throw new Error(`create issue failed: ${res.status} ${await res.text()}`)
+  const j = (await res.json()) as CreatedIssue
+  return { number: j.number, html_url: j.html_url }
+}
+
 /** Issues (state=all, sort=updated asc), optionally `since` (ISO). Excludes PRs. Follows pagination. */
 export async function listIssues(token: string, owner: string, repo: string, since?: string | null): Promise<GhIssue[]> {
   const base = `${GITHUB_API}/repos/${owner}/${repo}/issues?state=all&sort=updated&direction=asc&per_page=100`
