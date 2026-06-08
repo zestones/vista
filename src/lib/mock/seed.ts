@@ -172,6 +172,7 @@ export function buildSeed(): MockDb {
       name: 'You',
       role: 'owner',
       status: 'active',
+      can_view_comments: true,
       invited_at: now,
       decided_at: null,
     })

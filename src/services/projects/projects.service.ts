@@ -78,6 +78,7 @@ const mock: ProjectsApi = {
       name: owner.name,
       role: 'owner',
       status: 'active',
+      can_view_comments: true,
       invited_at: now,
       decided_at: null,
     })
