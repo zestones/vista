@@ -15,8 +15,9 @@ export type MemberAction =
   | { kind: 'deny'; id: string }
   | { kind: 'remove'; id: string }
   | { kind: 'role'; id: string; role: MemberRole }
+  | { kind: 'comments'; id: string; value: boolean }
 
-/** Owner member mutations (#103) -- approve/deny a request, change a role, remove a member. */
+/** Owner member mutations (#103/#93) -- approve/deny, change role, remove, toggle comment access. */
 export function useMemberAction(projectId: string) {
   const qc = useQueryClient()
   return useMutation({
@@ -24,8 +25,22 @@ export function useMemberAction(projectId: string) {
       if (a.kind === 'approve') return members.approveMember(a.id)
       if (a.kind === 'deny') return members.denyMember(a.id)
       if (a.kind === 'remove') return members.removeMember(a.id)
+      if (a.kind === 'comments') return members.setCommentAccess(a.id, a.value)
       return members.setMemberRole(a.id, a.role)
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: memberKeys.byProject(projectId) }),
+    // Optimistic for the comment-access toggle so the switch feels instant; rolled back on error.
+    onMutate: async (a) => {
+      if (a.kind !== 'comments') return undefined
+      await qc.cancelQueries({ queryKey: memberKeys.byProject(projectId) })
+      const prev = qc.getQueryData<MemberRow[]>(memberKeys.byProject(projectId))
+      qc.setQueryData<MemberRow[]>(memberKeys.byProject(projectId), (rows) =>
+        rows?.map((m) => (m.id === a.id ? { ...m, can_view_comments: a.value } : m)),
+      )
+      return { prev }
+    },
+    onError: (_e, _a, ctx) => {
+      if (ctx?.prev) qc.setQueryData(memberKeys.byProject(projectId), ctx.prev)
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: memberKeys.byProject(projectId) }),
   })
 }

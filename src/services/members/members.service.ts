@@ -10,6 +10,7 @@ export interface MembersApi {
   approveMember(memberId: string): Promise<void>
   denyMember(memberId: string): Promise<void>
   setMemberRole(memberId: string, role: MemberRole): Promise<void>
+  setCommentAccess(memberId: string, value: boolean): Promise<void>
   removeMember(memberId: string): Promise<void>
 }
 
@@ -33,6 +34,11 @@ const mock: MembersApi = {
   setMemberRole(memberId, role) {
     const m = mockDb().members.find((x) => x.id === memberId)
     if (m) m.role = role
+    return Promise.resolve()
+  },
+  setCommentAccess(memberId, value) {
+    const m = mockDb().members.find((x) => x.id === memberId)
+    if (m) m.can_view_comments = value
     return Promise.resolve()
   },
   removeMember(memberId) {
@@ -65,6 +71,11 @@ const supabaseApi: MembersApi = {
   },
   async setMemberRole(memberId, role) {
     const { error } = await supabase.from('project_members').update({ role }).eq('id', memberId)
+    if (error) throw error
+  },
+  // Owner-gated RPC (#91) — never a direct column write (RLS forbids client writes of can_view_comments).
+  async setCommentAccess(memberId, value) {
+    const { error } = await supabase.rpc('set_member_comment_access', { m: memberId, value })
     if (error) throw error
   },
   async removeMember(memberId) {
