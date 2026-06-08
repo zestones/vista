@@ -2,7 +2,7 @@
 -- Verifies the security boundary: non-members read nothing, members read their project,
 -- and submission writes are role-gated. Impersonation via set role + request.jwt.claims.
 begin;
-select plan(9);
+select plan(11);
 
 -- Seed as the superuser (RLS bypassed).
 insert into auth.users (id, email) values
@@ -36,9 +36,22 @@ select throws_ok(
 
 -- Editor
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111104"}';
+-- #99: a client can pass a fake submitter -- the trigger must ignore it.
 select lives_ok(
-  $$ insert into public.submissions (project_id, title) values ('22222222-2222-2222-2222-222222222201', 'ok') $$,
+  $$ insert into public.submissions (project_id, title, submitter_name, submitter_email)
+     values ('22222222-2222-2222-2222-222222222201', 'ok', 'FAKE', 'fake@evil.com') $$,
   'editor can insert a submission'
+);
+-- submitted_by + submitter identity are stamped from the profile -> traceability + author self-read.
+select is(
+  (select submitted_by::text from public.submissions where title = 'ok'),
+  '11111111-1111-1111-1111-111111111104',
+  'insert records submitted_by = the author (and the author can read it)'
+);
+select is(
+  (select submitter_email from public.submissions where title = 'ok'),
+  'editor@t.co',
+  'trigger overwrites a spoofed submitter_email with the verified profile'
 );
 
 -- Decide gate (#34): only the owner can update/decide a submission (RLS update = is_owner).

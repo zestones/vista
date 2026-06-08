@@ -1,6 +1,7 @@
 import { env } from '@/config/env'
 import { mockDb } from '@/lib/mock'
 import { supabase } from '@/lib/supabase/client'
+import { auth } from '@/services/auth'
 import type { CreateSubmissionInput, SubmissionRow, SubmissionStatus } from './submissions.dto'
 
 /** Approve options (#32): the owner picks the target repo (a sole repo is auto-resolved) + an optional milestone. */
@@ -25,15 +26,16 @@ const mock: SubmissionsApi = {
     return Promise.resolve(mockDb().submissions.filter((s) => s.project_id === projectId))
   },
   createSubmission(input) {
+    const me = auth.currentUser() // identity is server-stamped from the profile (#99); mirror it here
     const row: SubmissionRow = {
       id: `sub-new-${String((seq += 1))}`,
       project_id: input.projectId,
       type: input.type,
       title: input.title,
       body: input.body ?? null,
-      submitted_by: null,
-      submitter_name: input.submitterName ?? null,
-      submitter_email: input.submitterEmail ?? null,
+      submitted_by: me?.id ?? null,
+      submitter_name: me?.name ?? null,
+      submitter_email: me?.email ?? null,
       status: 'pending',
       github_issue_number: null,
       created_at: new Date().toISOString(),
@@ -72,13 +74,12 @@ const supabaseApi: SubmissionsApi = {
   async createSubmission(input) {
     const { data, error } = await supabase
       .from('submissions')
+      // submitted_by + submitter_name/email are stamped server-side from the profile (#99 trigger).
       .insert({
         project_id: input.projectId,
         type: input.type,
         title: input.title,
         body: input.body ?? null,
-        submitter_name: input.submitterName ?? null,
-        submitter_email: input.submitterEmail ?? null,
       })
       .select()
       .single()
