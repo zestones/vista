@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import { Check, X } from 'lucide-react'
-import type { SubmissionRow, SubmissionType } from '@/services/submissions'
-import { Badge, Button } from '@/components/ui'
+import type { SubmissionRow, SubmissionStatus, SubmissionType } from '@/services/submissions'
+import { Badge, Button, Segmented } from '@/components/ui'
 import { Spinner } from '@/components/feedback'
 import { useSubmissions } from '../hooks/use-submissions'
 import { useModerateSubmission } from '../hooks/use-moderate-submission'
@@ -15,12 +15,17 @@ const TYPE_KEY: Record<SubmissionType, string> = {
   question: 'mod.type.question',
   other: 'mod.type.other',
 }
+const STATUSES: SubmissionStatus[] = ['pending', 'approved', 'denied']
 
-/** Owner moderation inbox (#6): pending client submissions with approve/deny (mock). */
+const formatDate = (iso: string, lang: string) =>
+  new Date(iso).toLocaleDateString(lang, { day: 'numeric', month: 'short', year: 'numeric' })
+
+/** Owner moderation inbox (#6/#99): submissions by status, with the verified submitter + dates. */
 export function ModerationInbox({ projectId }: { projectId: string }) {
   const { t } = useTranslation()
   const { data, isLoading } = useSubmissions(projectId)
   const moderate = useModerateSubmission(projectId)
+  const [tab, setTab] = useState<SubmissionStatus>('pending')
   // Approve opens a picker (target repo + optional milestone); deny is immediate.
   const [approving, setApproving] = useState<SubmissionRow | null>(null)
 
@@ -32,7 +37,8 @@ export function ModerationInbox({ projectId }: { projectId: string }) {
     )
   }
 
-  const pending = data.filter((s) => s.status === 'pending')
+  const rows = data.filter((s) => s.status === tab)
+  const count = (s: SubmissionStatus) => data.filter((r) => r.status === s).length
 
   return (
     <div className='flex flex-col gap-6'>
@@ -41,11 +47,20 @@ export function ModerationInbox({ projectId }: { projectId: string }) {
         <p className='text-muted-ink mt-1 text-sm'>{t('mod.subtitle')}</p>
       </section>
 
-      {pending.length === 0 ? (
-        <p className='border-hairline text-muted-ink rounded-xl border border-dashed p-6 text-center text-sm'>{t('mod.empty')}</p>
+      <Segmented<SubmissionStatus>
+        aria-label={t('mod.title')}
+        value={tab}
+        onValueChange={setTab}
+        options={STATUSES.map((s) => ({ value: s, label: count(s) > 0 ? `${t(`mod.tab.${s}`)} ${String(count(s))}` : t(`mod.tab.${s}`) }))}
+      />
+
+      {rows.length === 0 ? (
+        <p className='border-hairline text-muted-ink rounded-xl border border-dashed p-6 text-center text-sm'>
+          {tab === 'pending' ? t('mod.empty') : t('mod.emptyOther')}
+        </p>
       ) : (
         <div className='flex flex-col gap-3'>
-          {pending.map((s) => (
+          {rows.map((s) => (
             <SubmissionCard
               key={s.id}
               sub={s}
@@ -103,40 +118,41 @@ function SubmissionCard({
   disabled: boolean
   onModerate: (decision: 'approve' | 'deny') => void
 }) {
-  const { t } = useTranslation()
-  const author = sub.submitter_name ?? sub.submitter_email ?? t('mod.anon')
+  const { t, i18n } = useTranslation()
+  const who = sub.submitter_name ?? sub.submitter_email ?? t('mod.anon')
+  // Verified submitter (server-stamped #99) + when it came in.
+  const meta = [who, sub.submitter_name && sub.submitter_email ? sub.submitter_email : null, formatDate(sub.created_at, i18n.language)]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
     <article className='border-hairline bg-card flex items-start gap-4 rounded-xl border p-4'>
       <div className='min-w-0 flex-1'>
-        <div className='mb-1.5 flex items-center gap-2'>
+        <div className='mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1'>
           <Badge variant='outline'>{t(TYPE_KEY[sub.type])}</Badge>
-          <span className='text-muted-ink truncate text-xs'>{author}</span>
+          <span className='text-muted-ink truncate text-xs'>{meta}</span>
         </div>
         <h3 className='text-ink font-medium'>{sub.title}</h3>
         {sub.body && <p className='text-body mt-1 text-sm'>{sub.body}</p>}
       </div>
-      <div className='flex shrink-0 items-center gap-2'>
-        <Button
-          variant='outline'
-          size='sm'
-          disabled={disabled}
-          onClick={() => {
-            onModerate('deny')
-          }}
-        >
-          <X /> {t('mod.deny')}
-        </Button>
-        <Button
-          size='sm'
-          disabled={disabled}
-          onClick={() => {
-            onModerate('approve')
-          }}
-        >
-          <Check /> {t('mod.approve')}
-        </Button>
-      </div>
+
+      {sub.status === 'pending' ? (
+        <div className='flex shrink-0 items-center gap-2'>
+          <Button variant='outline' size='sm' disabled={disabled} onClick={() => onModerate('deny')}>
+            <X /> {t('mod.deny')}
+          </Button>
+          <Button size='sm' disabled={disabled} onClick={() => onModerate('approve')}>
+            <Check /> {t('mod.approve')}
+          </Button>
+        </div>
+      ) : (
+        <div className='text-muted-ink shrink-0 text-right text-xs'>
+          {sub.status === 'approved' && sub.github_issue_number != null && (
+            <div className='text-ink font-medium'>{t('mod.issue', { n: sub.github_issue_number })}</div>
+          )}
+          {sub.decided_at && <div>{formatDate(sub.decided_at, i18n.language)}</div>}
+        </div>
+      )}
     </article>
   )
 }

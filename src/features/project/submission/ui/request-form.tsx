@@ -20,8 +20,6 @@ export function RequestForm({ projectId, onClose }: { projectId: string; onClose
   const [type, setType] = useState<SubmissionType>('feature')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
   const [touched, setTouched] = useState(false)
 
   const titleInvalid = touched && title.trim() === ''
@@ -43,8 +41,6 @@ export function RequestForm({ projectId, onClose }: { projectId: string; onClose
               setType('feature')
               setTitle('')
               setDescription('')
-              setName('')
-              setEmail('')
               setTouched(false)
               submit.reset()
             }}
@@ -67,8 +63,6 @@ export function RequestForm({ projectId, onClose }: { projectId: string; onClose
           type,
           title: title.trim(),
           body: description.trim() || undefined,
-          submitterName: name.trim() || undefined,
-          submitterEmail: email.trim() || undefined,
         })
       }}
       className='flex flex-col gap-5'
@@ -119,32 +113,6 @@ export function RequestForm({ projectId, onClose }: { projectId: string; onClose
           }}
           placeholder={t('form.descPlaceholder')}
         />
-      </div>
-
-      <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
-        <div className='flex flex-col gap-1.5'>
-          <Label htmlFor='req-name'>{t('form.nameLabel')}</Label>
-          <Input
-            id='req-name'
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value)
-            }}
-            placeholder={t('form.namePlaceholder')}
-          />
-        </div>
-        <div className='flex flex-col gap-1.5'>
-          <Label htmlFor='req-email'>{t('form.emailLabel')}</Label>
-          <Input
-            id='req-email'
-            type='email'
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value)
-            }}
-            placeholder={t('form.emailPlaceholder')}
-          />
-        </div>
       </div>
 
       {submit.isError && (
