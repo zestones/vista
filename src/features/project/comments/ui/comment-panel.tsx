@@ -54,7 +54,10 @@ export function CommentPanel() {
         // Unmount only after the panel's OWN exit animation finishes (symmetric open/close). The
         // currentTarget guard ignores animationend events bubbling up from children.
         onAnimationEnd={(e) => {
-          if (e.target === e.currentTarget && !target) setVisible(null)
+          if (e.target === e.currentTarget && !target) {
+            setVisible(null)
+            setExpanded(false) // reset width so the next open is the default compact size
+          }
         }}
         className={cn(
           'bg-background z-50 flex flex-col overflow-hidden shadow-lg',
