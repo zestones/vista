@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { CalendarClock, ChevronDown, ChevronRight, Circle, CircleCheck, Search, TriangleAlert, X } from 'lucide-react'
 import { fmtShort } from '../lib/roadmap.dates'
 import { type IssueSort, type MilestoneSort, sortRoadmap } from '../lib/roadmap.sort'
-import type { Group } from '../types'
+import type { Bar, Group } from '../types'
 import { RoadmapAvatar } from './roadmap-avatar'
 
 type Filter = 'all' | 'open' | 'closed'
@@ -23,7 +23,7 @@ const selectStyle: CSSProperties = {
 }
 
 /** Phone-first roadmap: a vertical, collapsible list — no horizontal timeline. */
-export function RoadmapMobile({ groups }: { groups: Group[] }) {
+export function RoadmapMobile({ groups, onIssueClick }: { groups: Group[]; onIssueClick?: (bar: Bar) => void }) {
   const { t, i18n } = useTranslation()
   const lang = i18n.language
   const [filter, setFilter] = useState<Filter>('all')
@@ -145,7 +145,7 @@ export function RoadmapMobile({ groups }: { groups: Group[] }) {
                   const leftPct = ((b.start.getTime() - wStart) / span) * 100
                   const widthPct = Math.max(((b.end.getTime() - b.start.getTime()) / span) * 100, 4)
                   return (
-                    <div key={b.id} style={{ padding: '11px 14px', borderTop: '1px solid var(--hairline)' }}>
+                    <button key={b.id} type='button' onClick={() => onIssueClick?.(b)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '11px 14px', border: 'none', borderTop: '1px solid var(--hairline)', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--font)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ display: 'flex', flexShrink: 0, color: isClosed ? 'var(--success)' : 'var(--border-strong)' }}>{isClosed ? <CircleCheck size={16} /> : <Circle size={16} />}</span>
                         <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: isClosed ? 'var(--muted)' : 'var(--body)', textDecoration: isClosed ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -162,7 +162,7 @@ export function RoadmapMobile({ groups }: { groups: Group[] }) {
                           {fmtShort(b.start, lang)} - {fmtShort(b.end, lang)}
                         </span>
                       </div>
-                    </div>
+                    </button>
                   )
                 })}
             </section>

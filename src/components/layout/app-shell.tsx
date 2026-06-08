@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAutoAnimate } from '@formkit/auto-animate/react'
@@ -6,7 +6,9 @@ import { LayoutGrid, Menu, Plus, Shield } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { SidebarContext } from '@/contexts/sidebar.context'
 import { PreviewContext } from '@/contexts/preview.context'
+import { CommentPanelContext, type CommentTarget } from '@/contexts/comment-panel.context'
 import { NewProjectModal, useWorkspace } from '@/features/workspace'
+import { CommentPanel } from '@/features/project/comments'
 import { Button } from '@/components/ui'
 import { LangToggle } from './lang-toggle'
 import { NotificationBell } from '@/features/notifications'
@@ -160,6 +162,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   const [previewActive, setPreviewActive] = useState(false)
+  const [commentTarget, setCommentTarget] = useState<CommentTarget | null>(null)
 
   const sidebar = useMemo(
     () => ({
@@ -171,80 +174,96 @@ export function AppShell({ children }: { children: ReactNode }) {
     [collapsed],
   )
   const preview = useMemo(() => ({ active: previewActive, setActive: setPreviewActive }), [previewActive])
+  // Stable open/close so consumer effects (close-on-unmount, close-on-project-switch) don't re-fire.
+  const openComments = useCallback((target: CommentTarget) => {
+    setCommentTarget(target)
+  }, [])
+  const closeComments = useCallback(() => {
+    setCommentTarget(null)
+  }, [])
+  const commentPanel = useMemo(
+    () => ({ target: commentTarget, open: openComments, close: closeComments }),
+    [commentTarget, openComments, closeComments],
+  )
 
   return (
     <SidebarContext value={sidebar}>
       <PreviewContext value={preview}>
-        {/* The page background carries the sidebar; the content sits on top as an inset panel. */}
-        <div className='bg-surface-sunken relative flex h-screen overflow-hidden lg:gap-2 lg:p-2'>
-          <aside
-            className={cn(
-              // pt-1 keeps the notification badge (which overhangs the bell) clear of the overflow-hidden top edge.
-              'hidden shrink-0 flex-col overflow-hidden transition-[width] duration-200 lg:flex lg:pt-1',
-              collapsed ? 'w-0' : 'w-60',
-            )}
-          >
-            <SidebarContent
-              onNavigate={() => undefined}
-              onNewProject={() => {
-                setNewOpen(true)
-              }}
-            />
-          </aside>
-
-          <div className='border-hairline bg-background/90 fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b px-5 backdrop-blur lg:hidden'>
-            <Link to='/app' className='text-ink flex items-center gap-2'>
-              <VistaMark size={20} />
-              <span className='font-display text-[17px] font-semibold'>Vista</span>
-            </Link>
-            <Button
-              variant='outline'
-              size='sm'
-              aria-expanded={drawerOpen}
-              aria-label='Menu'
-              onClick={() => {
-                setDrawerOpen((d) => !d)
-              }}
+        <CommentPanelContext value={commentPanel}>
+          {/* The page background carries the sidebar; the content sits on top as an inset panel. */}
+          <div className='bg-surface-sunken relative flex h-screen overflow-hidden lg:gap-2 lg:p-2'>
+            <aside
+              className={cn(
+                // pt-1 keeps the notification badge (which overhangs the bell) clear of the overflow-hidden top edge.
+                'hidden shrink-0 flex-col overflow-hidden transition-[width] duration-200 lg:flex lg:pt-1',
+                collapsed ? 'w-0' : 'w-60',
+              )}
             >
-              <Menu size={18} />
-            </Button>
-          </div>
-
-          {drawerOpen && (
-            <div className='border-hairline bg-surface-sunken fixed inset-x-0 top-14 z-30 max-h-[80vh] overflow-y-auto border-b p-4 lg:hidden'>
               <SidebarContent
-                onNavigate={() => {
-                  setDrawerOpen(false)
-                }}
+                onNavigate={() => undefined}
                 onNewProject={() => {
                   setNewOpen(true)
-                  setDrawerOpen(false)
                 }}
               />
+            </aside>
+
+            <div className='border-hairline bg-background/90 fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b px-5 backdrop-blur lg:hidden'>
+              <Link to='/app' className='text-ink flex items-center gap-2'>
+                <VistaMark size={20} />
+                <span className='font-display text-[17px] font-semibold'>Vista</span>
+              </Link>
+              <Button
+                variant='outline'
+                size='sm'
+                aria-expanded={drawerOpen}
+                aria-label='Menu'
+                onClick={() => {
+                  setDrawerOpen((d) => !d)
+                }}
+              >
+                <Menu size={18} />
+              </Button>
             </div>
-          )}
 
-          {/* Preview "spotlight": dim the sidebar + surrounding canvas so the client-view panel pops (#29). */}
-          <div
-            aria-hidden='true'
-            className={cn(
-              'pointer-events-none absolute inset-0 z-10 bg-black/60 transition-opacity duration-300',
-              previewActive ? 'opacity-100' : 'opacity-0',
+            {drawerOpen && (
+              <div className='border-hairline bg-surface-sunken fixed inset-x-0 top-14 z-30 max-h-[80vh] overflow-y-auto border-b p-4 lg:hidden'>
+                <SidebarContent
+                  onNavigate={() => {
+                    setDrawerOpen(false)
+                  }}
+                  onNewProject={() => {
+                    setNewOpen(true)
+                    setDrawerOpen(false)
+                  }}
+                />
+              </div>
             )}
-          />
 
-          {/* In owner preview (#29) the panel takes a bright link-accent hairline + soft ring glow, lifted above the dim. */}
-          <main
-            className={cn(
-              'bg-background relative z-20 flex-1 overflow-y-auto pt-14 transition-[border-color,box-shadow] duration-300 lg:rounded-xl lg:border lg:pt-0 lg:shadow-sm',
-              previewActive ? 'lg:border-link/80 lg:ring-2 lg:ring-link/40' : 'lg:border-hairline',
-            )}
-          >
-            {children}
-          </main>
+            {/* Preview "spotlight": dim the sidebar + surrounding canvas so the client-view panel pops (#29). */}
+            <div
+              aria-hidden='true'
+              className={cn(
+                'pointer-events-none absolute inset-0 z-10 bg-black/60 transition-opacity duration-300',
+                previewActive ? 'opacity-100' : 'opacity-0',
+              )}
+            />
 
-          <NewProjectModal open={newOpen} onOpenChange={setNewOpen} />
-        </div>
+            {/* In owner preview (#29) the panel takes a bright link-accent hairline + soft ring glow, lifted above the dim. */}
+            <main
+              className={cn(
+                'bg-background relative z-20 min-w-0 flex-1 overflow-y-auto pt-14 transition-[border-color,box-shadow] duration-300 lg:rounded-xl lg:border lg:pt-0 lg:shadow-sm',
+                previewActive ? 'lg:border-link/80 lg:ring-2 lg:ring-link/40' : 'lg:border-hairline',
+              )}
+            >
+              {children}
+            </main>
+
+            {/* Comment panel (#92): pushes content aside on desktop (flex sibling), overlays on mobile. */}
+            <CommentPanel />
+
+            <NewProjectModal open={newOpen} onOpenChange={setNewOpen} />
+          </div>
+        </CommentPanelContext>
       </PreviewContext>
     </SidebarContext>
   )

@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next'
 import { Eye, Lock, Plus, Settings } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { usePreview } from '@/contexts/preview.context'
-import { RoadmapGantt, RoadmapMobile, RoadmapOverview, useRoadmap } from '@/features/project/roadmap'
+import { RoadmapGantt, RoadmapMobile, RoadmapOverview, useRoadmap, type Bar } from '@/features/project/roadmap'
 import { useProjectAccess } from '@/features/project/dashboard'
 import { MyRequests, RequestModal } from '@/features/project/submission'
+import { useCommentPanel } from '@/contexts/comment-panel.context'
 import { Button, Segmented } from '@/components/ui'
 import { PageHeader } from '@/components/layout'
 import { TabTransition } from '@/components/motion'
@@ -23,6 +24,8 @@ export function RoadmapPage() {
   // Tab is driven by `?tab=` so a decision notification (#108) can deep-link to "My requests".
   const [searchParams, setSearchParams] = useSearchParams()
   const [requestOpen, setRequestOpen] = useState(false)
+  // Clicking an issue opens its comment panel (#92), which pushes the content aside (shell-level).
+  const { open: openComments, close: closeComments } = useCommentPanel()
   // Owner-only "render as a viewer" mode (#29). Lifted to the AppShell so the whole panel is framed.
   const { active: preview, setActive: setPreview } = usePreview()
   // Reset on project switch and when leaving the roadmap, so the frame never leaks to another page.
@@ -32,6 +35,12 @@ export function RoadmapPage() {
       setPreview(false)
     }
   }, [id, setPreview])
+  // Close the comment panel when switching project or leaving the roadmap.
+  useEffect(() => {
+    return () => {
+      closeComments()
+    }
+  }, [id, closeComments])
 
   const access = useProjectAccess(id, user?.id ?? '')
   const roadmap = useRoadmap(id, preview)
@@ -53,6 +62,15 @@ export function RoadmapPage() {
   const { project } = access.data
   const isOwner = project.owner_id === user?.id
   const isViewer = access.data.membership.role === 'viewer'
+  const canViewComments = access.data.membership.can_view_comments
+  const openIssue = (b: Bar) => {
+    openComments({
+      issue: { id: b.id, number: b.number, title: b.title, state: b.state, url: b.url },
+      projectId: id,
+      isOwner,
+      canViewComments,
+    })
+  }
 
   // Viewers have no "requests" tab, so a stray ?tab=requests falls back to gantt.
   const tabParam = searchParams.get('tab')
@@ -160,9 +178,9 @@ export function RoadmapPage() {
           ) : view === 'overview' ? (
             <RoadmapOverview groups={groups} unscheduled={unscheduled} />
           ) : view === 'mobile' ? (
-            <RoadmapMobile groups={groups} />
+            <RoadmapMobile groups={groups} onIssueClick={openIssue} />
           ) : (
-            <RoadmapGantt groups={groups} />
+            <RoadmapGantt groups={groups} onIssueClick={openIssue} />
           )}
         </TabTransition>
       </div>

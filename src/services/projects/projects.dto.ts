@@ -10,7 +10,7 @@ export type ProjectRow = Database['public']['Tables']['projects']['Row']
 /** A project plus the current user's relationship to it, for access guards and headers. */
 export interface ProjectAccess {
   project: ProjectRow
-  membership: { role: MemberRole; status: MemberStatus } | null
+  membership: { role: MemberRole; status: MemberStatus; can_view_comments: boolean } | null
   activeMembers: number
   pendingMembers: number
 }

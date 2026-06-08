@@ -55,9 +55,10 @@ interface Props {
   groups: Group[]
   embedded?: boolean
   maxHeight?: number
+  onIssueClick?: (bar: Bar) => void
 }
 
-export function RoadmapGantt({ groups, embedded = true, maxHeight = 560 }: Props) {
+export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssueClick }: Props) {
   const { t, i18n } = useTranslation()
   const lang = i18n.language
   const [filter, setFilter] = useState<Filter>('all')
@@ -629,7 +630,8 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560 }: Props
                         <div key={`c-b-${b.id}`} onMouseEnter={(e) => onHover(b, e)} onMouseLeave={() => setHovered(null)} style={{ height: ROW_H, position: 'relative', borderBottom: '1px solid var(--hairline)', background: rowBg(b.id) }}>
                           <button
                             onClick={() => {
-                              if (b.url) window.open(b.url, '_blank')
+                              // #92: open the in-app comment sheet (no raw GitHub URL for clients).
+                              if (onIssueClick) onIssueClick(b)
                               else centerOn(b)
                             }}
                             title={b.title}
