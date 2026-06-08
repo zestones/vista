@@ -13,6 +13,10 @@ export interface CommentPanelState {
   target: CommentTarget | null
   open: (target: CommentTarget) => void
   close: () => void
+  // #116: a comment's `#<n>` mention jumps to that issue (opens its comments + centers the Gantt). The
+  // active roadmap page registers the handler; the panel just calls navigateToIssue.
+  navigateToIssue: (issueNumber: number) => void
+  registerNavigator: (fn: ((issueNumber: number) => void) | null) => void
 }
 
 // No-op default so pages work outside the AppShell (e.g. tests).
@@ -20,6 +24,8 @@ export const CommentPanelContext = createContext<CommentPanelState>({
   target: null,
   open: () => undefined,
   close: () => undefined,
+  navigateToIssue: () => undefined,
+  registerNavigator: () => undefined,
 })
 
 export function useCommentPanel(): CommentPanelState {

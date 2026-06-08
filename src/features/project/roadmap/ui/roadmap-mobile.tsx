@@ -62,47 +62,145 @@ export function RoadmapMobile({ groups, onIssueClick }: { groups: Group[]; onIss
       {/* Controls */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-sm)' }}>
         <div style={{ position: 'relative' }}>
-          <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', display: 'flex', pointerEvents: 'none' }}>
+          <span
+            style={{
+              position: 'absolute',
+              left: 10,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--muted)',
+              display: 'flex',
+              pointerEvents: 'none',
+            }}
+          >
             <Search size={15} />
           </span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('roadmap.search')}
-            style={{ height: 40, width: '100%', paddingLeft: 32, paddingRight: query ? 32 : 12, fontSize: 14, border: '1px solid var(--hairline)', borderRadius: 'var(--r-sm)', background: 'var(--canvas)', color: 'var(--ink)', fontFamily: 'var(--font)' }}
+            style={{
+              height: 40,
+              width: '100%',
+              paddingLeft: 32,
+              paddingRight: query ? 32 : 12,
+              fontSize: 14,
+              border: '1px solid var(--hairline)',
+              borderRadius: 'var(--r-sm)',
+              background: 'var(--canvas)',
+              color: 'var(--ink)',
+              fontFamily: 'var(--font)',
+            }}
           />
           {query && (
-            <button onClick={() => setQuery('')} aria-label={t('form.close')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', display: 'flex' }}>
+            <button
+              onClick={() => setQuery('')}
+              aria-label={t('form.close')}
+              style={{
+                position: 'absolute',
+                right: 8,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--muted)',
+                cursor: 'pointer',
+                display: 'flex',
+              }}
+            >
               <X size={16} />
             </button>
           )}
         </div>
 
-        <div role='group' aria-label='Filter' style={{ alignSelf: 'flex-start', display: 'inline-flex', border: '1px solid var(--hairline)', borderRadius: 'var(--r-md)', padding: 2, gap: 2 }}>
-          {([['all', t('roadmap.all')], ['open', t('roadmap.open')], ['closed', t('roadmap.closed')]] as [Filter, string][]).map(([k, label]) => (
-            <button key={k} aria-pressed={filter === k} onClick={() => setFilter(k)} style={{ border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 13, padding: '5px 12px', borderRadius: 'var(--r-sm)', color: filter === k ? '#fff' : 'var(--body)', background: filter === k ? 'var(--ink)' : 'transparent' }}>
+        <div
+          role='group'
+          aria-label='Filter'
+          style={{
+            alignSelf: 'flex-start',
+            display: 'inline-flex',
+            border: '1px solid var(--hairline)',
+            borderRadius: 'var(--r-md)',
+            padding: 2,
+            gap: 2,
+          }}
+        >
+          {(
+            [
+              ['all', t('roadmap.all')],
+              ['open', t('roadmap.open')],
+              ['closed', t('roadmap.closed')],
+            ] as [Filter, string][]
+          ).map(([k, label]) => (
+            <button
+              key={k}
+              aria-pressed={filter === k}
+              onClick={() => setFilter(k)}
+              style={{
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: 'var(--font)',
+                fontSize: 13,
+                padding: '5px 12px',
+                borderRadius: 'var(--r-sm)',
+                color: filter === k ? '#fff' : 'var(--body)',
+                background: filter === k ? 'var(--ink)' : 'transparent',
+              }}
+            >
               {label}
             </button>
           ))}
         </div>
 
         <div style={{ display: 'flex', gap: 'var(--s-sm)', flexWrap: 'wrap' }}>
-          <select aria-label={t('roadmap.sortMs')} value={msSort} onChange={(e) => setMsSort(e.target.value as MilestoneSort)} style={selectStyle}>
-            <option value='default'>{t('roadmap.sortMs')}: {t('roadmap.sortDefault')}</option>
-            <option value='due'>{t('roadmap.sortMs')}: {t('roadmap.sortDue')}</option>
-            <option value='name'>{t('roadmap.sortMs')}: {t('roadmap.sortName')}</option>
-            <option value='progress'>{t('roadmap.sortMs')}: {t('roadmap.sortProgress')}</option>
+          <select
+            aria-label={t('roadmap.sortMs')}
+            value={msSort}
+            onChange={(e) => setMsSort(e.target.value as MilestoneSort)}
+            style={selectStyle}
+          >
+            <option value='default'>
+              {t('roadmap.sortMs')}: {t('roadmap.sortDefault')}
+            </option>
+            <option value='due'>
+              {t('roadmap.sortMs')}: {t('roadmap.sortDue')}
+            </option>
+            <option value='name'>
+              {t('roadmap.sortMs')}: {t('roadmap.sortName')}
+            </option>
+            <option value='progress'>
+              {t('roadmap.sortMs')}: {t('roadmap.sortProgress')}
+            </option>
           </select>
-          <select aria-label={t('roadmap.sortIssues')} value={issueSort} onChange={(e) => setIssueSort(e.target.value as IssueSort)} style={selectStyle}>
-            <option value='chrono'>{t('roadmap.sortIssues')}: {t('roadmap.sortChrono')}</option>
-            <option value='status'>{t('roadmap.sortIssues')}: {t('roadmap.sortStatus')}</option>
-            <option value='number'>{t('roadmap.sortIssues')}: {t('roadmap.sortNumber')}</option>
+          <select
+            aria-label={t('roadmap.sortIssues')}
+            value={issueSort}
+            onChange={(e) => setIssueSort(e.target.value as IssueSort)}
+            style={selectStyle}
+          >
+            <option value='chrono'>
+              {t('roadmap.sortIssues')}: {t('roadmap.sortChrono')}
+            </option>
+            <option value='status'>
+              {t('roadmap.sortIssues')}: {t('roadmap.sortStatus')}
+            </option>
+            <option value='number'>
+              {t('roadmap.sortIssues')}: {t('roadmap.sortNumber')}
+            </option>
           </select>
         </div>
       </div>
 
       {filtered.length === 0 ? (
-        <div style={{ padding: 'var(--s-xxl) var(--s-md)', textAlign: 'center', color: 'var(--muted)', border: '1px solid var(--hairline)', borderRadius: 'var(--r-lg)' }}>
+        <div
+          style={{
+            padding: 'var(--s-xxl) var(--s-md)',
+            textAlign: 'center',
+            color: 'var(--muted)',
+            border: '1px solid var(--hairline)',
+            borderRadius: 'var(--r-lg)',
+          }}
+        >
           {t('roadmap.noResults')}
         </div>
       ) : (
@@ -115,15 +213,58 @@ export function RoadmapMobile({ groups, onIssueClick }: { groups: Group[]; onIss
           const span = Math.max(wEnd - wStart, 1)
 
           return (
-            <section key={g.id} style={{ border: '1px solid var(--hairline)', borderRadius: 'var(--r-lg)', overflow: 'hidden', background: 'var(--canvas)' }}>
-              <button onClick={() => toggle(g.id)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '14px', background: 'var(--surface-soft)', border: 'none', borderBottom: open ? '1px solid var(--hairline)' : 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--font)' }}>
-                <span style={{ color: 'var(--muted)', display: 'flex', flexShrink: 0 }}>{open ? <ChevronDown size={18} /> : <ChevronRight size={18} />}</span>
+            <section
+              key={g.id}
+              style={{ border: '1px solid var(--hairline)', borderRadius: 'var(--r-lg)', overflow: 'hidden', background: 'var(--canvas)' }}
+            >
+              <button
+                onClick={() => toggle(g.id)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '14px',
+                  background: 'var(--surface-soft)',
+                  border: 'none',
+                  borderBottom: open ? '1px solid var(--hairline)' : 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontFamily: 'var(--font)',
+                }}
+              >
+                <span style={{ color: 'var(--muted)', display: 'flex', flexShrink: 0 }}>
+                  {open ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                </span>
                 <span style={{ width: 11, height: 11, borderRadius: 3, background: g.color, flexShrink: 0 }} />
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.title}</span>
+                  <span
+                    style={{
+                      display: 'block',
+                      fontSize: 15,
+                      fontWeight: 600,
+                      color: 'var(--ink)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {g.title}
+                  </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3, fontSize: 12, color: 'var(--muted)' }}>
-                    <span>{g.closed}/{g.total}</span>
-                    <span style={{ flex: 1, height: 5, background: 'var(--surface-strong)', borderRadius: 'var(--r-xs)', overflow: 'hidden', minWidth: 40 }}>
+                    <span>
+                      {g.closed}/{g.total}
+                    </span>
+                    <span
+                      style={{
+                        flex: 1,
+                        height: 5,
+                        background: 'var(--surface-strong)',
+                        borderRadius: 'var(--r-xs)',
+                        overflow: 'hidden',
+                        minWidth: 40,
+                      }}
+                    >
                       <span style={{ display: 'block', width: `${String(g.pct)}%`, height: '100%', background: g.color }} />
                     </span>
                     <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{g.pct}%</span>
@@ -132,7 +273,17 @@ export function RoadmapMobile({ groups, onIssueClick }: { groups: Group[]; onIss
               </button>
 
               {open && (g.due || overdue) && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 12, color: overdue ? TODAY : 'var(--muted)', borderBottom: '1px solid var(--hairline)' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '8px 14px',
+                    fontSize: 12,
+                    color: overdue ? TODAY : 'var(--muted)',
+                    borderBottom: '1px solid var(--hairline)',
+                  }}
+                >
                   {overdue ? <TriangleAlert size={14} /> : <CalendarClock size={14} />}
                   {overdue ? t('roadmap.late') : t('milestones.due')}
                   {g.due ? ` · ${fmtShort(g.due, lang)}` : ''}
@@ -145,18 +296,65 @@ export function RoadmapMobile({ groups, onIssueClick }: { groups: Group[]; onIss
                   const leftPct = ((b.start.getTime() - wStart) / span) * 100
                   const widthPct = Math.max(((b.end.getTime() - b.start.getTime()) / span) * 100, 4)
                   return (
-                    <button key={b.id} type='button' onClick={() => onIssueClick?.(b)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '11px 14px', border: 'none', borderTop: '1px solid var(--hairline)', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--font)' }}>
+                    <button
+                      key={b.id}
+                      type='button'
+                      onClick={() => onIssueClick?.(b)}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '11px 14px',
+                        border: 'none',
+                        borderTop: '1px solid var(--hairline)',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font)',
+                      }}
+                    >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ display: 'flex', flexShrink: 0, color: isClosed ? 'var(--success)' : 'var(--border-strong)' }}>{isClosed ? <CircleCheck size={16} /> : <Circle size={16} />}</span>
-                        <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: isClosed ? 'var(--muted)' : 'var(--body)', textDecoration: isClosed ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ display: 'flex', flexShrink: 0, color: isClosed ? 'var(--state-closed)' : 'var(--success)' }}>
+                          {isClosed ? <CircleCheck size={16} /> : <Circle size={16} />}
+                        </span>
+                        <span
+                          style={{
+                            flex: 1,
+                            minWidth: 0,
+                            fontSize: 14,
+                            color: isClosed ? 'var(--muted)' : 'var(--body)',
+                            textDecoration: isClosed ? 'line-through' : 'none',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           <span style={{ color: 'var(--border-strong)', fontSize: 12, marginRight: 5 }}>#{b.number}</span>
                           {b.title}
                         </span>
                         <RoadmapAvatar name={b.author} url={b.avatarUrl} size={20} />
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 7, paddingLeft: 24 }}>
-                        <span style={{ position: 'relative', flex: 1, height: 6, background: 'var(--surface-strong)', borderRadius: 'var(--r-xs)', overflow: 'hidden' }}>
-                          <span style={{ position: 'absolute', left: `${String(leftPct)}%`, width: `${String(widthPct)}%`, top: 0, bottom: 0, background: isClosed ? `${g.color}80` : g.color, borderRadius: 'var(--r-xs)' }} />
+                        <span
+                          style={{
+                            position: 'relative',
+                            flex: 1,
+                            height: 6,
+                            background: 'var(--surface-strong)',
+                            borderRadius: 'var(--r-xs)',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          <span
+                            style={{
+                              position: 'absolute',
+                              left: `${String(leftPct)}%`,
+                              width: `${String(widthPct)}%`,
+                              top: 0,
+                              bottom: 0,
+                              background: isClosed ? `${g.color}80` : g.color,
+                              borderRadius: 'var(--r-xs)',
+                            }}
+                          />
                         </span>
                         <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
                           {fmtShort(b.start, lang)} - {fmtShort(b.end, lang)}
