@@ -4,7 +4,7 @@
 // sync and webhook (omitting `shared` from the payload preserves it on conflict, and new
 // rows default to false = private). See "Cache de projection & synchronisation".
 import { type SupabaseClient } from 'npm:@supabase/supabase-js@2'
-import { type GhIssue, type GhMilestone } from './github.ts'
+import { type GhComment, type GhIssue, type GhMilestone, issueNumberFromUrl } from './github.ts'
 
 export function toMilestoneRow(projectRepoId: string, m: GhMilestone, now: string) {
   return {
@@ -60,5 +60,46 @@ export async function upsertIssues(admin: SupabaseClient, projectRepoId: string,
   const rows = issues.map((i) => toIssueRow(projectRepoId, i, i.milestone ? (byNumber.get(i.milestone.number) ?? null) : null, now))
   const { error } = await admin.from('issues').upsert(rows, { onConflict: 'project_repo_id,number' })
   if (error) throw new Error(`issue upsert: ${error.message}`)
+  return rows.length
+}
+
+/** Issue number -> projection id for the repo, used to link comments to their parent issue. */
+export async function issueIdByNumber(admin: SupabaseClient, projectRepoId: string): Promise<Map<number, string>> {
+  const { data } = await admin.from('issues').select('id, number').eq('project_repo_id', projectRepoId)
+  const rows = (data ?? []) as { id: string; number: number }[]
+  return new Map(rows.map((i) => [i.number, i.id]))
+}
+
+export function toCommentRow(projectRepoId: string, issueId: string, c: GhComment) {
+  return {
+    project_repo_id: projectRepoId,
+    issue_id: issueId,
+    github_comment_id: c.id,
+    author_login: c.user?.login ?? null,
+    author_avatar_url: c.user?.avatar_url ?? null,
+    body: c.body,
+    created_at: c.created_at,
+    updated_at: c.updated_at,
+  }
+}
+
+/**
+ * Upsert issue comments by (project_repo_id, github_comment_id). Each comment is linked to its parent
+ * issue via `issue_url`; a comment whose parent is NOT in our `issues` projection is dropped -- this is
+ * what excludes PR comments (we never project PRs) and orphan comments. Returns the count upserted.
+ */
+export async function upsertComments(admin: SupabaseClient, projectRepoId: string, comments: GhComment[], _now: string): Promise<number> {
+  if (comments.length === 0) return 0
+  const byNumber = await issueIdByNumber(admin, projectRepoId)
+  const rows = comments
+    .map((c) => {
+      const n = issueNumberFromUrl(c.issue_url)
+      const issueId = n != null ? byNumber.get(n) : undefined
+      return issueId ? toCommentRow(projectRepoId, issueId, c) : null
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null)
+  if (rows.length === 0) return 0
+  const { error } = await admin.from('comments').upsert(rows, { onConflict: 'project_repo_id,github_comment_id' })
+  if (error) throw new Error(`comment upsert: ${error.message}`)
   return rows.length
 }
