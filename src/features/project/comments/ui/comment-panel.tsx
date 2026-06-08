@@ -108,7 +108,7 @@ function CommentPanelBody({
     <>
       <div className='border-hairline flex flex-col gap-1.5 border-b p-5'>
         <div className='flex items-start gap-2'>
-          <span className={isClosed ? 'text-success mt-0.5' : 'text-muted-ink mt-0.5'}>
+          <span className={isClosed ? 'text-state-closed mt-0.5' : 'text-success mt-0.5'}>
             {isClosed ? <CircleCheck size={16} /> : <Circle size={16} />}
           </span>
           <h2 className='text-ink min-w-0 flex-1 text-base leading-snug font-semibold'>
