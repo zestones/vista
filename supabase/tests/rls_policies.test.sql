@@ -2,7 +2,7 @@
 -- Verifies the security boundary: non-members read nothing, members read their project,
 -- and submission writes are role-gated. Impersonation via set role + request.jwt.claims.
 begin;
-select plan(11);
+select plan(13);
 
 -- Seed as the superuser (RLS bypassed).
 insert into auth.users (id, email) values
@@ -62,6 +62,21 @@ set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111101"}';
 select is((select status::text from public.submissions where id = '66666666-6666-6666-6666-666666666601'), 'pending', 'editor cannot decide a submission');
 update public.submissions set status = 'approved' where id = '66666666-6666-6666-6666-666666666601';
 select is((select status::text from public.submissions where id = '66666666-6666-6666-6666-666666666601'), 'approved', 'owner can decide a submission');
+
+-- Member management (#103): owner can change a member's role; a non-owner's update is filtered out.
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111101"}';
+update public.project_members set role = 'editor' where project_id = '22222222-2222-2222-2222-222222222201' and email = 'viewer@t.co';
+select is(
+  (select role::text from public.project_members where project_id = '22222222-2222-2222-2222-222222222201' and email = 'viewer@t.co'),
+  'editor', 'owner can change a member role (members_manage)'
+);
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111103"}';
+update public.project_members set role = 'viewer' where project_id = '22222222-2222-2222-2222-222222222201' and email = 'viewer@t.co';
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111101"}';
+select is(
+  (select role::text from public.project_members where project_id = '22222222-2222-2222-2222-222222222201' and email = 'viewer@t.co'),
+  'editor', 'a non-owner cannot change a member role (RLS filters)'
+);
 
 -- Stranger (non-member)
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111103"}';

@@ -9,6 +9,10 @@ export interface InvitesApi {
   getProjectByToken(token: string, userEmail: string): Promise<JoinProjectView | null>
   /** Request access behind a token; idempotent for users who are already members or already pending. */
   requestAccess(token: string, user: AuthUser): Promise<RequestAccessResult>
+  /** Owner: the project's active invite token, creating one if none exists (#103). */
+  getOrCreateInviteToken(projectId: string): Promise<string>
+  /** Owner: revoke the current token(s) and mint a fresh one. */
+  regenerateInviteToken(projectId: string): Promise<string>
 }
 
 // MOCK: the token is the project id, and only projects exposed on Vista are joinable.
@@ -45,6 +49,13 @@ const mock: InvitesApi = {
     })
     return Promise.resolve({ status: 'requested' })
   },
+  // Mock convention: the token IS the project id (see getProjectByToken above).
+  getOrCreateInviteToken(projectId) {
+    return Promise.resolve(projectId)
+  },
+  regenerateInviteToken(projectId) {
+    return Promise.resolve(projectId)
+  },
 }
 
 // Supabase: the token RPC (#16) returns only public fields; membership is the caller's own row.
@@ -71,6 +82,35 @@ const supabaseApi: InvitesApi = {
     const { data, error } = await supabase.rpc('request_access', { p_token: token })
     if (error) throw error
     return { status: data as RequestAccessResult['status'] }
+  },
+  async getOrCreateInviteToken(projectId) {
+    // Owner-gated by the invites_manage RLS. Reuse the active (non-revoked) token if there is one.
+    const { data: existing, error: readErr } = await supabase
+      .from('project_invites')
+      .select('token')
+      .eq('project_id', projectId)
+      .is('revoked_at', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (readErr) throw readErr
+    if (existing) return existing.token
+    const token = crypto.randomUUID()
+    const { error } = await supabase.from('project_invites').insert({ project_id: projectId, token })
+    if (error) throw error
+    return token
+  },
+  async regenerateInviteToken(projectId) {
+    const { error: revokeErr } = await supabase
+      .from('project_invites')
+      .update({ revoked_at: new Date().toISOString() })
+      .eq('project_id', projectId)
+      .is('revoked_at', null)
+    if (revokeErr) throw revokeErr
+    const token = crypto.randomUUID()
+    const { error } = await supabase.from('project_invites').insert({ project_id: projectId, token })
+    if (error) throw error
+    return token
   },
 }
 
