@@ -178,7 +178,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* The page background carries the sidebar; the content sits on top as an inset panel. */}
         <div className='bg-surface-sunken relative flex h-screen overflow-hidden lg:gap-2 lg:p-2'>
           <aside
-            className={cn('hidden shrink-0 flex-col overflow-hidden transition-[width] duration-200 lg:flex', collapsed ? 'w-0' : 'w-60')}
+            className={cn(
+              // pt-1 keeps the notification badge (which overhangs the bell) clear of the overflow-hidden top edge.
+              'hidden shrink-0 flex-col overflow-hidden transition-[width] duration-200 lg:flex lg:pt-1',
+              collapsed ? 'w-0' : 'w-60',
+            )}
           >
             <SidebarContent
               onNavigate={() => undefined}

@@ -5,6 +5,8 @@ import { Check, X } from 'lucide-react'
 import type { SubmissionRow, SubmissionStatus, SubmissionType } from '@/services/submissions'
 import { Badge, Button, Segmented } from '@/components/ui'
 import { Spinner } from '@/components/feedback'
+import { submissionKeys } from '@/lib/query-keys/submission.keys'
+import { useRealtimeInvalidate } from '@/hooks/use-realtime-invalidate'
 import { useSubmissions } from '../hooks/use-submissions'
 import { useModerateSubmission } from '../hooks/use-moderate-submission'
 import { ApproveDialog } from './approve-dialog'
@@ -28,6 +30,8 @@ export function ModerationInbox({ projectId }: { projectId: string }) {
   const [tab, setTab] = useState<SubmissionStatus>('pending')
   // Approve opens a picker (target repo + optional milestone); deny is immediate.
   const [approving, setApproving] = useState<SubmissionRow | null>(null)
+  // Live updates (#37): the inbox reflects new/decided submissions without a refresh.
+  useRealtimeInvalidate('submissions', `project_id=eq.${projectId}`, submissionKeys.byProject(projectId))
 
   if (isLoading || !data) {
     return (
