@@ -44,6 +44,7 @@ const mock: InvitesApi = {
       name: user.name,
       role: 'viewer',
       status: 'pending',
+      can_view_comments: false,
       invited_at: new Date().toISOString(),
       decided_at: null,
     })

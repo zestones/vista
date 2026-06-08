@@ -52,6 +52,7 @@ describe('project dashboard + settings (#52)', () => {
       name: 'Viewer',
       role: 'viewer',
       status: 'active',
+      can_view_comments: false,
       invited_at: new Date().toISOString(),
       decided_at: null,
     })

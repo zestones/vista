@@ -338,6 +338,7 @@ export type Database = {
       }
       project_members: {
         Row: {
+          can_view_comments: boolean
           decided_at: string | null
           email: string
           id: string
@@ -349,6 +350,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          can_view_comments?: boolean
           decided_at?: string | null
           email: string
           id?: string
@@ -360,6 +362,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          can_view_comments?: boolean
           decided_at?: string | null
           email?: string
           id?: string
@@ -621,10 +624,12 @@ export type Database = {
         Returns: boolean
       }
       is_active_member: { Args: { p: string }; Returns: boolean }
+      is_issue_visible_to_member: { Args: { i: string }; Returns: boolean }
       is_milestone_shared: { Args: { m: string }; Returns: boolean }
       is_owner: { Args: { p: string }; Returns: boolean }
       is_project_published: { Args: { p: string }; Returns: boolean }
       is_repo_visible_to_member: { Args: { pr: string }; Returns: boolean }
+      member_can_view_comments: { Args: { p: string }; Returns: boolean }
       notify: {
         Args: {
           p_data: Json
@@ -639,6 +644,10 @@ export type Database = {
       resync_all_repos: { Args: never; Returns: undefined }
       set_issue_shared: {
         Args: { i: string; value: boolean }
+        Returns: undefined
+      }
+      set_member_comment_access: {
+        Args: { m: string; value: boolean }
         Returns: undefined
       }
       set_milestone_issues_shared: {
