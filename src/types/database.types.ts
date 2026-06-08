@@ -33,6 +33,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      comments: {
+        Row: {
+          author_avatar_url: string | null
+          author_login: string | null
+          body: string | null
+          created_at: string | null
+          github_comment_id: number
+          id: string
+          issue_id: string
+          project_repo_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          author_avatar_url?: string | null
+          author_login?: string | null
+          body?: string | null
+          created_at?: string | null
+          github_comment_id: number
+          id?: string
+          issue_id: string
+          project_repo_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          author_avatar_url?: string | null
+          author_login?: string | null
+          body?: string | null
+          created_at?: string | null
+          github_comment_id?: number
+          id?: string
+          issue_id?: string
+          project_repo_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_project_repo_id_fkey"
+            columns: ["project_repo_id"]
+            isOneToOne: false
+            referencedRelation: "project_repos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       github_installations: {
         Row: {
           account_login: string

@@ -6,8 +6,8 @@
 //
 // A repo can be attached to several projects, so we fan out to every matching project_repo.
 import { admin } from '../_shared/supabaseAdmin.ts'
-import { upsertIssues, upsertMilestones } from '../_shared/projection.ts'
-import { type GhIssue, type GhMilestone } from '../_shared/github.ts'
+import { upsertComments, upsertIssues, upsertMilestones } from '../_shared/projection.ts'
+import { type GhComment, type GhIssue, type GhMilestone } from '../_shared/github.ts'
 
 const encoder = new TextEncoder()
 
@@ -38,6 +38,7 @@ interface WebhookPayload {
   repository?: { owner: { login: string }; name: string }
   installation?: { id: number }
   issue?: GhIssue
+  comment?: GhComment
   milestone?: GhMilestone
   repositories_removed?: { full_name: string }[]
 }
@@ -75,6 +76,16 @@ Deno.serve(async (req) => {
           await admin.from('issues').delete().eq('project_repo_id', prId).eq('number', issue.number)
         } else if (!issue.pull_request) {
           await upsertIssues(admin, prId, [issue], now)
+        }
+      }
+    } else if (event === 'issue_comment' && payload.comment) {
+      const comment = payload.comment
+      for (const prId of await projectReposFor(payload)) {
+        if (payload.action === 'deleted') {
+          await admin.from('comments').delete().eq('project_repo_id', prId).eq('github_comment_id', comment.id)
+        } else {
+          // created/edited: upsertComments links via issue_url and self-excludes PR/orphan comments.
+          await upsertComments(admin, prId, [comment], now)
         }
       }
     } else if (event === 'milestone' && payload.milestone) {

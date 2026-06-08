@@ -220,3 +220,38 @@ export async function listIssues(token: string, owner: string, repo: string, sin
   }
   return out
 }
+
+export interface GhComment {
+  id: number
+  body: string | null
+  user: { login: string; avatar_url: string } | null
+  created_at: string
+  updated_at: string
+  // Repo-level comments carry only `issue_url` (no parent object). The trailing number is the parent
+  // issue/PR number; PR comments are excluded later by linking only to issues in our projection.
+  issue_url: string
+}
+
+/**
+ * Issue comments for the whole repo (#90), optionally `since` (ISO). Uses the repo-level endpoint so a
+ * single paginated pass covers all issues. Returns comments on PRs too (PRs are issues here); callers
+ * exclude them by linking each comment to a known issue via `issue_url`. Follows pagination.
+ */
+export async function listIssueComments(token: string, owner: string, repo: string, since?: string | null): Promise<GhComment[]> {
+  const base = `${GITHUB_API}/repos/${owner}/${repo}/issues/comments?sort=updated&direction=asc&per_page=100`
+  let url: string | null = since ? `${base}&since=${encodeURIComponent(since)}` : base
+  const out: GhComment[] = []
+  while (url) {
+    const r = await fetch(url, { headers: ghHeaders(token) })
+    if (!r.ok) throw new Error(`list issue comments failed: ${r.status} ${await r.text()}`)
+    out.push(...((await r.json()) as GhComment[]))
+    url = nextLink(r.headers.get('Link'))
+  }
+  return out
+}
+
+/** Parse the trailing issue/PR number from a comment's `issue_url` (.../issues/{n}). */
+export function issueNumberFromUrl(issueUrl: string): number | null {
+  const m = /\/issues\/(\d+)(?:$|[/?#])/.exec(issueUrl)
+  return m ? Number(m[1]) : null
+}

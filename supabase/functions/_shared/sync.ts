@@ -5,14 +5,15 @@
 // Backfill (no prior state) fetches everything; incremental uses `since` (issues) + an ETag/304
 // (milestones). Upserts are idempotent by (project_repo_id, number) and NEVER write `shared`.
 import { type SupabaseClient } from 'npm:@supabase/supabase-js@2'
-import { installationToken, listIssues, listMilestones } from './github.ts'
-import { upsertIssues, upsertMilestones } from './projection.ts'
+import { installationToken, listIssueComments, listIssues, listMilestones } from './github.ts'
+import { upsertComments, upsertIssues, upsertMilestones } from './projection.ts'
 
 export class RepoNotFoundError extends Error {}
 
 export interface SyncResult {
   milestonesUpserted: number
   issuesUpserted: number
+  commentsUpserted: number
   milestonesNotModified: boolean
 }
 
@@ -37,17 +38,22 @@ export async function syncRepo(admin: SupabaseClient, projectRepoId: string): Pr
 
   const ms = await listMilestones(token, repo.owner, repo.repo, state?.last_etag ?? null)
   const issues = await listIssues(token, repo.owner, repo.repo, state?.last_synced_at ?? null)
+  const comments = await listIssueComments(token, repo.owner, repo.repo, state?.last_synced_at ?? null)
   let milestonesUpserted = 0
   let issuesUpserted = 0
-  // Upsert milestones first so upsertIssues can resolve milestone linkage. Both omit `shared`.
+  // Upsert milestones first so upsertIssues can resolve milestone linkage; then issues so upsertComments
+  // can resolve issue linkage. All omit `shared`; comments have no `shared` column.
   if (!ms.notModified) milestonesUpserted = await upsertMilestones(admin, projectRepoId, ms.milestones, startedAt)
   issuesUpserted = await upsertIssues(admin, projectRepoId, issues, startedAt)
+  const commentsUpserted = await upsertComments(admin, projectRepoId, comments, startedAt)
 
   const { error: stateErr } = await admin
     .from('sync_state')
     .upsert({ project_repo_id: projectRepoId, last_synced_at: startedAt, last_etag: ms.etag }, { onConflict: 'project_repo_id' })
   if (stateErr) throw new Error(`sync_state upsert failed: ${stateErr.message}`)
 
-  console.log(`sync-repo ${repo.owner}/${repo.repo}: milestones=${milestonesUpserted} issues=${issuesUpserted} (304=${ms.notModified})`)
-  return { milestonesUpserted, issuesUpserted, milestonesNotModified: ms.notModified }
+  console.log(
+    `sync-repo ${repo.owner}/${repo.repo}: milestones=${milestonesUpserted} issues=${issuesUpserted} comments=${commentsUpserted} (304=${ms.notModified})`,
+  )
+  return { milestonesUpserted, issuesUpserted, commentsUpserted, milestonesNotModified: ms.notModified }
 }
