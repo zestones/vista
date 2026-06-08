@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { Bell } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/contexts/auth.context'
+import { useRealtimeInvalidate } from '@/hooks/use-realtime-invalidate'
 import { useMarkNotifications, useNotifications } from '../hooks/use-notifications'
 
 const formatDate = (iso: string, lang: string) => new Date(iso).toLocaleDateString(lang, { day: 'numeric', month: 'short' })
@@ -11,10 +13,13 @@ const formatDate = (iso: string, lang: string) => new Date(iso).toLocaleDateStri
 /** Bell + unread badge -> dropdown of the current user's notifications, with deep links (#108). */
 export function NotificationBell() {
   const { t, i18n } = useTranslation()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const { data } = useNotifications()
   const { markRead, markAllRead } = useMarkNotifications()
+  // Live updates (#37): new notifications pop the badge without a refresh.
+  useRealtimeInvalidate('notifications', user ? `user_id=eq.${user.id}` : undefined, ['notifications'])
 
   const items = data ?? []
   const unread = items.filter((n) => !n.read_at).length

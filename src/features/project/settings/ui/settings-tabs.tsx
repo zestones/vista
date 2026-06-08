@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
 import { SharePicker } from '@/features/project/sharing'
 import { ModerationInbox, useSubmissions } from '@/features/project/moderation'
@@ -6,6 +7,9 @@ import { GithubTab } from '@/features/project/github'
 import { MembersTab, AccessRequestsTab } from '@/features/project/members'
 import { GeneralTab } from './general-tab'
 import type { ProjectRow } from '@/services/projects'
+
+// Tab is driven by `?tab=` so notifications (#108) can deep-link straight to e.g. the submissions inbox.
+const TABS = ['general', 'github', 'members', 'requests', 'sharing', 'submissions'] as const
 
 export function SettingsTabs({
   project,
@@ -19,8 +23,11 @@ export function SettingsTabs({
   const { t } = useTranslation()
   const { data: subs } = useSubmissions(project.id)
   const pendingSubs = subs?.filter((s) => s.status === 'pending').length ?? 0
+  const [params, setParams] = useSearchParams()
+  const raw = params.get('tab') ?? 'general'
+  const tab = TABS.includes(raw as (typeof TABS)[number]) ? raw : 'general'
   return (
-    <Tabs defaultValue='general'>
+    <Tabs value={tab} onValueChange={(v) => setParams(v === 'general' ? {} : { tab: v }, { replace: true })}>
       <TabsList variant='line'>
         <TabsTrigger value='general'>{t('ps.tab.general')}</TabsTrigger>
         <TabsTrigger value='github'>{t('ps.tab.github')}</TabsTrigger>

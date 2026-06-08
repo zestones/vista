@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Eye, Lock, Plus, Settings } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
@@ -20,7 +20,8 @@ export function RoadmapPage() {
   const { id = '' } = useParams()
   const { user } = useAuth()
   const isMobile = useMediaQuery('(max-width: 700px)')
-  const [tab, setTab] = useState<Tab>('gantt')
+  // Tab is driven by `?tab=` so a decision notification (#108) can deep-link to "My requests".
+  const [searchParams, setSearchParams] = useSearchParams()
   const [requestOpen, setRequestOpen] = useState(false)
   // Owner-only "render as a viewer" mode (#29). Lifted to the AppShell so the whole panel is framed.
   const { active: preview, setActive: setPreview } = usePreview()
@@ -52,6 +53,10 @@ export function RoadmapPage() {
   const { project } = access.data
   const isOwner = project.owner_id === user?.id
   const isViewer = access.data.membership.role === 'viewer'
+
+  // Viewers have no "requests" tab, so a stray ?tab=requests falls back to gantt.
+  const tabParam = searchParams.get('tab')
+  const tab: Tab = tabParam === 'overview' ? 'overview' : tabParam === 'requests' && !isViewer ? 'requests' : 'gantt'
 
   const view =
     tab === 'requests'
@@ -131,7 +136,7 @@ export function RoadmapPage() {
           <Segmented<Tab>
             aria-label='View'
             value={tab}
-            onValueChange={setTab}
+            onValueChange={(v) => setSearchParams(v === 'gantt' ? {} : { tab: v }, { replace: true })}
             options={[
               { value: 'gantt', label: t('dash.tab.gantt') },
               { value: 'overview', label: t('dash.tab.overview') },
