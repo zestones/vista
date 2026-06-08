@@ -28,6 +28,7 @@ function iss(id: string, repo: string, milestoneId: string, number: number, stat
     milestone_id: milestoneId,
     number,
     title: `Issue ${String(number)}`,
+    body: null,
     state,
     labels: [],
     author_login: 'tom',

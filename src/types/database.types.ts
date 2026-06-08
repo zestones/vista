@@ -120,6 +120,7 @@ export type Database = {
         Row: {
           author_avatar_url: string | null
           author_login: string | null
+          body: string | null
           closed_at: string | null
           created_at: string | null
           html_url: string | null
@@ -136,6 +137,7 @@ export type Database = {
         Insert: {
           author_avatar_url?: string | null
           author_login?: string | null
+          body?: string | null
           closed_at?: string | null
           created_at?: string | null
           html_url?: string | null
@@ -152,6 +154,7 @@ export type Database = {
         Update: {
           author_avatar_url?: string | null
           author_login?: string | null
+          body?: string | null
           closed_at?: string | null
           created_at?: string | null
           html_url?: string | null

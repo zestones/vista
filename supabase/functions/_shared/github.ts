@@ -145,6 +145,7 @@ export interface GhMilestone {
 export interface GhIssue {
   number: number
   title: string
+  body: string | null
   state: string
   labels: Array<{ name: string } | string>
   user: { login: string; avatar_url: string } | null

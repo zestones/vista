@@ -7,7 +7,7 @@ import { commentKeys } from '@/lib/query-keys/comment.keys'
 import { useRealtimeInvalidate } from '@/hooks/use-realtime-invalidate'
 import { useCommentPanel, type CommentTarget } from '@/contexts/comment-panel.context'
 import { cn } from '@/lib/utils'
-import { useComments, useCommentViewerCount } from '../hooks/use-comments'
+import { useComments, useCommentViewerCount, useOpeningPost } from '../hooks/use-comments'
 
 const CommentMarkdown = lazy(() => import('./comment-markdown'))
 
@@ -100,12 +100,16 @@ function CommentPanelBody({
   const { navigateToIssue } = useCommentPanel()
   const { issue, isOwner, canViewComments, projectId } = target
   const { data, isLoading } = useComments(issue.id)
+  const op = useOpeningPost(issue.id)
   const viewer = useCommentViewerCount(projectId, isOwner)
   // Live updates while open (#37 reuse): a new comment appears without a refresh.
   useRealtimeInvalidate('comments', `issue_id=eq.${issue.id}`, commentKeys.byIssue(issue.id))
 
   const access = isOwner || canViewComments
   const isClosed = issue.state === 'closed'
+  // The issue body is the opening post — visible to anyone who can see the issue (#119, option B).
+  const openingBody = op.data?.body?.trim() ?? ''
+  const hasOpening = openingBody.length > 0
 
   return (
     <>
@@ -151,40 +155,64 @@ function CommentPanelBody({
         )}
       </div>
 
-      <div className='flex-1 overflow-y-auto p-5'>
+      <div className='flex-1 space-y-4 overflow-y-auto p-5'>
+        {/* Opening post (#119): the issue body, shown to anyone who can see the issue (option B). */}
+        {hasOpening && (
+          <article className='border-hairline bg-card overflow-hidden rounded-xl border'>
+            <div className='border-hairline bg-secondary flex items-center gap-2 border-b px-3.5 py-2'>
+              <Avatar size='sm'>
+                {op.data?.author_avatar_url && <AvatarImage src={op.data.author_avatar_url} alt={op.data.author_login ?? ''} />}
+                <AvatarFallback>{(op.data?.author_login ?? '?').charAt(0).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <span className='text-ink text-[13px] font-medium'>{op.data?.author_login ?? t('mod.anon')}</span>
+              <span className='text-muted-ink text-[11px]'>{t('cmt.opened')}</span>
+              <span className='text-muted-ink ml-auto text-xs'>{formatDate(op.data?.created_at ?? null, i18n.language)}</span>
+            </div>
+            <div className='text-body px-3.5 py-3 text-sm'>
+              <Suspense fallback={<span className='text-muted-ink text-xs'>…</span>}>
+                <CommentMarkdown onIssueRef={navigateToIssue}>{openingBody}</CommentMarkdown>
+              </Suspense>
+            </div>
+          </article>
+        )}
+
+        {/* Replies — gated by the comment grant (#91). */}
         {!access ? (
-          <div className='text-muted-ink grid place-items-center gap-2 py-12 text-center text-sm'>
-            <Lock size={20} />
-            {t('cmt.noAccess')}
-          </div>
+          hasOpening ? (
+            <p className='text-muted-ink flex items-center gap-1.5 text-xs'>
+              <Lock size={13} /> {t('cmt.repliesRestricted')}
+            </p>
+          ) : (
+            <div className='text-muted-ink grid place-items-center gap-2 py-12 text-center text-sm'>
+              <Lock size={20} />
+              {t('cmt.noAccess')}
+            </div>
+          )
         ) : isLoading || !data ? (
-          <div className='grid place-items-center py-12'>
+          <div className='grid place-items-center py-8'>
             <Spinner />
           </div>
         ) : data.length === 0 ? (
-          <p className='text-muted-ink py-12 text-center text-sm'>{t('cmt.empty')}</p>
+          <p className='text-muted-ink py-8 text-center text-sm'>{hasOpening ? t('cmt.noReplies') : t('cmt.empty')}</p>
         ) : (
-          <ul className='flex flex-col gap-4'>
-            {data.map((c) => (
-              // Each comment is one self-contained card: a tinted header strip + the body, so consecutive
-              // comments are clearly distinct (GitHub-style).
-              <li key={c.id} className='border-hairline bg-card overflow-hidden rounded-xl border'>
-                <div className='border-hairline bg-secondary flex items-center gap-2 border-b px-3.5 py-2'>
-                  <Avatar size='sm'>
-                    {c.author_avatar_url && <AvatarImage src={c.author_avatar_url} alt={c.author_login ?? ''} />}
-                    <AvatarFallback>{(c.author_login ?? '?').charAt(0).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <span className='text-ink text-[13px] font-medium'>{c.author_login ?? t('mod.anon')}</span>
-                  <span className='text-muted-ink text-xs'>{formatDate(c.created_at, i18n.language)}</span>
-                </div>
-                <div className='text-body px-3.5 py-3 text-sm'>
-                  <Suspense fallback={<span className='text-muted-ink text-xs'>…</span>}>
-                    <CommentMarkdown onIssueRef={navigateToIssue}>{c.body ?? ''}</CommentMarkdown>
-                  </Suspense>
-                </div>
-              </li>
-            ))}
-          </ul>
+          // Each reply is one self-contained card: a tinted header strip + the body (GitHub-style).
+          data.map((c) => (
+            <article key={c.id} className='border-hairline bg-card overflow-hidden rounded-xl border'>
+              <div className='border-hairline bg-secondary flex items-center gap-2 border-b px-3.5 py-2'>
+                <Avatar size='sm'>
+                  {c.author_avatar_url && <AvatarImage src={c.author_avatar_url} alt={c.author_login ?? ''} />}
+                  <AvatarFallback>{(c.author_login ?? '?').charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <span className='text-ink text-[13px] font-medium'>{c.author_login ?? t('mod.anon')}</span>
+                <span className='text-muted-ink text-xs'>{formatDate(c.created_at, i18n.language)}</span>
+              </div>
+              <div className='text-body px-3.5 py-3 text-sm'>
+                <Suspense fallback={<span className='text-muted-ink text-xs'>…</span>}>
+                  <CommentMarkdown onIssueRef={navigateToIssue}>{c.body ?? ''}</CommentMarkdown>
+                </Suspense>
+              </div>
+            </article>
+          ))
         )}
       </div>
 

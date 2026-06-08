@@ -97,6 +97,7 @@ export function genRepo(projectRepoId: string, seedKey: string): { milestones: M
         milestone_id: msId,
         number: num,
         title: ISSUE_TITLES[(m * 3 + i) % ISSUE_TITLES.length],
+        body: null,
         state: isClosed ? 'closed' : 'open',
         labels: [],
         author_login: AUTHORS[Math.floor(r() * AUTHORS.length)],
@@ -198,6 +199,18 @@ export function buildSeed(): MockDb {
 
   // A few comments on the first Apollo issue so the comment sidebar (#92) renders in mock mode.
   const apolloIssue = 'prj-apollo-repo-1-iss-1'
+  // Give it a body so the opening post (#119) renders in mock mode.
+  const apolloRow = db.issues.find((i) => i.id === apolloIssue)
+  if (apolloRow) {
+    apolloRow.body = [
+      'We need to ship the **client portal** redesign.',
+      '',
+      '- new dashboard',
+      '- shared roadmap',
+      '',
+      'Tracking the rest in #2.',
+    ].join('\n')
+  }
   db.comments.push(
     {
       id: 'cmt-1',

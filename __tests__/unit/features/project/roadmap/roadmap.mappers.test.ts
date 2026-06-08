@@ -25,6 +25,7 @@ function iss(id: string, repo: string, milestoneId: string | null, number: numbe
     milestone_id: milestoneId,
     number,
     title: `I ${String(number)}`,
+    body: null,
     state,
     labels: [],
     author_login: 'x',

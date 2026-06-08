@@ -11,6 +11,15 @@ export function useComments(issueId: string | null) {
   })
 }
 
+/** The issue's opening post (#119) — body + author, gated by issue visibility (not the comment grant). */
+export function useOpeningPost(issueId: string | null) {
+  return useQuery({
+    queryKey: commentKeys.openingPost(issueId ?? ''),
+    queryFn: () => comments.getOpeningPost(issueId ?? ''),
+    enabled: issueId !== null,
+  })
+}
+
 /** Owner-only: count of clients who can view comments on the project (for the sheet hint). */
 export function useCommentViewerCount(projectId: string, enabled: boolean) {
   return useQuery({
