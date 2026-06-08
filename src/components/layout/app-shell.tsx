@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAutoAnimate } from '@formkit/auto-animate/react'
@@ -181,9 +181,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   const closeComments = useCallback(() => {
     setCommentTarget(null)
   }, [])
+  // Issue-mention navigation (#116): the active roadmap page registers a handler into this ref; the
+  // stable navigateToIssue delegates to it (no-op when no roadmap is mounted).
+  const navigatorRef = useRef<((issueNumber: number) => void) | null>(null)
+  const navigateToIssue = useCallback((issueNumber: number) => {
+    navigatorRef.current?.(issueNumber)
+  }, [])
+  const registerNavigator = useCallback((fn: ((issueNumber: number) => void) | null) => {
+    navigatorRef.current = fn
+  }, [])
   const commentPanel = useMemo(
-    () => ({ target: commentTarget, open: openComments, close: closeComments }),
-    [commentTarget, openComments, closeComments],
+    () => ({ target: commentTarget, open: openComments, close: closeComments, navigateToIssue, registerNavigator }),
+    [commentTarget, openComments, closeComments, navigateToIssue, registerNavigator],
   )
 
   return (

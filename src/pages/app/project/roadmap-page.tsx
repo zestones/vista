@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Eye, Lock, Plus, Settings } from 'lucide-react'
@@ -24,8 +24,10 @@ export function RoadmapPage() {
   // Tab is driven by `?tab=` so a decision notification (#108) can deep-link to "My requests".
   const [searchParams, setSearchParams] = useSearchParams()
   const [requestOpen, setRequestOpen] = useState(false)
+  // Centering the Gantt on an issue (#116): a token whose `key` changes so re-clicks re-trigger.
+  const [focusBar, setFocusBar] = useState<{ id: string; key: number } | null>(null)
   // Clicking an issue opens its comment panel (#92), which pushes the content aside (shell-level).
-  const { open: openComments, close: closeComments } = useCommentPanel()
+  const { open: openComments, close: closeComments, registerNavigator } = useCommentPanel()
   // Owner-only "render as a viewer" mode (#29). Lifted to the AppShell so the whole panel is framed.
   const { active: preview, setActive: setPreview } = usePreview()
   // Reset on project switch and when leaving the roadmap, so the frame never leaks to another page.
@@ -46,6 +48,41 @@ export function RoadmapPage() {
   const roadmap = useRoadmap(id, preview)
   const groups = roadmap.data?.groups ?? []
   const unscheduled = roadmap.data?.unscheduled ?? []
+
+  // Resolve a `#<n>` mention to a visible issue, open its comments, and center the Gantt on it (#116).
+  // No-op if the number isn't a visible issue in this roadmap. Reads hook data so it stays above the guards.
+  const navigateToIssue = useCallback(
+    (issueNumber: number) => {
+      const data = roadmap.data
+      const acc = access.data
+      if (!data || !acc) return
+      let bar: Bar | undefined
+      for (const g of data.groups) {
+        bar = g.bars.find((b) => b.number === issueNumber)
+        if (bar) break
+      }
+      const unsched = data.unscheduled.find((i) => i.number === issueNumber)
+      const src =
+        bar ??
+        (unsched ? { id: unsched.id, number: unsched.number, title: unsched.title, state: unsched.state, url: unsched.html_url } : null)
+      if (!src) return
+      openComments({
+        issue: { id: src.id, number: src.number, title: src.title, state: src.state, url: src.url },
+        projectId: id,
+        isOwner: acc.project.owner_id === user?.id,
+        canViewComments: acc.membership?.can_view_comments ?? false,
+      })
+      if (bar) {
+        setSearchParams({}, { replace: true }) // switch to the Gantt view
+        setFocusBar({ id: bar.id, key: Date.now() })
+      }
+    },
+    [roadmap.data, access.data, user?.id, id, openComments, setSearchParams],
+  )
+  useEffect(() => {
+    registerNavigator(navigateToIssue)
+    return () => registerNavigator(null)
+  }, [registerNavigator, navigateToIssue])
 
   if (access.isLoading) {
     return (
@@ -180,7 +217,7 @@ export function RoadmapPage() {
           ) : view === 'mobile' ? (
             <RoadmapMobile groups={groups} onIssueClick={openIssue} />
           ) : (
-            <RoadmapGantt groups={groups} onIssueClick={openIssue} />
+            <RoadmapGantt groups={groups} onIssueClick={openIssue} focusBar={focusBar} />
           )}
         </TabTransition>
       </div>

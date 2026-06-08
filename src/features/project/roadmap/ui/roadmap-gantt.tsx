@@ -56,9 +56,10 @@ interface Props {
   embedded?: boolean
   maxHeight?: number
   onIssueClick?: (bar: Bar) => void
+  focusBar?: { id: string; key: number } | null
 }
 
-export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssueClick }: Props) {
+export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssueClick, focusBar }: Props) {
   const { t, i18n } = useTranslation()
   const lang = i18n.language
   const [filter, setFilter] = useState<Filter>('all')
@@ -333,6 +334,23 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
     initRef.current = true
     scrollerRef.current.scrollTo({ left: Math.max(0, todayOff * dayW - (viewW - labelW) / 2) })
   }, [viewW, todayOff, dayW, todayInRange, labelW])
+
+  // Focus a bar on demand (#116, issue-mention jump). Refs so this fires only when `focusBar` changes,
+  // not on every zoom/pan that would change jumpTo/groups identity.
+  const jumpRef = useRef(jumpTo)
+  jumpRef.current = jumpTo
+  const groupsRef = useRef(groups)
+  groupsRef.current = groups
+  useEffect(() => {
+    if (!focusBar) return
+    for (const g of groupsRef.current) {
+      const b = g.bars.find((x) => x.id === focusBar.id)
+      if (b) {
+        jumpRef.current(g, b)
+        break
+      }
+    }
+  }, [focusBar])
 
   useEffect(() => {
     if (!searchOpen) return
