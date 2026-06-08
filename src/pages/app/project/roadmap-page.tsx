@@ -6,14 +6,14 @@ import { useAuth } from '@/contexts/auth.context'
 import { usePreview } from '@/contexts/preview.context'
 import { RoadmapGantt, RoadmapMobile, RoadmapOverview, useRoadmap } from '@/features/project/roadmap'
 import { useProjectAccess } from '@/features/project/dashboard'
-import { RequestModal } from '@/features/project/submission'
+import { MyRequests, RequestModal } from '@/features/project/submission'
 import { Button, Segmented } from '@/components/ui'
 import { PageHeader } from '@/components/layout'
 import { TabTransition } from '@/components/motion'
 import { Spinner } from '@/components/feedback'
 import { useMediaQuery } from '@/hooks/use-media-query'
 
-type Tab = 'gantt' | 'overview'
+type Tab = 'gantt' | 'overview' | 'requests'
 
 export function RoadmapPage() {
   const { t } = useTranslation()
@@ -53,17 +53,20 @@ export function RoadmapPage() {
   const isOwner = project.owner_id === user?.id
   const isViewer = access.data.membership.role === 'viewer'
 
-  const view = roadmap.isLoading
-    ? 'loading'
-    : roadmap.isError
-      ? 'error'
-      : groups.length === 0
-        ? 'empty'
-        : tab === 'overview'
-          ? 'overview'
-          : isMobile
-            ? 'mobile'
-            : 'gantt'
+  const view =
+    tab === 'requests'
+      ? 'requests'
+      : roadmap.isLoading
+        ? 'loading'
+        : roadmap.isError
+          ? 'error'
+          : groups.length === 0
+            ? 'empty'
+            : tab === 'overview'
+              ? 'overview'
+              : isMobile
+                ? 'mobile'
+                : 'gantt'
 
   return (
     <div className='flex h-full flex-col'>
@@ -132,6 +135,8 @@ export function RoadmapPage() {
             options={[
               { value: 'gantt', label: t('dash.tab.gantt') },
               { value: 'overview', label: t('dash.tab.overview') },
+              // Editors (who can submit) get a self-scoped "My requests" tab (#101).
+              ...(!isViewer ? [{ value: 'requests' as const, label: t('dash.tab.requests') }] : []),
             ]}
           />
         </div>
@@ -141,6 +146,8 @@ export function RoadmapPage() {
             <div className='grid flex-1 place-items-center'>
               <Spinner />
             </div>
+          ) : view === 'requests' ? (
+            <MyRequests projectId={id} />
           ) : view === 'error' ? (
             <p className='text-muted-ink text-sm'>{t('state.errorTitle')}</p>
           ) : view === 'empty' ? (
