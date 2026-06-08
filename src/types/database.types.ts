@@ -181,6 +181,54 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          kind: Database["public"]["Enums"]["notification_kind"]
+          link: string | null
+          project_id: string | null
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id?: string
+          kind: Database["public"]["Enums"]["notification_kind"]
+          link?: string | null
+          project_id?: string | null
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          kind?: Database["public"]["Enums"]["notification_kind"]
+          link?: string | null
+          project_id?: string | null
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -526,6 +574,16 @@ export type Database = {
       is_owner: { Args: { p: string }; Returns: boolean }
       is_project_published: { Args: { p: string }; Returns: boolean }
       is_repo_visible_to_member: { Args: { pr: string }; Returns: boolean }
+      notify: {
+        Args: {
+          p_data: Json
+          p_kind: Database["public"]["Enums"]["notification_kind"]
+          p_link: string
+          p_project: string
+          p_user: string
+        }
+        Returns: undefined
+      }
       request_access: { Args: { p_token: string }; Returns: string }
       resync_all_repos: { Args: never; Returns: undefined }
       set_issue_shared: {
@@ -548,6 +606,13 @@ export type Database = {
     Enums: {
       member_role: "owner" | "editor" | "viewer"
       member_status: "pending" | "active"
+      notification_kind:
+        | "submission_received"
+        | "submission_approved"
+        | "submission_denied"
+        | "access_requested"
+        | "access_approved"
+        | "access_denied"
       project_visibility: "private" | "shared"
       submission_status: "pending" | "approved" | "denied"
       submission_type: "feature" | "bug" | "question" | "other"
@@ -675,6 +740,14 @@ export const Constants = {
     Enums: {
       member_role: ["owner", "editor", "viewer"],
       member_status: ["pending", "active"],
+      notification_kind: [
+        "submission_received",
+        "submission_approved",
+        "submission_denied",
+        "access_requested",
+        "access_approved",
+        "access_denied",
+      ],
       project_visibility: ["private", "shared"],
       submission_status: ["pending", "approved", "denied"],
       submission_type: ["feature", "bug", "question", "other"],
