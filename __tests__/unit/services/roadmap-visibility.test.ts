@@ -25,6 +25,7 @@ function iss(id: string, milestoneId: string | null, shared: boolean): IssueRow 
     milestone_id: milestoneId,
     number: 1,
     title: id,
+    body: null,
     state: 'open',
     labels: [],
     author_login: 'x',

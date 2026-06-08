@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Info } from 'lucide-react'
 import { filterShared } from '@/services/roadmap'
 import { milestoneColor, useRoadmapData } from '@/features/project/roadmap'
 import { Button, Switch } from '@/components/ui'
@@ -42,6 +43,11 @@ export function SharePicker({ projectId }: { projectId: string }) {
         <div>
           <h2 className='text-ink text-lg font-medium'>{t('share.title')}</h2>
           <p className='text-muted-ink mt-1 text-sm'>{t('share.subtitle')}</p>
+          {/* Make the implication of sharing explicit (#119): a shared issue reveals its description. */}
+          <p className='border-hairline bg-secondary text-muted-ink mt-3 flex max-w-prose items-start gap-2 rounded-md border px-3 py-2 text-xs'>
+            <Info size={14} className='mt-0.5 shrink-0' />
+            {t('share.bodyNote')}
+          </p>
         </div>
         {hasItems && (
           <Button

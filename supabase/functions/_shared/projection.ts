@@ -25,6 +25,7 @@ export function toIssueRow(projectRepoId: string, i: GhIssue, milestoneId: strin
     project_repo_id: projectRepoId,
     number: i.number,
     title: i.title,
+    body: i.body ?? null,
     state: i.state,
     labels: i.labels.map((l) => (typeof l === 'string' ? l : l.name)),
     author_login: i.user?.login ?? null,
