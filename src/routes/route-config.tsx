@@ -14,10 +14,11 @@ export const routeConfig: RouteObject[] = [
   { element: <GuestOnly />, children: [{ path: '/login', element: <LoginPage /> }] },
   // Public: GitHub App post-install redirect target (#77). Handles auth itself.
   { path: '/github/callback', element: <GithubCallbackPage /> },
+  // Public: an invitee must see the project + sign in before they're a member (#105).
+  { path: '/join/:token', element: <JoinPage /> },
   {
     element: <RequireAuth />,
     children: [
-      { path: '/join/:token', element: <JoinPage /> },
       { path: '/app', element: <WorkspacePage /> },
       { path: '/app/admin', element: <AdminPage /> },
       { path: '/app/projects/:id', element: <RoadmapPage /> },
