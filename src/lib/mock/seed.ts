@@ -8,6 +8,7 @@ export type MilestoneRow = Tables['milestones']['Row']
 export type IssueRow = Tables['issues']['Row']
 export type MemberRow = Tables['project_members']['Row']
 export type SubmissionRow = Tables['submissions']['Row']
+export type NotificationRow = Tables['notifications']['Row']
 
 /** Normalized in-memory shape that mirrors the Postgres tables (rows, not a nested tree). */
 export interface MockDb {
@@ -17,6 +18,7 @@ export interface MockDb {
   issues: IssueRow[]
   members: MemberRow[]
   submissions: SubmissionRow[]
+  notifications: NotificationRow[]
 }
 
 // ─── Seeded RNG (mulberry32) — deterministic per key ─────────────
@@ -131,7 +133,15 @@ interface ProjectDef {
 }
 
 const PROJECT_DEFS: ProjectDef[] = [
-  { id: 'prj-apollo', name: 'Platform redesign', visibility: 'shared', repos: [['acme', 'webapp'], ['acme', 'design-system']] },
+  {
+    id: 'prj-apollo',
+    name: 'Platform redesign',
+    visibility: 'shared',
+    repos: [
+      ['acme', 'webapp'],
+      ['acme', 'design-system'],
+    ],
+  },
   { id: 'prj-mobile', name: 'Mobile app', visibility: 'shared', repos: [['acme', 'mobile']] },
   { id: 'prj-internal', name: 'Internal tools', visibility: 'private', repos: [['acme', 'ops']] },
 ]
@@ -141,7 +151,7 @@ export function buildSeed(): MockDb {
   const now = new Date().toISOString()
   // Mock identity = email (see services/auth). The demo owner is you@vista.app.
   const ownerId = 'you@vista.app'
-  const db: MockDb = { projects: [], projectRepos: [], milestones: [], issues: [], members: [], submissions: [] }
+  const db: MockDb = { projects: [], projectRepos: [], milestones: [], issues: [], members: [], submissions: [], notifications: [] }
 
   PROJECT_DEFS.forEach((d, di) => {
     db.projects.push({
@@ -190,6 +200,30 @@ export function buildSeed(): MockDb {
     decided_at: null,
     decided_by: null,
   })
+
+  // A couple of seeded notifications for the demo owner so the bell isn't empty in mock.
+  db.notifications.push(
+    {
+      id: 'notif-1',
+      user_id: ownerId,
+      project_id: 'prj-apollo',
+      kind: 'submission_received',
+      data: { project: 'Apollo', title: 'Dark mode for the client portal' },
+      link: '/app/projects/prj-apollo/settings',
+      read_at: null,
+      created_at: now,
+    },
+    {
+      id: 'notif-2',
+      user_id: ownerId,
+      project_id: 'prj-apollo',
+      kind: 'access_requested',
+      data: { project: 'Apollo', who: 'Marie' },
+      link: '/app/projects/prj-apollo/settings',
+      read_at: null,
+      created_at: now,
+    },
+  )
 
   return db
 }

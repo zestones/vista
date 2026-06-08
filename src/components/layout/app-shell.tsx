@@ -9,6 +9,7 @@ import { PreviewContext } from '@/contexts/preview.context'
 import { NewProjectModal, useWorkspace } from '@/features/workspace'
 import { Button } from '@/components/ui'
 import { LangToggle } from './lang-toggle'
+import { NotificationBell } from '@/features/notifications'
 import { VistaMark } from '@/components/brand'
 import { cn } from '@/lib/utils'
 import { env } from '@/config/env'
@@ -65,15 +66,20 @@ function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; 
 
   return (
     <div className='flex h-full flex-col'>
-      <Link to='/app' onClick={onNavigate} className='text-ink mb-6 flex items-center gap-2.5 px-2'>
-        <VistaMark />
-        <span className='font-display text-[19px] font-semibold tracking-[-0.02em]'>Vista</span>
-        {env.backend === 'mock' && (
-          <span className='border-hairline text-muted-ink ml-auto rounded-sm border px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase'>
-            {t('side.mockBadge')}
-          </span>
-        )}
-      </Link>
+      <div className='mb-6 flex items-center gap-2 px-2'>
+        <Link to='/app' onClick={onNavigate} className='text-ink flex items-center gap-2.5'>
+          <VistaMark />
+          <span className='font-display text-[19px] font-semibold tracking-[-0.02em]'>Vista</span>
+        </Link>
+        <div className='ml-auto flex items-center gap-1'>
+          {env.backend === 'mock' && (
+            <span className='border-hairline text-muted-ink rounded-sm border px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase'>
+              {t('side.mockBadge')}
+            </span>
+          )}
+          <NotificationBell />
+        </div>
+      </div>
 
       <nav className='flex flex-col gap-0.5'>
         <NavItem
