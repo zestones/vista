@@ -22,12 +22,17 @@ describe('moderation inbox (#6)', () => {
     resetMockDb()
   })
 
-  it('lists the seeded pending submission and clears it to the empty state on approve', async () => {
+  it('approves via the picker dialog and clears the submission to the empty state', async () => {
     renderInbox()
     // The seed carries one pending submission for prj-apollo.
     expect(await screen.findByText('Dark mode for the client portal')).toBeInTheDocument()
 
+    // Approve opens the target-repo picker (#33); the sole repo is preselected.
     fireEvent.click(screen.getByRole('button', { name: /Approuver|Approve/ }))
+
+    // Confirm creates the issue -> the submission leaves the pending list.
+    const confirm = await screen.findByRole('button', { name: /Créer|Create issue/ })
+    fireEvent.click(confirm)
 
     await waitFor(() => {
       expect(screen.queryByText('Dark mode for the client portal')).toBeNull()

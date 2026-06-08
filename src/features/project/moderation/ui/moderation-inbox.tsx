@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import { Check, X } from 'lucide-react'
@@ -6,6 +7,7 @@ import { Badge, Button } from '@/components/ui'
 import { Spinner } from '@/components/feedback'
 import { useSubmissions } from '../hooks/use-submissions'
 import { useModerateSubmission } from '../hooks/use-moderate-submission'
+import { ApproveDialog } from './approve-dialog'
 
 const TYPE_KEY: Record<SubmissionType, string> = {
   feature: 'mod.type.feature',
@@ -19,6 +21,8 @@ export function ModerationInbox({ projectId }: { projectId: string }) {
   const { t } = useTranslation()
   const { data, isLoading } = useSubmissions(projectId)
   const moderate = useModerateSubmission(projectId)
+  // Approve opens a picker (target repo + optional milestone); deny is immediate.
+  const [approving, setApproving] = useState<SubmissionRow | null>(null)
 
   if (isLoading || !data) {
     return (
@@ -47,16 +51,45 @@ export function ModerationInbox({ projectId }: { projectId: string }) {
               sub={s}
               disabled={moderate.isPending}
               onModerate={(decision) => {
-                // Target repo: #32 auto-resolves a sole repo; the #33 picker will supply it for multi-repo.
-                moderate.mutate(decision === 'approve' ? { decision: 'approve', id: s.id } : { decision: 'deny', id: s.id }, {
-                  onSuccess: () => toast.success(t(decision === 'approve' ? 'mod.approved' : 'mod.denied')),
-                  onError: (e) => toast.error(e instanceof Error && e.message ? e.message : t('mod.error')),
-                })
+                if (decision === 'approve') {
+                  setApproving(s) // pick target repo + milestone in the dialog
+                  return
+                }
+                moderate.mutate(
+                  { decision: 'deny', id: s.id },
+                  {
+                    onSuccess: () => toast.success(t('mod.denied')),
+                    onError: (e) => toast.error(e instanceof Error && e.message ? e.message : t('mod.error')),
+                  },
+                )
               }}
             />
           ))}
         </div>
       )}
+
+      <ApproveDialog
+        projectId={projectId}
+        submissionTitle={approving?.title ?? null}
+        open={approving !== null}
+        onOpenChange={(v) => {
+          if (!v) setApproving(null)
+        }}
+        pending={moderate.isPending}
+        onConfirm={(opts) => {
+          if (!approving) return
+          moderate.mutate(
+            { decision: 'approve', id: approving.id, ...opts },
+            {
+              onSuccess: () => {
+                toast.success(t('mod.approved'))
+                setApproving(null)
+              },
+              onError: (e) => toast.error(e instanceof Error && e.message ? e.message : t('mod.error')),
+            },
+          )
+        }}
+      />
     </div>
   )
 }
