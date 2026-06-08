@@ -56,7 +56,7 @@ export function Combobox({
             !selected && 'text-muted-foreground',
           )}
         >
-          <span className='truncate'>{selected ? selected.label : placeholder}</span>
+          <span className='min-w-0 truncate'>{selected ? selected.label : placeholder}</span>
           <ChevronsUpDown className='ml-2 size-4 shrink-0 opacity-50' />
         </button>
       </PopoverTrigger>
