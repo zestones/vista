@@ -9,6 +9,7 @@ export type IssueRow = Tables['issues']['Row']
 export type MemberRow = Tables['project_members']['Row']
 export type SubmissionRow = Tables['submissions']['Row']
 export type NotificationRow = Tables['notifications']['Row']
+export type CommentRow = Tables['comments']['Row']
 
 /** Normalized in-memory shape that mirrors the Postgres tables (rows, not a nested tree). */
 export interface MockDb {
@@ -19,6 +20,7 @@ export interface MockDb {
   members: MemberRow[]
   submissions: SubmissionRow[]
   notifications: NotificationRow[]
+  comments: CommentRow[]
 }
 
 // ─── Seeded RNG (mulberry32) — deterministic per key ─────────────
@@ -151,7 +153,16 @@ export function buildSeed(): MockDb {
   const now = new Date().toISOString()
   // Mock identity = email (see services/auth). The demo owner is you@vista.app.
   const ownerId = 'you@vista.app'
-  const db: MockDb = { projects: [], projectRepos: [], milestones: [], issues: [], members: [], submissions: [], notifications: [] }
+  const db: MockDb = {
+    projects: [],
+    projectRepos: [],
+    milestones: [],
+    issues: [],
+    members: [],
+    submissions: [],
+    notifications: [],
+    comments: [],
+  }
 
   PROJECT_DEFS.forEach((d, di) => {
     db.projects.push({
@@ -184,6 +195,33 @@ export function buildSeed(): MockDb {
       db.issues.push(...issues)
     })
   })
+
+  // A few comments on the first Apollo issue so the comment sidebar (#92) renders in mock mode.
+  const apolloIssue = 'prj-apollo-repo-1-iss-1'
+  db.comments.push(
+    {
+      id: 'cmt-1',
+      project_repo_id: 'prj-apollo-repo-1',
+      issue_id: apolloIssue,
+      github_comment_id: 9001,
+      author_login: 'maintainer',
+      author_avatar_url: null,
+      body: 'Started on this — the **first pass** is in review.\n\n- [x] schema\n- [ ] UI\n- [ ] tests',
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: 'cmt-2',
+      project_repo_id: 'prj-apollo-repo-1',
+      issue_id: apolloIssue,
+      github_comment_id: 9002,
+      author_login: 'designer',
+      author_avatar_url: null,
+      body: 'See the spec in `design-system`. Quick example:\n\n```ts\nconst ok = true\n```\n\nMore in [the doc](https://example.com).',
+      created_at: now,
+      updated_at: now,
+    },
+  )
 
   // One pending submission so the moderation flow is testable from the seed.
   db.submissions.push({

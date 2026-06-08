@@ -47,7 +47,7 @@ const mock: ProjectsApi = {
     const mine = members.find((m) => m.user_id === userId)
     return Promise.resolve({
       project,
-      membership: mine ? { role: mine.role, status: mine.status } : null,
+      membership: mine ? { role: mine.role, status: mine.status, can_view_comments: mine.can_view_comments } : null,
       activeMembers: members.filter((m) => m.status === 'active').length,
       pendingMembers: members.filter((m) => m.status === 'pending').length,
     })
@@ -55,7 +55,12 @@ const mock: ProjectsApi = {
   createProject(input, owner) {
     const db = mockDb()
     const now = new Date().toISOString()
-    const slug = input.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'project'
+    const slug =
+      input.name
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '') || 'project'
     let id = `prj-${slug}`
     for (let n = 2; db.projects.some((p) => p.id === id); n++) id = `prj-${slug}-${String(n)}`
 
@@ -139,12 +144,15 @@ const supabaseApi: ProjectsApi = {
     const { data: project, error } = await supabase.from('projects').select('*').eq('id', id).maybeSingle()
     if (error) throw error
     if (!project) return null
-    const { data: members, error: mErr } = await supabase.from('project_members').select('role, status, user_id').eq('project_id', id)
+    const { data: members, error: mErr } = await supabase
+      .from('project_members')
+      .select('role, status, user_id, can_view_comments')
+      .eq('project_id', id)
     if (mErr) throw mErr
     const mine = members.find((m) => m.user_id === userId)
     return {
       project,
-      membership: mine ? { role: mine.role, status: mine.status } : null,
+      membership: mine ? { role: mine.role, status: mine.status, can_view_comments: mine.can_view_comments } : null,
       activeMembers: members.filter((m) => m.status === 'active').length,
       pendingMembers: members.filter((m) => m.status === 'pending').length,
     }
