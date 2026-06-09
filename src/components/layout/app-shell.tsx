@@ -2,12 +2,13 @@ import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAutoAnimate } from '@formkit/auto-animate/react'
-import { LayoutGrid, Menu, Plus, Shield } from 'lucide-react'
+import { Globe, LayoutGrid, Menu, Plus, Shield } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { SidebarContext } from '@/contexts/sidebar.context'
 import { PreviewContext } from '@/contexts/preview.context'
 import { CommentPanelContext, type CommentTarget } from '@/contexts/comment-panel.context'
 import { NewProjectModal, useWorkspace } from '@/features/workspace'
+import { publishState, type ProjectSummary } from '@/services/projects'
 import { CommentPanel } from '@/features/project/comments'
 import { Button } from '@/components/ui'
 import { LangToggle } from './lang-toggle'
@@ -23,6 +24,7 @@ function NavItem({
   dot,
   label,
   badge,
+  trailing,
   onNavigate,
 }: {
   to: string
@@ -31,6 +33,7 @@ function NavItem({
   dot?: string
   label: string
   badge?: number
+  trailing?: ReactNode
   onNavigate: () => void
 }) {
   return (
@@ -48,10 +51,42 @@ function NavItem({
         <span className={cn('flex shrink-0', active ? 'text-ink' : 'text-muted-ink')}>{icon}</span>
       )}
       <span className='flex-1 truncate'>{label}</span>
+      {trailing}
       {badge !== undefined && badge > 0 && (
         <span className='bg-sig-coral rounded-sm px-1.5 py-0.5 text-[11px] font-bold text-white tabular-nums'>{badge}</span>
       )}
     </Link>
+  )
+}
+
+/** A labelled group of projects in the sidebar. `owned` items flag the ones not visible to clients (#107). */
+function ProjectGroup({ label, items, pathname, owned, onNavigate }: { label: string; items: ProjectSummary[]; pathname: string; owned: boolean; onNavigate: () => void }) {
+  const { t } = useTranslation()
+  const [listRef] = useAutoAnimate<HTMLDivElement>()
+  if (items.length === 0) return null
+  return (
+    <div>
+      <div className='text-muted-ink mb-1 px-3 text-[10px] font-semibold tracking-wide uppercase'>{label}</div>
+      <div ref={listRef} className='flex flex-col gap-0.5'>
+        {items.map((s) => (
+          <NavItem
+            key={s.project.id}
+            to={`/app/projects/${s.project.id}`}
+            active={pathname.startsWith(`/app/projects/${s.project.id}`)}
+            dot={s.project.color ?? 'var(--color-ink)'}
+            label={s.project.name}
+            trailing={
+              owned && publishState(s.project).published ? (
+                <span title={t('status.clientVisible')} className='flex shrink-0'>
+                  <Globe size={13} className='text-success' aria-label={t('status.clientVisible')} />
+                </span>
+              ) : undefined
+            }
+            onNavigate={onNavigate}
+          />
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -61,9 +96,9 @@ function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; 
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { data } = useWorkspace(user?.id ?? '')
-  const [projectsRef] = useAutoAnimate<HTMLDivElement>()
-  const projects = [...(data?.owned ?? []), ...(data?.joined ?? [])]
-  const pendingTotal = (data?.owned ?? []).reduce((n, s) => n + s.pendingMembers, 0)
+  const owned = data?.owned ?? []
+  const joined = data?.joined ?? []
+  const pendingTotal = owned.reduce((n, s) => n + s.pendingMembers, 0)
   const initial = (user?.name ?? user?.email ?? '?').charAt(0).toUpperCase()
 
   return (
@@ -101,7 +136,7 @@ function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; 
         />
       </nav>
 
-      <div className='mt-6'>
+      <div className='mt-6 flex min-h-0 flex-1 flex-col'>
         <div className='mb-1.5 flex items-center justify-between px-3'>
           <span className='text-muted-ink text-[11px] font-medium tracking-wide uppercase'>{t('side.projects')}</span>
           <button
@@ -114,17 +149,9 @@ function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; 
             <Plus size={14} />
           </button>
         </div>
-        <div ref={projectsRef} className='flex max-h-[40vh] flex-col gap-0.5 overflow-y-auto'>
-          {projects.map((s) => (
-            <NavItem
-              key={s.project.id}
-              to={`/app/projects/${s.project.id}`}
-              active={pathname.startsWith(`/app/projects/${s.project.id}`)}
-              dot={s.project.color ?? 'var(--color-ink)'}
-              label={s.project.name}
-              onNavigate={onNavigate}
-            />
-          ))}
+        <div className='flex flex-col gap-3 overflow-y-auto'>
+          <ProjectGroup label={t('ws.owned')} items={owned} pathname={pathname} owned onNavigate={onNavigate} />
+          <ProjectGroup label={t('ws.joined')} items={joined} pathname={pathname} owned={false} onNavigate={onNavigate} />
         </div>
       </div>
 

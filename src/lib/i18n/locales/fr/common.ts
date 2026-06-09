@@ -17,4 +17,6 @@ export const common = {
   'status.unavailable': 'Masqué',
   'status.shared': 'Partagé',
   'status.private': 'Privé',
+  'status.clientVisible': 'Visible par les clients',
+  'status.clientHidden': 'Masqué des clients',
 }

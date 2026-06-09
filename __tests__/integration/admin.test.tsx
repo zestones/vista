@@ -38,16 +38,16 @@ describe('admin console (#51)', () => {
     expect(manage[0].getAttribute('href')).toMatch(/\/app\/projects\/.+\/settings/)
   })
 
-  it('toggles a project availability', async () => {
+  it('toggles a project client visibility', async () => {
     renderAdmin()
     await screen.findByText('Platform redesign')
-    const availability = screen.getAllByRole('switch', { name: /Disponible|Available/ })
-    const before = availability[0].getAttribute('aria-checked')
+    const access = screen.getAllByRole('switch', { name: /Visible/ })
+    const before = access[0].getAttribute('aria-checked')
 
-    fireEvent.click(availability[0])
+    fireEvent.click(access[0])
 
     await waitFor(() => {
-      const after = screen.getAllByRole('switch', { name: /Disponible|Available/ })[0]
+      const after = screen.getAllByRole('switch', { name: /Visible/ })[0]
       expect(after.getAttribute('aria-checked')).not.toBe(before)
     })
   })

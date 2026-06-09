@@ -28,13 +28,23 @@ function summarize(db: MockDb, project: ProjectRow): ProjectSummary {
   }
 }
 
+/**
+ * Stable list order (#107). Without it the supabase RPC returns rows in physical-update order, so
+ * toggling availability/visibility reshuffles the admin table, workspace, and sidebar. Sort by
+ * created_at (oldest first) so the order never moves under the user.
+ */
+function stableOrder(r: OwnedJoinedProjects): OwnedJoinedProjects {
+  const byCreated = (a: ProjectSummary, b: ProjectSummary) => a.project.created_at.localeCompare(b.project.created_at)
+  return { owned: [...r.owned].sort(byCreated), joined: [...r.joined].sort(byCreated) }
+}
+
 const mock: ProjectsApi = {
   getProjectsForUser(userId) {
     const db = mockDb()
     const memberOf = new Set(db.members.filter((m) => m.user_id === userId && m.status === 'active').map((m) => m.project_id))
     const owned = db.projects.filter((p) => p.owner_id === userId).map((p) => summarize(db, p))
     const joined = db.projects.filter((p) => p.owner_id !== userId && memberOf.has(p.id)).map((p) => summarize(db, p))
-    return Promise.resolve({ owned, joined })
+    return Promise.resolve(stableOrder({ owned, joined }))
   },
   getProject(id) {
     return Promise.resolve(mockDb().projects.find((p) => p.id === id) ?? null)
@@ -133,7 +143,7 @@ const supabaseApi: ProjectsApi = {
   async getProjectsForUser() {
     const { data, error } = await supabase.rpc('get_projects_for_user')
     if (error) throw error
-    return (data ?? { owned: [], joined: [] }) as unknown as OwnedJoinedProjects
+    return stableOrder((data ?? { owned: [], joined: [] }) as unknown as OwnedJoinedProjects)
   },
   async getProject(id) {
     const { data, error } = await supabase.from('projects').select('*').eq('id', id).maybeSingle()

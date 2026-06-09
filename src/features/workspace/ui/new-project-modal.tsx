@@ -14,7 +14,6 @@ import {
   DialogTitle,
   Input,
   Label,
-  Segmented,
   Switch,
   Textarea,
 } from '@/components/ui'
@@ -23,7 +22,7 @@ import { cn } from '@/lib/utils'
 import { GITHUB_INSTALL_URL } from '@/services/connections'
 import type { NewProjectInput } from '@/services/projects'
 
-const EMPTY: NewProjectInput = { name: '', description: '', source: 'mock', visibility: 'private', availableOnVista: true }
+const EMPTY: NewProjectInput = { name: '', description: '', source: 'mock', visibility: 'private', availableOnVista: false }
 
 function SourceCard({
   active,
@@ -167,28 +166,19 @@ function NewProjectForm({ onDone }: { onDone: () => void }) {
         )}
       </div>
 
-      <div className='flex flex-col gap-1.5'>
-        <Label>{t('np.visibility')}</Label>
-        <Segmented<NewProjectInput['visibility']>
-          value={form.visibility}
-          onValueChange={(v) => {
-            setForm((f) => ({ ...f, visibility: v }))
-          }}
-          options={[
-            { value: 'private', label: t('np.visPrivate') },
-            { value: 'shared', label: t('np.visShared') },
-          ]}
-        />
-      </div>
-
-      <label className='flex cursor-pointer items-center gap-3'>
+      <label htmlFor='np-visible' className='border-hairline flex cursor-pointer items-start gap-3 rounded-md border p-3'>
         <Switch
-          checked={form.availableOnVista}
+          id='np-visible'
+          checked={form.visibility === 'shared'}
           onCheckedChange={(v) => {
-            setForm((f) => ({ ...f, availableOnVista: v }))
+            setForm((f) => ({ ...f, visibility: v ? 'shared' : 'private', availableOnVista: v }))
           }}
+          aria-label={t('np.clientAccess')}
         />
-        <span className='text-body text-sm'>{t('np.available')}</span>
+        <span>
+          <span className='text-ink block text-sm font-medium'>{t('np.clientAccess')}</span>
+          <span className='text-muted-ink mt-0.5 block text-xs'>{t('np.clientAccessHint')}</span>
+        </span>
       </label>
 
       <Button type='submit' className='w-full' disabled={create.isPending}>

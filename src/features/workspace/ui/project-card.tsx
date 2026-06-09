@@ -2,11 +2,15 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowRight, Globe, Lock, Settings, Users } from 'lucide-react'
 import { Badge, Button } from '@/components/ui'
-import type { ProjectSummary } from '@/services/projects'
+import { publishState, type ProjectSummary } from '@/services/projects'
 
 export function ProjectCard({ summary, isOwner }: { summary: ProjectSummary; isOwner: boolean }) {
   const { t } = useTranslation()
   const { project, activeMembers, pendingMembers, progress } = summary
+  // #107: the owner needs the at-a-glance truth (clients see it only when shared AND available),
+  // not two flags that can silently contradict. Shown for the owner only — a client's own card
+  // doesn't need publish state.
+  const pub = publishState(project)
 
   return (
     <article className='border-hairline bg-card flex h-full flex-col gap-3 rounded-lg border p-6'>
@@ -15,24 +19,21 @@ export function ProjectCard({ summary, isOwner }: { summary: ProjectSummary; isO
         <h3 className='text-ink flex-1 truncate text-lg font-medium'>{project.name}</h3>
       </div>
 
-      <div className='flex flex-wrap gap-1.5'>
-        {project.available_on_vista ? (
-          <Badge className='bg-success/10 text-success border-transparent'>{t('status.available')}</Badge>
-        ) : (
-          <Badge variant='secondary'>{t('status.unavailable')}</Badge>
-        )}
-        {project.visibility === 'shared' ? (
-          <Badge className='bg-link/10 text-link border-transparent'>
-            <Globe />
-            {t('status.shared')}
-          </Badge>
-        ) : (
-          <Badge variant='secondary'>
-            <Lock />
-            {t('status.private')}
-          </Badge>
-        )}
-      </div>
+      {isOwner && (
+        <div className='flex flex-wrap gap-1.5'>
+          {pub.published ? (
+            <Badge className='bg-success/10 text-success border-transparent'>
+              <Globe />
+              {t('status.clientVisible')}
+            </Badge>
+          ) : (
+            <Badge variant='secondary'>
+              <Lock />
+              {t('status.clientHidden')}
+            </Badge>
+          )}
+        </div>
+      )}
 
       {project.description && <p className='text-muted-ink line-clamp-2 text-[13px] leading-snug'>{project.description}</p>}
 
