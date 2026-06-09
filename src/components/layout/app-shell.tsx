@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAutoAnimate } from '@formkit/auto-animate/react'
-import { Globe, Inbox, LayoutGrid, Menu, Plus, Shield } from 'lucide-react'
+import { Globe, Inbox, LayoutGrid, LogOut, Menu, Plus, Shield } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { SidebarContext } from '@/contexts/sidebar.context'
 import { PreviewContext } from '@/contexts/preview.context'
@@ -62,7 +62,19 @@ function NavItem({
 }
 
 /** A labelled group of projects in the sidebar. `owned` items flag the ones not visible to clients (#107). */
-function ProjectGroup({ label, items, pathname, owned, onNavigate }: { label: string; items: ProjectSummary[]; pathname: string; owned: boolean; onNavigate: () => void }) {
+function ProjectGroup({
+  label,
+  items,
+  pathname,
+  owned,
+  onNavigate,
+}: {
+  label: string
+  items: ProjectSummary[]
+  pathname: string
+  owned: boolean
+  onNavigate: () => void
+}) {
   const { t } = useTranslation()
   const [listRef] = useAutoAnimate<HTMLDivElement>()
   if (items.length === 0) return null
@@ -164,35 +176,35 @@ function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; 
             <Plus size={14} />
           </button>
         </div>
+        <div aria-hidden className='via-hairline mx-3 mb-2.5 h-px shrink-0 bg-gradient-to-r from-transparent to-transparent' />
         <div className='flex flex-col gap-3 overflow-y-auto'>
           <ProjectGroup label={t('ws.owned')} items={owned} pathname={pathname} owned onNavigate={onNavigate} />
           <ProjectGroup label={t('ws.joined')} items={joined} pathname={pathname} owned={false} onNavigate={onNavigate} />
         </div>
       </div>
 
-      <div className='border-hairline mt-auto border-t pt-4'>
-        <div className='flex items-center gap-2.5 px-1 py-2'>
-          <span className='bg-ink font-display grid size-9 shrink-0 place-items-center rounded-full font-semibold text-white'>
+      <div className='border-hairline mt-auto border-t pt-3'>
+        <div className='flex items-center gap-2 px-1 py-1.5'>
+          <span className='bg-ink font-display grid size-8 shrink-0 place-items-center rounded-full text-[13px] font-semibold text-white'>
             {initial}
           </span>
           <div className='min-w-0 flex-1'>
-            <div className='text-ink truncate text-[13px] font-semibold'>{user?.name}</div>
+            <div className='text-ink truncate text-[13px] font-medium'>{user?.name}</div>
             <div className='text-muted-ink truncate text-[11px]'>{user?.email}</div>
           </div>
-        </div>
-        <div className='mt-1.5 flex items-center gap-2'>
           <LangToggle />
-          <Button
-            variant='outline'
-            size='sm'
-            className='flex-1'
+          <button
+            type='button'
+            title={t('side.logout')}
+            aria-label={t('side.logout')}
             onClick={() => {
               signOut()
               void navigate('/')
             }}
+            className='text-muted-ink hover:bg-secondary hover:text-ink grid size-8 shrink-0 cursor-pointer place-items-center rounded-md transition-colors'
           >
-            {t('side.logout')}
-          </Button>
+            <LogOut size={15} />
+          </button>
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowUpRight, Globe, Lock, Users } from 'lucide-react'
 import { publishState, type ProjectSummary } from '@/services/projects'
@@ -10,18 +10,16 @@ import { publishState, type ProjectSummary } from '@/services/projects'
  */
 export function ProjectCard({ summary, isOwner }: { summary: ProjectSummary; isOwner: boolean }) {
   const { t } = useTranslation()
-  const navigate = useNavigate()
   const { project, activeMembers, pendingMembers, progress } = summary
   const color = project.color ?? 'var(--color-ink)'
   // #107: the owner needs the at-a-glance publish truth (shared AND available, not two flags that
   // can silently contradict); a client's own card doesn't need it.
   const pub = publishState(project)
 
+  // The title link's ::after overlay makes the whole card the anchor (native keyboard/a11y);
+  // footer links sit above it with z-10.
   return (
-    <article
-      onClick={() => void navigate(`/app/projects/${project.id}`)}
-      className='group border-hairline bg-card hover:border-ink/25 relative flex h-full cursor-pointer flex-col rounded-xl border p-5 transition-all hover:shadow-md'
-    >
+    <article className='group border-hairline bg-card hover:border-ink/25 relative flex h-full flex-col rounded-xl border p-5 transition-all hover:shadow-md'>
       <ArrowUpRight
         size={16}
         aria-hidden
@@ -38,8 +36,7 @@ export function ProjectCard({ summary, isOwner }: { summary: ProjectSummary; isO
         </span>
         <Link
           to={`/app/projects/${project.id}`}
-          onClick={(e) => e.stopPropagation()}
-          className='font-display text-ink truncate text-[17px] font-medium tracking-[-0.01em]'
+          className='font-display text-ink truncate text-[17px] font-medium tracking-[-0.01em] after:absolute after:inset-0'
         >
           {project.name}
         </Link>
@@ -79,8 +76,7 @@ export function ProjectCard({ summary, isOwner }: { summary: ProjectSummary; isO
         {isOwner && pendingMembers > 0 && (
           <Link
             to={`/app/projects/${project.id}/settings?tab=people`}
-            onClick={(e) => e.stopPropagation()}
-            className='text-sig-coral ml-auto font-semibold hover:underline'
+            className='text-sig-coral relative z-10 ml-auto font-semibold hover:underline'
           >
             {pendingMembers} {t('ws.pending')}
           </Link>
