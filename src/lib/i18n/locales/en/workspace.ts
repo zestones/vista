@@ -6,7 +6,6 @@ export const workspace = {
   'ws.joined': 'Shared with you',
   'ws.empty': 'No projects yet.',
   'ws.createFirst': 'Create your first project',
-  'ws.open': 'Open',
   'ws.attention': 'Needs attention',
   'ws.attnSubs': 'submissions to review',
   'ws.attnReqs': 'access requests',
