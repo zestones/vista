@@ -26,7 +26,7 @@ const formatDate = (iso: string, lang: string) =>
 export function ModerationInbox({ projectId }: { projectId: string }) {
   const { t } = useTranslation()
   const { data, isLoading } = useSubmissions(projectId)
-  const moderate = useModerateSubmission(projectId)
+  const moderate = useModerateSubmission()
   const [tab, setTab] = useState<SubmissionStatus>('pending')
   // Approve opens a picker (target repo + optional milestone); deny is immediate.
   const [approving, setApproving] = useState<SubmissionRow | null>(null)

@@ -2,12 +2,13 @@ import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAutoAnimate } from '@formkit/auto-animate/react'
-import { Globe, LayoutGrid, Menu, Plus, Shield } from 'lucide-react'
+import { Globe, Inbox, LayoutGrid, Menu, Plus, Shield } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { SidebarContext } from '@/contexts/sidebar.context'
 import { PreviewContext } from '@/contexts/preview.context'
 import { CommentPanelContext, type CommentTarget } from '@/contexts/comment-panel.context'
 import { NewProjectModal, useWorkspace } from '@/features/workspace'
+import { useOwnerInbox } from '@/features/project/moderation'
 import { publishState, type ProjectSummary } from '@/services/projects'
 import { CommentPanel } from '@/features/project/comments'
 import { Button } from '@/components/ui'
@@ -100,6 +101,9 @@ function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; 
   const owned = data?.owned ?? []
   const joined = data?.joined ?? []
   const pendingTotal = owned.reduce((n, s) => n + s.pendingMembers, 0)
+  // Cross-project submissions inbox (#145): owner-only entry with a pending count.
+  const inbox = useOwnerInbox(user?.id ?? '')
+  const pendingSubs = inbox.data?.length ?? 0
   const initial = (user?.name ?? user?.email ?? '?').charAt(0).toUpperCase()
 
   return (
@@ -135,6 +139,16 @@ function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; 
           badge={pendingTotal}
           onNavigate={onNavigate}
         />
+        {owned.length > 0 && (
+          <NavItem
+            to='/app/submissions'
+            active={pathname.startsWith('/app/submissions')}
+            icon={<Inbox size={16} />}
+            label={t('side.submissions')}
+            badge={pendingSubs}
+            onNavigate={onNavigate}
+          />
+        )}
       </nav>
 
       <div className='mt-6 flex min-h-0 flex-1 flex-col'>

@@ -5,6 +5,7 @@ import { LoginPage } from '@/pages/auth/login-page'
 import { JoinPage } from '@/pages/join/join-page'
 import { WorkspacePage } from '@/pages/app/workspace/workspace-page'
 import { AdminPage } from '@/pages/app/admin/admin-page'
+import { SubmissionsInboxPage } from '@/pages/app/submissions/submissions-inbox-page'
 import { RoadmapPage } from '@/pages/app/project/roadmap-page'
 import { SubmissionsPage } from '@/pages/app/project/submissions-page'
 import { SettingsPage } from '@/pages/app/settings/settings-page'
@@ -22,6 +23,7 @@ export const routeConfig: RouteObject[] = [
     children: [
       { path: '/app', element: <WorkspacePage /> },
       { path: '/app/admin', element: <AdminPage /> },
+      { path: '/app/submissions', element: <SubmissionsInboxPage /> },
       { path: '/app/projects/:id', element: <RoadmapPage /> },
       { path: '/app/projects/:id/submissions', element: <SubmissionsPage /> },
       { path: '/app/projects/:id/settings', element: <SettingsPage /> },
