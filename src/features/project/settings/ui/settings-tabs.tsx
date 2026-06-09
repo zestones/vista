@@ -1,17 +1,17 @@
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
-import { SharePicker } from '@/features/project/sharing'
 import { ModerationInbox, useSubmissions } from '@/features/project/moderation'
 import { GithubTab } from '@/features/project/github'
 import { PeopleTab } from '@/features/project/members'
 import { GeneralTab } from './general-tab'
+import { ClientVisibilityTab } from './client-visibility-tab'
 import type { ProjectRow } from '@/services/projects'
 
 // Tab is driven by `?tab=` so notifications (#108) can deep-link straight to e.g. the submissions inbox.
-const TABS = ['general', 'github', 'people', 'sharing', 'submissions'] as const
-// Legacy deep-links (#137): the former Members + Requests tabs merged into "people".
-const ALIAS: Record<string, (typeof TABS)[number]> = { members: 'people', requests: 'people' }
+const TABS = ['general', 'github', 'people', 'visibility', 'submissions'] as const
+// Legacy deep-links: Members+Requests merged into "people" (#137); Sharing merged into "visibility" (#139).
+const ALIAS: Record<string, (typeof TABS)[number]> = { members: 'people', requests: 'people', sharing: 'visibility' }
 
 export function SettingsTabs({
   project,
@@ -38,7 +38,7 @@ export function SettingsTabs({
           {t('ps.tab.people')} · {activeMembers}
           {pendingMembers > 0 ? ` · ${String(pendingMembers)}` : ''}
         </TabsTrigger>
-        <TabsTrigger value='sharing'>{t('ps.tab.sharing')}</TabsTrigger>
+        <TabsTrigger value='visibility'>{t('ps.tab.visibility')}</TabsTrigger>
         <TabsTrigger value='submissions'>
           {t('ps.tab.submissions')}
           {pendingSubs > 0 ? ` · ${String(pendingSubs)}` : ''}
@@ -54,8 +54,8 @@ export function SettingsTabs({
       <TabsContent value='people' className='mt-6'>
         <PeopleTab projectId={project.id} />
       </TabsContent>
-      <TabsContent value='sharing' className='mt-6'>
-        <SharePicker projectId={project.id} />
+      <TabsContent value='visibility' className='mt-6'>
+        <ClientVisibilityTab project={project} />
       </TabsContent>
       <TabsContent value='submissions' className='mt-6'>
         <ModerationInbox projectId={project.id} />

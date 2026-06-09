@@ -14,6 +14,7 @@ export const project = {
   'ps.tab.requests': 'Demandes d’accès',
   'ps.tab.invite': 'Inviter',
   'ps.tab.sharing': 'Partage',
+  'ps.tab.visibility': 'Visibilité client',
   'ps.tab.submissions': 'Soumissions',
   'ps.tab.github': 'GitHub',
   'ps.gh.title': 'Connexion GitHub',
