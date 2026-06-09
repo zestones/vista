@@ -28,7 +28,7 @@ describe('request submission form (#53)', () => {
     renderModal()
     const dialog = await screen.findByRole('dialog')
 
-    fireEvent.change(within(dialog).getByLabelText(/Titre|Title/), { target: { value: 'Dark mode please' } })
+    fireEvent.change(within(dialog).getByLabelText(/^(Titre|Title)$/), { target: { value: 'Dark mode please' } })
     fireEvent.click(within(dialog).getByRole('button', { name: /Envoyer la demande|Send request/ }))
 
     expect(await screen.findByText(/Demande envoyée|Request sent/)).toBeInTheDocument()
@@ -39,6 +39,16 @@ describe('request submission form (#53)', () => {
     expect(after.at(-1)?.title).toBe('Dark mode please')
   })
 
+  it('asks for confirmation before closing a dirty draft (#153)', async () => {
+    renderModal()
+    const dialog = await screen.findByRole('dialog')
+
+    fireEvent.change(within(dialog).getByLabelText(/^(Titre|Title)$/), { target: { value: 'Draft in progress' } })
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+
+    expect(await screen.findByText(/Abandonner cette demande|Discard this request/)).toBeInTheDocument()
+  })
+
   it('requires a title before submitting', async () => {
     renderModal()
     const dialog = await screen.findByRole('dialog')
@@ -46,6 +56,6 @@ describe('request submission form (#53)', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: /Envoyer la demande|Send request/ }))
 
     expect(await screen.findByText(/Ce champ est requis|This field is required/)).toBeInTheDocument()
-    expect(within(dialog).getByLabelText(/Titre|Title/)).toBeInTheDocument()
+    expect(within(dialog).getByLabelText(/^(Titre|Title)$/)).toBeInTheDocument()
   })
 })

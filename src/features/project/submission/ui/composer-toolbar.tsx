@@ -3,6 +3,9 @@ import {
   AlertTriangle,
   Bold,
   Code,
+  Heading1,
+  Heading2,
+  Heading3,
   Info,
   Italic,
   Lightbulb,
@@ -18,6 +21,9 @@ import {
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui'
 
 export type ComposerAction =
+  | 'h1'
+  | 'h2'
+  | 'h3'
   | 'bold'
   | 'italic'
   | 'bullets'
@@ -29,6 +35,9 @@ export type ComposerAction =
 export type CalloutKind = 'note' | 'tip' | 'important' | 'warning' | 'caution'
 
 const FORMATS: { action: ComposerAction; Icon: LucideIcon; label: string }[] = [
+  { action: 'h1', Icon: Heading1, label: 'form.toolH1' },
+  { action: 'h2', Icon: Heading2, label: 'form.toolH2' },
+  { action: 'h3', Icon: Heading3, label: 'form.toolH3' },
   { action: 'bold', Icon: Bold, label: 'form.toolBold' },
   { action: 'italic', Icon: Italic, label: 'form.toolItalic' },
   { action: 'bullets', Icon: List, label: 'form.toolBullets' },
