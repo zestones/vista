@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/auth.context'
 import { auth } from '@/services/auth'
 import { invites } from '@/services/invites'
 import { inviteKeys } from '@/lib/query-keys/invites.keys'
+import { useMembershipRealtime } from '@/hooks/use-membership-realtime'
 import { Button, Input, Label } from '@/components/ui'
 import { Spinner } from '@/components/feedback'
 import { LangToggle } from '@/components/layout'
@@ -112,6 +113,9 @@ export function JoinPage() {
   const email = user?.email ?? ''
   const navigate = useNavigate()
   const qc = useQueryClient()
+  // The join page lives outside the AppShell, so it carries its own live-membership subscription:
+  // when the owner approves, the "Request sent" card flips to "Open project" without a refresh (#122).
+  useMembershipRealtime(user?.id ?? '')
 
   const { data, isLoading } = useQuery({
     queryKey: inviteKeys.byToken(token, email),
