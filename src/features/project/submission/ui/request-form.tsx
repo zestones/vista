@@ -1,8 +1,8 @@
-import { lazy, Suspense, useCallback, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Bug, Check, Code2, Eye, HelpCircle, Sparkles, Tag, type LucideIcon } from 'lucide-react'
 import type { Editor } from '@tiptap/react'
-import { Button, Input, Label, Segmented } from '@/components/ui'
+import { Button, Input, Label, Segmented, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui'
 import { Spinner } from '@/components/feedback'
 import { cn } from '@/lib/utils'
 import { useSubmitRequest } from '../hooks/use-submit-request'
@@ -13,11 +13,12 @@ import type { SubmissionType } from '@/services/submissions'
 const Markdown = lazy(() => import('@/components/markdown/markdown'))
 const RichEditor = lazy(() => import('./rich/rich-editor'))
 
-const TYPES: { key: SubmissionType; Icon: LucideIcon; label: string }[] = [
-  { key: 'feature', Icon: Sparkles, label: 'form.typeFeature' },
-  { key: 'bug', Icon: Bug, label: 'form.typeBug' },
-  { key: 'question', Icon: HelpCircle, label: 'form.typeQuestion' },
-  { key: 'other', Icon: Tag, label: 'form.typeOther' },
+// Same tones as the inbox SubmissionCard type chips, so a request reads identically on both sides.
+const TYPES: { key: SubmissionType; Icon: LucideIcon; label: string; tone: string }[] = [
+  { key: 'feature', Icon: Sparkles, label: 'form.typeFeature', tone: 'bg-success/10 text-success' },
+  { key: 'bug', Icon: Bug, label: 'form.typeBug', tone: 'bg-sig-coral/10 text-sig-coral' },
+  { key: 'question', Icon: HelpCircle, label: 'form.typeQuestion', tone: 'bg-link/10 text-link' },
+  { key: 'other', Icon: Tag, label: 'form.typeOther', tone: 'bg-secondary text-muted-ink' },
 ]
 
 /**
@@ -25,7 +26,16 @@ const TYPES: { key: SubmissionType; Icon: LucideIcon; label: string }[] = [
  * like — no markdown knowledge needed. The Markdown toggle flips to a source + preview split for
  * technical users. Both modes share the toolbar and store markdown.
  */
-export function RequestForm({ projectId, onClose }: { projectId: string; onClose: () => void }) {
+export function RequestForm({
+  projectId,
+  onClose,
+  registerDirtyCheck,
+}: {
+  projectId: string
+  onClose: () => void
+  /** The modal calls this check before closing — a non-empty, unsent draft asks for confirmation (#153). */
+  registerDirtyCheck?: (check: () => boolean) => void
+}) {
   const { t } = useTranslation()
   const submit = useSubmitRequest()
   const [type, setType] = useState<SubmissionType>('feature')
@@ -59,7 +69,10 @@ export function RequestForm({ projectId, onClose }: { projectId: string; onClose
     `flowchart LR\n  A[${t('form.phStep1')}] --> B[${t('form.phStep2')}]\n  B --> C[${t('form.phStep3')}]`
 
   const onMarkdownAction = (action: ComposerAction) => {
-    if (action === 'bold') applyMd((s) => wrapSelection(s, '**', '**', t('form.phText')))
+    if (action === 'h1' || action === 'h2' || action === 'h3') {
+      const hashes = '#'.repeat(Number(action[1]))
+      applyMd((s) => prefixLines(s, () => `${hashes} `, t('form.phHeading')))
+    } else if (action === 'bold') applyMd((s) => wrapSelection(s, '**', '**', t('form.phText')))
     else if (action === 'italic') applyMd((s) => wrapSelection(s, '*', '*', t('form.phText')))
     else if (action === 'bullets') applyMd((s) => prefixLines(s, () => '- ', t('form.phItem')))
     else if (action === 'numbered') applyMd((s) => prefixLines(s, (i) => `${String(i + 1)}. `, t('form.phItem')))
@@ -83,7 +96,12 @@ export function RequestForm({ projectId, onClose }: { projectId: string; onClose
   const onRichAction = (action: ComposerAction) => {
     const ed = editorRef.current
     if (!ed) return
-    if (action === 'bold') ed.chain().focus().toggleBold().run()
+    if (action === 'h1' || action === 'h2' || action === 'h3')
+      ed.chain()
+        .focus()
+        .toggleHeading({ level: Number(action[1]) as 1 | 2 | 3 })
+        .run()
+    else if (action === 'bold') ed.chain().focus().toggleBold().run()
     else if (action === 'italic') ed.chain().focus().toggleItalic().run()
     else if (action === 'bullets') ed.chain().focus().toggleBulletList().run()
     else if (action === 'numbered') ed.chain().focus().toggleOrderedList().run()
@@ -115,6 +133,14 @@ export function RequestForm({ projectId, onClose }: { projectId: string; onClose
 
   /** The markdown source of truth at any moment, whichever mode is active. */
   const currentMarkdown = () => (mode === 'rich' ? (editorRef.current?.getMarkdown() ?? description) : description)
+
+  const dirtyRef = useRef<() => boolean>(() => false)
+  useEffect(() => {
+    dirtyRef.current = () => !submit.isSuccess && (title.trim() !== '' || currentMarkdown().trim() !== '')
+  })
+  useEffect(() => {
+    registerDirtyCheck?.(() => dirtyRef.current())
+  }, [registerDirtyCheck])
 
   const toggleMode = () => {
     if (mode === 'rich') {
@@ -169,27 +195,8 @@ export function RequestForm({ projectId, onClose }: { projectId: string; onClose
         submit.mutate({ projectId, type, title: title.trim(), body: body === '' ? undefined : body })
       }}
     >
-      {/* Meta row: what is it + one-line summary. */}
-      <div className='border-hairline flex flex-col gap-4 border-b px-6 py-4 md:flex-row md:items-end'>
-        <div className='flex flex-col gap-1.5'>
-          <Label>{t('form.typeLabel')}</Label>
-          <div className='flex gap-1.5'>
-            {TYPES.map(({ key, Icon, label }) => (
-              <button
-                key={key}
-                type='button'
-                aria-pressed={type === key}
-                onClick={() => setType(key)}
-                className={cn(
-                  'flex h-9 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-[13px] font-medium whitespace-nowrap transition-colors',
-                  type === key ? 'border-ink bg-primary text-primary-foreground' : 'border-hairline text-body hover:bg-secondary',
-                )}
-              >
-                <Icon size={14} /> {t(label)}
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* Meta row: one-line summary + what it is (colored like the inbox type chips). */}
+      <div className='border-hairline flex flex-col gap-4 border-b px-6 py-4 sm:flex-row sm:items-end'>
         <div className='flex min-w-0 flex-1 flex-col gap-1.5'>
           <Label htmlFor='req-title'>{t('form.titleLabel')}</Label>
           <Input
@@ -200,6 +207,27 @@ export function RequestForm({ projectId, onClose }: { projectId: string; onClose
             aria-invalid={titleInvalid}
           />
           {titleInvalid && <span className='text-sig-coral text-xs'>{t('form.required')}</span>}
+        </div>
+        <div className='flex flex-col gap-1.5'>
+          <Label htmlFor='req-type'>{t('form.typeLabel')}</Label>
+          <Select value={type} onValueChange={(v) => setType(v as SubmissionType)}>
+            <SelectTrigger
+              id='req-type'
+              className={cn('w-full border-transparent font-medium sm:w-44', TYPES.find((x) => x.key === type)?.tone)}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {TYPES.map(({ key, Icon, label, tone }) => (
+                <SelectItem key={key} value={key}>
+                  <span className={cn('grid size-6 place-items-center rounded-md', tone)}>
+                    <Icon size={13} />
+                  </span>
+                  {t(label)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -282,9 +310,9 @@ export function RequestForm({ projectId, onClose }: { projectId: string; onClose
         )}
       </div>
 
-      {/* Footer: reassurance + submit. */}
+      {/* Footer: submit (hint only in markdown mode — rich mode is self-explanatory). */}
       <div className='border-hairline flex items-center justify-between gap-4 border-t px-6 py-3'>
-        <span className='text-muted-ink hidden text-xs sm:block'>{t(mode === 'rich' ? 'form.richHint' : 'form.editorHint')}</span>
+        <span className='text-muted-ink hidden text-xs sm:block'>{mode === 'markdown' ? t('form.editorHint') : ''}</span>
         <div className='flex items-center gap-3'>
           {submit.isError && (
             <span className='text-sig-coral text-[13px]'>
