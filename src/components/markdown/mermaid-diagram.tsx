@@ -162,8 +162,8 @@ function DiagramView({ svg, fullscreen, onToggleFullscreen }: { svg: string; ful
   )
 }
 
-/** Render a ```mermaid block as a static preview with a clean fullscreen overlay for zoom/pan. */
-export function CommentMermaid({ chart }: { chart: string }) {
+/** Render a ```mermaid block as a static preview with a clean fullscreen overlay for zoom/pan (shared, #149). */
+export function MermaidDiagram({ chart }: { chart: string }) {
   const [svg, setSvg] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)

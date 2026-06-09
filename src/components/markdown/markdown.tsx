@@ -2,6 +2,7 @@ import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import { remarkAlert } from 'remark-github-blockquote-alert'
+import { MermaidDiagram } from './mermaid-diagram'
 import 'highlight.js/styles/github.css'
 
 interface HastNode {
@@ -21,6 +22,11 @@ const components: Components = {
   // Passthrough so the `code` override owns the block wrapper.
   pre: ({ children }) => <>{children}</>,
   code({ node, className, children }) {
+    const lang = /language-(\w+)/.exec(className ?? '')?.[1]
+    if (lang === 'mermaid') {
+      const src = nodeText(node).trim()
+      return <MermaidDiagram key={src} chart={src} />
+    }
     const isBlock = (className?.includes('language-') ?? false) || nodeText(node).includes('\n')
     if (isBlock) {
       return (
@@ -39,9 +45,9 @@ const components: Components = {
 }
 
 /**
- * Shared sanitized markdown (#147): GFM + GitHub callouts + syntax-highlighted code. No raw HTML
- * (no rehype-raw), no mermaid — a lighter renderer than the comment one, for submissions and beyond.
- * Default export so callers can lazy-load it (keeps react-markdown out of the main bundle).
+ * Shared sanitized markdown (#147/#149): GFM + GitHub callouts + syntax-highlighted code + zoomable
+ * ```mermaid diagrams — same pipeline as comments, minus the issue-mention plugin. No raw HTML (no
+ * rehype-raw). Default export so callers can lazy-load it (keeps react-markdown out of the main bundle).
  */
 export default function Markdown({ children }: { children: string }) {
   return (
