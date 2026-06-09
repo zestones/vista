@@ -13,7 +13,7 @@ import { publishState, type ProjectSummary } from '@/services/projects'
 import { CommentPanel } from '@/features/project/comments'
 import { Button } from '@/components/ui'
 import { useMembershipRealtime } from '@/hooks/use-membership-realtime'
-import { LangToggle } from './lang-toggle'
+import { LangMenu } from './lang-toggle'
 import { NotificationBell } from '@/features/notifications'
 import { VistaMark } from '@/components/brand'
 import { cn } from '@/lib/utils'
@@ -131,6 +131,7 @@ function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; 
               {t('side.mockBadge')}
             </span>
           )}
+          <LangMenu />
           <NotificationBell />
         </div>
       </div>
@@ -176,7 +177,7 @@ function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; 
             <Plus size={14} />
           </button>
         </div>
-        <div aria-hidden className='via-hairline mx-3 mb-2.5 h-px shrink-0 bg-gradient-to-r from-transparent to-transparent' />
+        <div aria-hidden className='via-ink/15 mx-3 mb-2.5 h-px shrink-0 bg-gradient-to-r from-transparent to-transparent' />
         <div className='flex flex-col gap-3 overflow-y-auto'>
           <ProjectGroup label={t('ws.owned')} items={owned} pathname={pathname} owned onNavigate={onNavigate} />
           <ProjectGroup label={t('ws.joined')} items={joined} pathname={pathname} owned={false} onNavigate={onNavigate} />
@@ -192,7 +193,6 @@ function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; 
             <div className='text-ink truncate text-[13px] font-medium'>{user?.name}</div>
             <div className='text-muted-ink truncate text-[11px]'>{user?.email}</div>
           </div>
-          <LangToggle />
           <button
             type='button'
             title={t('side.logout')}
@@ -201,7 +201,7 @@ function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; 
               signOut()
               void navigate('/')
             }}
-            className='text-muted-ink hover:bg-secondary hover:text-ink grid size-8 shrink-0 cursor-pointer place-items-center rounded-md transition-colors'
+            className='text-sig-coral hover:bg-sig-coral/10 grid size-8 shrink-0 cursor-pointer place-items-center rounded-md transition-colors'
           >
             <LogOut size={15} />
           </button>
