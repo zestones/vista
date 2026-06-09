@@ -8,6 +8,7 @@ export const roadmap = {
   'roadmap.open': 'Open',
   'roadmap.closed': 'Closed',
   'roadmap.empty': 'Nothing to show',
+  'roadmap.liveUpdated': 'Roadmap updated',
   'roadmap.late': 'Late',
   'roadmap.by': 'by',
   'roadmap.today': 'Today',

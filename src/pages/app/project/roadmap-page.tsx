@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useQuery } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 import { Eye, Lock, Plus, Settings } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { usePreview } from '@/contexts/preview.context'
-import { RoadmapGantt, RoadmapMobile, RoadmapOverview, useRoadmap, type Bar } from '@/features/project/roadmap'
+import { RoadmapGantt, RoadmapMobile, RoadmapOverview, useRoadmap, useRoadmapRealtime, type Bar } from '@/features/project/roadmap'
 import { useProjectAccess } from '@/features/project/dashboard'
 import { MyRequests, RequestModal } from '@/features/project/submission'
+import { connections } from '@/services/connections'
+import { connectionKeys } from '@/lib/query-keys/connections.keys'
 import { useCommentPanel } from '@/contexts/comment-panel.context'
 import { Button, Segmented } from '@/components/ui'
 import { PageHeader } from '@/components/layout'
@@ -48,6 +52,12 @@ export function RoadmapPage() {
   const roadmap = useRoadmap(id, preview)
   const groups = roadmap.data?.groups ?? []
   const unscheduled = roadmap.data?.unscheduled ?? []
+
+  // Live updates (#131): subscribe to the project's projection rows so a webhook reprojection /
+  // publish updates the Gantt without a refresh, with one coalesced toast. Backend realtime is #129.
+  const repos = useQuery({ queryKey: connectionKeys.attached(id), queryFn: () => connections.getAttachedRepos(id), enabled: !!id })
+  const repoIds = (repos.data ?? []).map((r) => r.id)
+  useRoadmapRealtime(id, repoIds, user?.id ?? 'anon', () => toast(t('roadmap.liveUpdated'), { id: 'roadmap-live' }))
 
   // Resolve a `#<n>` mention to a visible issue, open its comments, and center the Gantt on it (#116).
   // No-op if the number isn't a visible issue in this roadmap. Reads hook data so it stays above the guards.
