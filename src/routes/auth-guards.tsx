@@ -31,8 +31,24 @@ export function RequireAuth() {
   )
 }
 
+type FromState = { from?: { pathname?: string; search?: string; hash?: string } }
+
 export function GuestOnly() {
-  const { user } = useAuth()
-  if (user) return <Navigate to='/app' replace />
+  const { user, loading } = useAuth()
+  const location = useLocation()
+  // Wait for the session to hydrate, otherwise an already-authed user briefly sees the login page (#123).
+  if (loading) {
+    return (
+      <div className='grid min-h-screen place-items-center'>
+        <Spinner />
+      </div>
+    )
+  }
+  if (user) {
+    // Return to the original destination (incl. query/hash) when RequireAuth bounced them here (#123).
+    const from = (location.state as FromState | null)?.from
+    const to = from ? `${from.pathname ?? '/app'}${from.search ?? ''}${from.hash ?? ''}` : '/app'
+    return <Navigate to={to} replace />
+  }
   return <Outlet />
 }
