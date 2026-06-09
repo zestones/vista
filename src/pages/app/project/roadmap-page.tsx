@@ -3,7 +3,7 @@ import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { CalendarRange, Eye, Lock, Plus, Settings } from 'lucide-react'
+import { CalendarRange, Eye, Inbox, Lock, Plus, Settings } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { usePreview } from '@/contexts/preview.context'
 import { RoadmapGantt, RoadmapMobile, RoadmapOverview, useRoadmap, useRoadmapRealtime, type Bar } from '@/features/project/roadmap'
@@ -170,6 +170,13 @@ export function RoadmapPage() {
                 }}
               >
                 <Eye /> {preview ? t('pd.exitPreview') : t('pd.previewAsClient')}
+              </Button>
+            )}
+            {isOwner && (
+              <Button variant='outline' size='sm' asChild>
+                <Link to={`/app/projects/${id}/submissions`}>
+                  <Inbox /> {t('ps.tab.submissions')}
+                </Link>
               </Button>
             )}
             {isOwner && (

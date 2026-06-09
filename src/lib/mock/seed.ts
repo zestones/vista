@@ -286,7 +286,7 @@ export function buildSeed(): MockDb {
       project_id: 'prj-apollo',
       kind: 'submission_received',
       data: { project: 'Apollo', title: 'Dark mode for the client portal' },
-      link: '/app/projects/prj-apollo/settings?tab=submissions',
+      link: '/app/projects/prj-apollo/submissions',
       read_at: null,
       created_at: now,
     },
