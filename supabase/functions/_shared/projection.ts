@@ -1,8 +1,10 @@
 // Projection mapping + upserts (#22 sync-repo, #23 github-webhook) -- one place.
 //
-// INVARIANT: these upserts NEVER write `shared`. The owner allowlist must survive every
-// sync and webhook (omitting `shared` from the payload preserves it on conflict, and new
-// rows default to false = private). See "Cache de projection & synchronisation".
+// INVARIANT: these upserts NEVER write owner-curated columns -- `shared` (allowlist) and
+// `client_summary` (#127, the milestone's client-facing summary). They must survive every sync and
+// webhook (omitting them from the payload preserves them on conflict, and new rows default to
+// false/null). toMilestoneRow/toIssueRow therefore list ONLY GitHub-sourced fields.
+// See "Cache de projection & synchronisation".
 import { type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { type GhComment, type GhIssue, type GhMilestone, issueNumberFromUrl } from './github.ts'
 

@@ -9,6 +9,7 @@ function ms(id: string, shared: boolean): MilestoneRow {
     project_repo_id: 'r',
     number: 1,
     title: id,
+    client_summary: null,
     description: null,
     due_on: null,
     state: 'open',
