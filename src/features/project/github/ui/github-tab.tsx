@@ -54,7 +54,13 @@ export function GithubTab({ projectId }: { projectId: string }) {
                   </span>
                   <Badge className='bg-success/10 text-success border-transparent'>{t('ps.gh.connected')}</Badge>
                 </span>
-                <Button variant='ghost' size='sm' onClick={() => detach.mutate(r.id)} disabled={detach.isPending}>
+                <Button
+                  variant='ghost'
+                  size='sm'
+                  onClick={() => detach.mutate(r.id)}
+                  disabled={detach.isPending}
+                  className='text-sig-coral hover:bg-sig-coral/10 hover:text-sig-coral'
+                >
                   <X size={15} /> {t('ps.gh.detach')}
                 </Button>
               </li>
