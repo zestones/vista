@@ -7,7 +7,6 @@ export const workspace = {
   'ws.empty': 'Aucun projet pour l’instant.',
   'ws.createFirst': 'Créer votre premier projet',
   'ws.open': 'Ouvrir',
-  'ws.manage': 'Gérer',
   'ws.pending': 'en attente',
   'ws.accessGranted': 'Vous avez désormais accès à {{project}}',
   'np.title': 'Nouveau projet',

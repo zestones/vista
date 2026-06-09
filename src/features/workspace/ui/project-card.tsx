@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight, Globe, Lock, Settings, Users } from 'lucide-react'
+import { ArrowRight, Globe, Lock, Users } from 'lucide-react'
 import { Badge, Button } from '@/components/ui'
 import { publishState, type ProjectSummary } from '@/services/projects'
 
@@ -60,21 +60,12 @@ export function ProjectCard({ summary, isOwner }: { summary: ProjectSummary; isO
             </span>
           )}
         </span>
-        <div className='flex gap-1.5'>
-          {isOwner && (
-            <Button variant='outline' size='icon-sm' asChild aria-label={t('ws.manage')} title={t('ws.manage')}>
-              <Link to={`/app/projects/${project.id}/settings`}>
-                <Settings />
-              </Link>
-            </Button>
-          )}
-          <Button size='sm' asChild>
-            <Link to={`/app/projects/${project.id}`}>
-              {t('ws.open')}
-              <ArrowRight />
-            </Link>
-          </Button>
-        </div>
+        <Button size='sm' asChild>
+          <Link to={`/app/projects/${project.id}`}>
+            {t('ws.open')}
+            <ArrowRight />
+          </Link>
+        </Button>
       </div>
     </article>
   )
