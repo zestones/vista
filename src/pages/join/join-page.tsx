@@ -1,14 +1,13 @@
-import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowRight, Check, Lock, MailCheck, Users } from 'lucide-react'
+import { ArrowRight, Check, Lock, Users } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
-import { auth } from '@/services/auth'
 import { invites } from '@/services/invites'
 import { inviteKeys } from '@/lib/query-keys/invites.keys'
 import { useMembershipRealtime } from '@/hooks/use-membership-realtime'
-import { Button, Input, Label } from '@/components/ui'
+import { MagicLinkForm } from '@/features/auth'
+import { Button } from '@/components/ui'
 import { Spinner } from '@/components/feedback'
 import { LangToggle } from '@/components/layout'
 import { VistaMark } from '@/components/brand'
@@ -22,86 +21,6 @@ function InlineNote({ tone, title, body }: { tone: 'link' | 'success'; title: st
         <div className='text-ink font-semibold'>{title}</div>
         <div className='text-muted-ink mt-0.5 text-[13px]'>{body}</div>
       </div>
-    </div>
-  )
-}
-
-/** Sign-in shown to a logged-out invitee. Stashes the token so we return here after the round-trip (#105). */
-function SignInToJoin({ token }: { token: string }) {
-  const { t } = useTranslation()
-  const { signInWithEmail, signInWithGoogle } = useAuth()
-  const [email, setEmail] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [sent, setSent] = useState(false)
-
-  const run = (p: Promise<void>) => {
-    localStorage.setItem(PENDING_JOIN_KEY, token)
-    setBusy(true)
-    p.then(() => {
-      // Mock signs in synchronously; Supabase emails a magic link -> "check your email".
-      if (!auth.currentUser()) setSent(true)
-    })
-      .catch(() => undefined)
-      .finally(() => {
-        setBusy(false)
-      })
-  }
-
-  if (sent) {
-    return (
-      <div className='border-hairline bg-secondary rounded-lg border p-4'>
-        <MailCheck size={20} className='text-ink mb-2' />
-        <div className='text-ink font-semibold'>{t('auth.checkEmail.title')}</div>
-        <div className='text-muted-ink mt-0.5 text-[13px]'>
-          {t('auth.checkEmail.body')} <span className='text-ink font-medium'>{email}</span>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className='flex flex-col gap-4'>
-      <p className='text-body'>{t('join.signinHint')}</p>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          run(signInWithEmail(email))
-        }}
-        className='flex flex-col gap-3'
-      >
-        <div className='flex flex-col gap-1.5'>
-          <Label htmlFor='join-email'>{t('auth.email')}</Label>
-          <Input
-            id='join-email'
-            type='email'
-            required
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value)
-            }}
-            placeholder={t('auth.emailPlaceholder')}
-          />
-        </div>
-        <Button type='submit' className='w-full' disabled={busy}>
-          {t('join.signin')}
-        </Button>
-      </form>
-      <div className='flex items-center gap-3'>
-        <span className='bg-border h-px flex-1' />
-        <span className='text-muted-ink text-xs uppercase'>{t('auth.or')}</span>
-        <span className='bg-border h-px flex-1' />
-      </div>
-      <Button
-        type='button'
-        variant='outline'
-        className='w-full'
-        disabled={busy}
-        onClick={() => {
-          run(signInWithGoogle())
-        }}
-      >
-        {t('auth.withGoogle')}
-      </Button>
     </div>
   )
 }
@@ -166,7 +85,13 @@ export function JoinPage() {
                 </div>
 
                 {!user ? (
-                  <SignInToJoin token={token} />
+                  <MagicLinkForm
+                    submitLabel={t('join.signin')}
+                    hint={t('join.signinHint')}
+                    onBeforeSignIn={() => {
+                      localStorage.setItem(PENDING_JOIN_KEY, token)
+                    }}
+                  />
                 ) : data.membership === 'member' || request.data?.status === 'member' ? (
                   <>
                     <InlineNote tone='success' title={t('join.member')} body={t('join.memberMsg')} />
