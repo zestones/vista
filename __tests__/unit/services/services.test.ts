@@ -16,23 +16,24 @@ describe('services — mock branch (issue #8)', () => {
     expect(Array.isArray(joined)).toBe(true)
   })
 
-  it('projects.createProject adds an owned project with a mock roadmap', async () => {
+  it('projects.createProject adds an owned project', async () => {
     const owner = { id: 'you@vista.app', email: 'you@vista.app', name: 'You' }
     const before = (await projects.getProjectsForUser(owner.id)).owned.length
     const created = await projects.createProject(
-      { name: 'Fresh thing', description: '', source: 'mock', visibility: 'private', availableOnVista: true },
+      { name: 'Fresh thing', description: '', visibility: 'private', availableOnVista: true },
       owner,
     )
     expect(created.name).toBe('Fresh thing')
     const after = await projects.getProjectsForUser(owner.id)
     expect(after.owned.length).toBe(before + 1)
-    expect(after.owned.find((s) => s.project.id === created.id)?.progress).not.toBeNull()
+    // Projects start empty (#161): no roadmap until a repo is attached.
+    expect(after.owned.find((s) => s.project.id === created.id)?.progress).toBeNull()
   })
 
-  it('projects.createProject (github source) starts empty; attachRepo records the repo + roadmap', async () => {
+  it('projects.createProject starts empty; attachRepo records the repo + roadmap', async () => {
     const owner = { id: 'admin@gmail.com', email: 'admin@gmail.com', name: 'admin' }
     const created = await projects.createProject(
-      { name: 'Aria', description: '', source: 'github', visibility: 'private', availableOnVista: true },
+      { name: 'Aria', description: '', visibility: 'private', availableOnVista: true },
       owner,
     )
     expect(created.name).toBe('Aria')

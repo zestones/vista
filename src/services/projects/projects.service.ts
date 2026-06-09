@@ -1,5 +1,5 @@
 import { env } from '@/config/env'
-import { genRepo, mockDb, PROJECT_PALETTE, type MockDb } from '@/lib/mock'
+import { mockDb, PROJECT_PALETTE, type MockDb } from '@/lib/mock'
 import { supabase } from '@/lib/supabase/client'
 import type { AuthUser } from '@/services/auth'
 import type { NewProjectInput, OwnedJoinedProjects, ProjectAccess, ProjectRow, ProjectSummary, ProjectUpdate } from './projects.dto'
@@ -97,24 +97,6 @@ const mock: ProjectsApi = {
       invited_at: now,
       decided_at: null,
     })
-
-    // Demo seeds a sample roadmap so the project isn't empty; a github source starts empty
-    // and gets its repos via the connect flow (#20, connections.attachRepo).
-    if (input.source === 'mock') {
-      const repoId = `${id}-repo-1`
-      db.projectRepos.push({
-        id: repoId,
-        project_id: id,
-        installation_id: 0, // mock sentinel; the real id comes from the GitHub App
-        owner: 'demo',
-        repo: 'sample',
-        github_repo_id: null,
-        created_at: now,
-      })
-      const { milestones, issues } = genRepo(repoId, id)
-      db.milestones.push(...milestones)
-      db.issues.push(...issues)
-    }
 
     return Promise.resolve(project)
   },

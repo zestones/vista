@@ -1,6 +1,5 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LayoutGrid } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { useCreateProject } from '../hooks/use-create-project'
 import { useInstallationRepos } from '@/features/project/github'
@@ -18,40 +17,10 @@ import {
   Textarea,
 } from '@/components/ui'
 import { GitHubMark } from '@/components/brand'
-import { cn } from '@/lib/utils'
 import { GITHUB_INSTALL_URL } from '@/services/connections'
 import type { NewProjectInput } from '@/services/projects'
 
-const EMPTY: NewProjectInput = { name: '', description: '', source: 'mock', visibility: 'private', availableOnVista: false }
-
-function SourceCard({
-  active,
-  onClick,
-  icon,
-  title,
-  hint,
-}: {
-  active: boolean
-  onClick: () => void
-  icon: ReactNode
-  title: string
-  hint: string
-}) {
-  return (
-    <button
-      type='button'
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn('flex cursor-pointer items-start gap-2.5 rounded-md border p-4 text-left', active ? 'border-ink bg-secondary' : 'border-hairline')}
-    >
-      <span className='text-ink mt-0.5'>{icon}</span>
-      <span>
-        <span className='text-ink block text-sm font-semibold'>{title}</span>
-        <span className='text-muted-ink mt-0.5 block text-xs'>{hint}</span>
-      </span>
-    </button>
-  )
-}
+const EMPTY: NewProjectInput = { name: '', description: '', visibility: 'private', availableOnVista: false }
 
 /** Lives inside DialogContent, which Radix unmounts on close, so the form resets on each open. */
 function NewProjectForm({ onDone }: { onDone: () => void }) {
@@ -62,21 +31,17 @@ function NewProjectForm({ onDone }: { onDone: () => void }) {
   const [repoKey, setRepoKey] = useState<string | null>(null)
   const [touched, setTouched] = useState(false)
 
-  // Fetch the installation's repos only once the GitHub source is chosen.
-  const reposQuery = useInstallationRepos(form.source === 'github')
+  const reposQuery = useInstallationRepos(true)
   const repos = reposQuery.data ?? []
   const selectedRepo = repos.find((r) => `${r.owner}/${r.repo}` === repoKey)
 
   const nameInvalid = touched && form.name.trim() === ''
-  // A github project with repos available must pick one; with none available, create empty + connect later.
-  const repoInvalid = touched && form.source === 'github' && repos.length > 0 && !selectedRepo
 
+  // The repo is optional (#161): pick one to start with data, or create empty and connect in Settings.
   const submit = () => {
     setTouched(true)
     if (form.name.trim() === '' || !user) return
-    if (form.source === 'github' && repos.length > 0 && !selectedRepo) return
-    const repo = form.source === 'github' ? selectedRepo : undefined
-    create.mutate({ input: form, owner: user, repo }, { onSuccess: onDone })
+    create.mutate({ input: form, owner: user, repo: selectedRepo }, { onSuccess: onDone })
   }
 
   return (
@@ -114,56 +79,32 @@ function NewProjectForm({ onDone }: { onDone: () => void }) {
       </div>
 
       <div className='flex flex-col gap-1.5'>
-        <Label>{t('np.source')}</Label>
-        <div className='grid grid-cols-2 gap-2'>
-          <SourceCard
-            active={form.source === 'mock'}
-            onClick={() => {
-              setForm((f) => ({ ...f, source: 'mock' }))
-            }}
-            icon={<LayoutGrid size={18} />}
-            title={t('np.sourceMock')}
-            hint={t('np.sourceMockHint')}
-          />
-          <SourceCard
-            active={form.source === 'github'}
-            onClick={() => {
-              setForm((f) => ({ ...f, source: 'github' }))
-            }}
-            icon={<GitHubMark size={18} />}
-            title={t('np.sourceGithub')}
-            hint={t('np.sourceGithubHint')}
-          />
+        <Label>{t('np.repo')}</Label>
+        <div className='flex flex-col gap-1.5'>
+          {reposQuery.isLoading ? (
+            <p className='text-muted-ink text-xs'>{t('np.repoLoading')}</p>
+          ) : repos.length > 0 ? (
+            <>
+              <Combobox
+                value={repoKey}
+                onChange={setRepoKey}
+                options={repos.map((r) => ({ value: `${r.owner}/${r.repo}`, label: `${r.owner}/${r.repo}` }))}
+                placeholder={t('np.repoSelectPh')}
+                searchPlaceholder={t('np.repoSearch')}
+                emptyText={t('np.repoNoMatch')}
+              />
+            </>
+          ) : (
+            <div className='border-hairline flex flex-col items-start gap-2 rounded-md border p-3'>
+              <p className='text-muted-ink text-xs'>{t('np.repoConnectHint')}</p>
+              <Button variant='outline' size='sm' asChild>
+                <a href={GITHUB_INSTALL_URL} target='_blank' rel='noreferrer'>
+                  <GitHubMark size={14} /> {t('np.repoConnect')}
+                </a>
+              </Button>
+            </div>
+          )}
         </div>
-        {form.source === 'github' && (
-          <div className='mt-1 flex flex-col gap-1.5'>
-            {reposQuery.isLoading ? (
-              <p className='text-muted-ink text-xs'>{t('np.repoLoading')}</p>
-            ) : repos.length > 0 ? (
-              <>
-                <Combobox
-                  value={repoKey}
-                  onChange={setRepoKey}
-                  options={repos.map((r) => ({ value: `${r.owner}/${r.repo}`, label: `${r.owner}/${r.repo}` }))}
-                  placeholder={t('np.repoSelectPh')}
-                  searchPlaceholder={t('np.repoSearch')}
-                  emptyText={t('np.repoNoMatch')}
-                  invalid={repoInvalid}
-                />
-                {repoInvalid && <span className='text-sig-coral text-xs'>{t('np.repoPick')}</span>}
-              </>
-            ) : (
-              <div className='border-hairline flex flex-col items-start gap-2 rounded-md border p-3'>
-                <p className='text-muted-ink text-xs'>{t('np.repoConnectHint')}</p>
-                <Button variant='outline' size='sm' asChild>
-                  <a href={GITHUB_INSTALL_URL} target='_blank' rel='noreferrer'>
-                    <GitHubMark size={14} /> {t('np.repoConnect')}
-                  </a>
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       <label htmlFor='np-visible' className='border-hairline flex cursor-pointer items-start gap-3 rounded-md border p-3'>

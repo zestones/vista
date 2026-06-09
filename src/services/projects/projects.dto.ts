@@ -38,11 +38,10 @@ export interface OwnedJoinedProjects {
   joined: ProjectSummary[]
 }
 
+/** Projects start empty and attach GitHub repos via the connect flow (#20). */
 export interface NewProjectInput {
   name: string
   description: string
-  /** Demo seeds a sample roadmap; github starts empty and attaches repos via the connect flow (#20). */
-  source: 'mock' | 'github'
   visibility: ProjectVisibility
   availableOnVista: boolean
 }
