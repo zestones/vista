@@ -147,7 +147,6 @@ export function RoadmapPage() {
         backTo={{ to: '/app', label: t('pd.back') }}
         leading={<span className='size-3.5 shrink-0 rounded' style={{ background: project.color ?? 'var(--color-ink)' }} />}
         title={project.name}
-        description={project.description ?? undefined}
         center={
           preview ? (
             <div className='flex items-center gap-2.5'>
@@ -241,7 +240,7 @@ export function RoadmapPage() {
               </div>
             </div>
           ) : view === 'overview' ? (
-            <RoadmapOverview groups={groups} unscheduled={unscheduled} />
+            <RoadmapOverview groups={groups} unscheduled={unscheduled} description={project.description} />
           ) : view === 'mobile' ? (
             <RoadmapMobile groups={groups} onIssueClick={openIssue} />
           ) : (

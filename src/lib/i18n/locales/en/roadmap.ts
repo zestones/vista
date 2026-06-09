@@ -2,6 +2,7 @@ export const roadmap = {
   'dash.newRequest': 'New request',
   'milestones.tasks': 'requests',
   'mt.milestone': 'Milestone',
+  'roadmap.about': 'About',
   'roadmap.search': 'Search an issue',
   'roadmap.noResults': 'No results',
   'roadmap.all': 'All',
