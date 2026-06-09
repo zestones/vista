@@ -4,12 +4,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
 import { SharePicker } from '@/features/project/sharing'
 import { ModerationInbox, useSubmissions } from '@/features/project/moderation'
 import { GithubTab } from '@/features/project/github'
-import { MembersTab, AccessRequestsTab } from '@/features/project/members'
+import { PeopleTab } from '@/features/project/members'
 import { GeneralTab } from './general-tab'
 import type { ProjectRow } from '@/services/projects'
 
 // Tab is driven by `?tab=` so notifications (#108) can deep-link straight to e.g. the submissions inbox.
-const TABS = ['general', 'github', 'members', 'requests', 'sharing', 'submissions'] as const
+const TABS = ['general', 'github', 'people', 'sharing', 'submissions'] as const
+// Legacy deep-links (#137): the former Members + Requests tabs merged into "people".
+const ALIAS: Record<string, (typeof TABS)[number]> = { members: 'people', requests: 'people' }
 
 export function SettingsTabs({
   project,
@@ -25,17 +27,15 @@ export function SettingsTabs({
   const pendingSubs = subs?.filter((s) => s.status === 'pending').length ?? 0
   const [params, setParams] = useSearchParams()
   const raw = params.get('tab') ?? 'general'
-  const tab = TABS.includes(raw as (typeof TABS)[number]) ? raw : 'general'
+  const resolved = ALIAS[raw] ?? raw
+  const tab = TABS.some((v) => v === resolved) ? resolved : 'general'
   return (
     <Tabs value={tab} onValueChange={(v) => setParams(v === 'general' ? {} : { tab: v }, { replace: true })}>
       <TabsList variant='line'>
         <TabsTrigger value='general'>{t('ps.tab.general')}</TabsTrigger>
         <TabsTrigger value='github'>{t('ps.tab.github')}</TabsTrigger>
-        <TabsTrigger value='members'>
-          {t('ps.tab.members')} · {activeMembers}
-        </TabsTrigger>
-        <TabsTrigger value='requests'>
-          {t('ps.tab.requests')}
+        <TabsTrigger value='people'>
+          {t('ps.tab.people')} · {activeMembers}
           {pendingMembers > 0 ? ` · ${String(pendingMembers)}` : ''}
         </TabsTrigger>
         <TabsTrigger value='sharing'>{t('ps.tab.sharing')}</TabsTrigger>
@@ -51,11 +51,8 @@ export function SettingsTabs({
       <TabsContent value='github' className='mt-6'>
         <GithubTab projectId={project.id} />
       </TabsContent>
-      <TabsContent value='members' className='mt-6'>
-        <MembersTab projectId={project.id} />
-      </TabsContent>
-      <TabsContent value='requests' className='mt-6'>
-        <AccessRequestsTab projectId={project.id} />
+      <TabsContent value='people' className='mt-6'>
+        <PeopleTab projectId={project.id} />
       </TabsContent>
       <TabsContent value='sharing' className='mt-6'>
         <SharePicker projectId={project.id} />

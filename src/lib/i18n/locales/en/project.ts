@@ -9,6 +9,7 @@ export const project = {
   'ps.back': 'All projects',
   'ps.soon': 'This section lands in Phase 1.',
   'ps.tab.general': 'General',
+  'ps.tab.people': 'People',
   'ps.tab.members': 'Members',
   'ps.tab.requests': 'Access requests',
   'ps.tab.invite': 'Invite',

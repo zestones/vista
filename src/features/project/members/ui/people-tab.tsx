@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
-import { Copy, RefreshCw, Trash2 } from 'lucide-react'
+import { Check, Copy, RefreshCw, Trash2, X } from 'lucide-react'
 import type { MemberRole, MemberRow } from '@/services/members'
 import {
   Badge,
@@ -24,9 +24,15 @@ import { Spinner } from '@/components/feedback'
 import { useMemberAction, useMembers, type MemberAction } from '../hooks/use-members'
 import { useInviteLink } from '../hooks/use-invite-link'
 
-/** Owner: shareable invite link + active members with role control, comment access, and removal (#103/#93). */
-export function MembersTab({ projectId }: { projectId: string }) {
-  const { t } = useTranslation()
+const formatDate = (iso: string, lang: string) => new Date(iso).toLocaleDateString(lang, { day: 'numeric', month: 'short', year: 'numeric' })
+
+/**
+ * Owner "People" tab (#137, part of #136). One place for "who can access this project": the invite
+ * link, pending access requests (approve/deny), and active members (roles, comment access, removal).
+ * Merges the former Members + Requests tabs (they share useMembers/useMemberAction).
+ */
+export function PeopleTab({ projectId }: { projectId: string }) {
+  const { t, i18n } = useTranslation()
   const { data, isLoading } = useMembers(projectId)
   const action = useMemberAction(projectId)
   const invite = useInviteLink(projectId)
@@ -42,8 +48,12 @@ export function MembersTab({ projectId }: { projectId: string }) {
   }
 
   const active = data.filter((m) => m.status === 'active')
-  const run = (a: MemberAction) =>
-    action.mutate(a, { onError: (e) => toast.error(e instanceof Error && e.message ? e.message : t('ps.mem.error')) })
+  const pending = data.filter((m) => m.status === 'pending')
+  const run = (a: MemberAction, ok?: string) =>
+    action.mutate(a, {
+      onSuccess: ok ? () => toast.success(t(ok)) : undefined,
+      onError: (e) => toast.error(e instanceof Error && e.message ? e.message : t('ps.mem.error')),
+    })
 
   const copy = () => {
     void navigator.clipboard
@@ -55,26 +65,51 @@ export function MembersTab({ projectId }: { projectId: string }) {
   return (
     <div className='flex flex-col gap-6'>
       <section className='border-hairline bg-card rounded-xl border p-5'>
-        <h3 className='text-ink font-medium'>{t('ps.mem.invite')}</h3>
+        <h3 className='text-ink font-medium'>{t('ps.inv.title')}</h3>
         <p className='text-muted-ink mt-1 mb-3 text-sm'>{t('ps.mem.inviteHint')}</p>
         <div className='flex gap-2'>
           <Input readOnly value={invite.link} className='font-mono text-xs' />
           <Button variant='outline' size='sm' className='shrink-0' onClick={copy} disabled={!invite.link}>
             <Copy /> {t('ps.mem.copy')}
           </Button>
-          <Button
-            variant='outline'
-            size='sm'
-            className='shrink-0'
-            onClick={() => invite.regenerate.mutate()}
-            disabled={invite.regenerate.isPending}
-          >
+          <Button variant='outline' size='sm' className='shrink-0' onClick={() => invite.regenerate.mutate()} disabled={invite.regenerate.isPending}>
             <RefreshCw /> {t('ps.mem.regenerate')}
           </Button>
         </div>
       </section>
 
-      <div>
+      {pending.length > 0 && (
+        <section>
+          <h3 className='text-ink mb-2 font-medium'>
+            {t('ps.req.title')} · {pending.length}
+          </h3>
+          <div className='flex flex-col gap-3'>
+            {pending.map((m) => (
+              <article key={m.id} className='border-hairline bg-card flex items-center gap-4 rounded-xl border p-4'>
+                <div className='min-w-0 flex-1'>
+                  <div className='text-ink truncate font-medium'>{m.name ?? m.email}</div>
+                  <div className='text-muted-ink truncate text-xs'>
+                    {m.email} · {formatDate(m.invited_at, i18n.language)}
+                  </div>
+                </div>
+                <div className='flex shrink-0 items-center gap-2'>
+                  <Button variant='outline' size='sm' disabled={action.isPending} onClick={() => run({ kind: 'deny', id: m.id }, 'ps.req.denied')}>
+                    <X /> {t('ps.req.deny')}
+                  </Button>
+                  <Button size='sm' disabled={action.isPending} onClick={() => run({ kind: 'approve', id: m.id }, 'ps.req.approved')}>
+                    <Check /> {t('ps.req.approve')}
+                  </Button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section>
+        <h3 className='text-ink mb-1 font-medium'>
+          {t('ps.mem.title')} · {active.length}
+        </h3>
         <p className='text-muted-ink mb-2 text-xs'>{t('ps.mem.commentsHint')}</p>
         <div className='border-hairline bg-card overflow-hidden rounded-xl border'>
           {active.map((m) => (
@@ -123,7 +158,7 @@ export function MembersTab({ projectId }: { projectId: string }) {
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
       <Dialog
         open={grantTarget !== null}
