@@ -2,7 +2,7 @@ import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import { remarkAlert } from 'remark-github-blockquote-alert'
-import { CommentMermaid } from './comment-mermaid'
+import { MermaidDiagram } from '@/components/markdown/mermaid-diagram'
 import { remarkIssueMentions } from '../lib/remark-issue-mentions'
 import 'highlight.js/styles/github.css'
 
@@ -33,7 +33,7 @@ export default function CommentMarkdown({ children, onIssueRef }: { children: st
       const lang = /language-(\w+)/.exec(className ?? '')?.[1]
       if (lang === 'mermaid') {
         const src = nodeText(node).trim()
-        return <CommentMermaid key={src} chart={src} />
+        return <MermaidDiagram key={src} chart={src} />
       }
       const isBlock = (className?.includes('language-') ?? false) || nodeText(node).includes('\n')
       if (isBlock) {

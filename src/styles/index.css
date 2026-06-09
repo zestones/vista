@@ -297,3 +297,12 @@
 .md .markdown-alert-caution {
   --md-alert: #cf222e;
 }
+.md .cmt-mermaid {
+  margin: 0.8em 0;
+}
+/* Fullscreen diagram canvas dot grid — global so it also applies outside the comment panel (#149). */
+.cmt-canvas {
+  background-color: var(--color-background, #fff);
+  background-image: radial-gradient(var(--color-hairline, #e6e6e6) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
