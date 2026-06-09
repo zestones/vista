@@ -29,11 +29,11 @@ const mock: SubmissionsApi = {
   },
   listOwnerInbox(userId) {
     const db = mockDb()
-    const owned = new Map(db.projects.filter((p) => p.owner_id === userId).map((p) => [p.id, p.name] as const))
+    const owned = new Map(db.projects.filter((p) => p.owner_id === userId).map((p) => [p.id, p] as const))
     return Promise.resolve(
       db.submissions
         .filter((s) => s.status === 'pending' && owned.has(s.project_id))
-        .map((s) => ({ ...s, projectName: owned.get(s.project_id) ?? '' })),
+        .map((s) => ({ ...s, projectName: owned.get(s.project_id)?.name ?? '', projectColor: owned.get(s.project_id)?.color ?? null })),
     )
   },
   createSubmission(input) {
@@ -87,11 +87,13 @@ const supabaseApi: SubmissionsApi = {
     // owner_id filter keeps only projects this user owns. Pending only -- the inbox is a triage queue.
     const { data, error } = await supabase
       .from('submissions')
-      .select('*, projects!inner(name, owner_id)')
+      .select('*, projects!inner(name, owner_id, color)')
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
     if (error) throw error
-    return data.filter((r) => r.projects.owner_id === userId).map(({ projects, ...s }) => ({ ...s, projectName: projects.name }))
+    return data
+      .filter((r) => r.projects.owner_id === userId)
+      .map(({ projects, ...s }) => ({ ...s, projectName: projects.name, projectColor: projects.color }))
   },
   async createSubmission(input) {
     const { data, error } = await supabase
