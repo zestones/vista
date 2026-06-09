@@ -11,6 +11,7 @@ import { NewProjectModal, useWorkspace } from '@/features/workspace'
 import { publishState, type ProjectSummary } from '@/services/projects'
 import { CommentPanel } from '@/features/project/comments'
 import { Button } from '@/components/ui'
+import { useMembershipRealtime } from '@/hooks/use-membership-realtime'
 import { LangToggle } from './lang-toggle'
 import { NotificationBell } from '@/features/notifications'
 import { VistaMark } from '@/components/brand'
@@ -185,6 +186,10 @@ function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; 
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
+  // App-wide live membership (#122): mounted once here (SidebarContent renders twice) so a member
+  // gets access live + a toast on approval, and the owner's pending badge / members tab self-update.
+  useMembershipRealtime(user?.id ?? '')
   const [newOpen, setNewOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)

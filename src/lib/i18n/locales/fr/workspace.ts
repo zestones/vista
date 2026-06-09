@@ -9,6 +9,7 @@ export const workspace = {
   'ws.open': 'Ouvrir',
   'ws.manage': 'Gérer',
   'ws.pending': 'en attente',
+  'ws.accessGranted': 'Vous avez désormais accès à {{project}}',
   'np.title': 'Nouveau projet',
   'np.subtitle': 'Créez un espace de roadmap à partager.',
   'np.name': 'Nom du projet',
