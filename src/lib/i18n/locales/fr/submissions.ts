@@ -59,8 +59,6 @@ export const submissions = {
   'form.submit': 'Envoyer la demande',
   'form.submitting': 'Envoi…',
   'form.successTitle': 'Demande envoyée',
-  'form.successMsg': 'Merci ! Votre demande a bien été créée.',
-  'form.another': 'Envoyer une autre demande',
   'form.errorTitle': 'Échec de l’envoi',
   'form.errorGeneric': 'Impossible d’envoyer la demande. Réessayez dans un instant.',
   'form.required': 'Ce champ est requis.',
