@@ -112,7 +112,9 @@ export function RequestForm({ projectId, onClose }: { projectId: string; onClose
             setDescription(e.target.value)
           }}
           placeholder={t('form.descPlaceholder')}
+          className='min-h-28'
         />
+        <span className='text-muted-ink text-xs'>{t('form.markdownHint')}</span>
       </div>
 
       {submit.isError && (

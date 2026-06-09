@@ -10,6 +10,7 @@ export const submissions = {
   'form.titlePlaceholder': 'Résumez en une phrase',
   'form.descLabel': 'Description',
   'form.descPlaceholder': 'Donnez le contexte, ce que vous attendez, et comment reproduire le cas échéant.',
+  'form.markdownHint': 'Markdown pris en charge — listes, code, liens.',
   'form.nameLabel': 'Votre nom',
   'form.namePlaceholder': 'Optionnel',
   'form.emailLabel': 'Email',

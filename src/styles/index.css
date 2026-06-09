@@ -175,3 +175,125 @@
     scrollbar-color: var(--surface-strong) transparent;
   }
 }
+
+/* Shared markdown typography (#147) — used by the shared <Markdown> renderer (submissions, etc.). */
+.md {
+  line-height: 1.55;
+  word-break: break-word;
+}
+.md > :first-child {
+  margin-top: 0;
+}
+.md > :last-child {
+  margin-bottom: 0;
+}
+.md p {
+  margin: 0.6em 0;
+}
+.md h1,
+.md h2,
+.md h3,
+.md h4,
+.md h5,
+.md h6 {
+  margin: 1em 0 0.4em;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.md a {
+  color: var(--color-link);
+  text-decoration: underline;
+}
+.md ul,
+.md ol {
+  margin: 0.6em 0;
+  padding-left: 1.3em;
+}
+.md ul {
+  list-style: disc;
+}
+.md ol {
+  list-style: decimal;
+}
+.md li {
+  margin: 0.2em 0;
+}
+.md code {
+  background: var(--color-secondary);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+.md pre {
+  background: var(--color-secondary);
+  padding: 0.7em 0.9em;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.8em 0;
+}
+.md pre code {
+  background: none;
+  padding: 0;
+}
+.md img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+.md blockquote {
+  border-left: 3px solid var(--color-hairline);
+  padding-left: 0.8em;
+  margin: 0.8em 0;
+  color: var(--color-muted-ink);
+}
+.md table {
+  border-collapse: collapse;
+  font-size: 0.92em;
+  margin: 0.8em 0;
+  display: block;
+  overflow-x: auto;
+}
+.md th,
+.md td {
+  border: 1px solid var(--color-hairline);
+  padding: 0.3em 0.6em;
+}
+.md .markdown-alert {
+  margin: 0.8em 0;
+  padding: 0.5em 0.9em;
+  border-left: 3px solid var(--md-alert, #57606a);
+  background: color-mix(in srgb, var(--md-alert, #57606a) 7%, transparent);
+}
+.md .markdown-alert > :first-child {
+  margin-top: 0;
+}
+.md .markdown-alert > :last-child {
+  margin-bottom: 0;
+}
+.md .markdown-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  font-weight: 600;
+  font-size: 0.88em;
+  color: var(--md-alert, #57606a);
+  text-transform: capitalize;
+}
+.md .markdown-alert-title svg.octicon {
+  fill: currentColor;
+}
+.md .markdown-alert-note {
+  --md-alert: #0969da;
+}
+.md .markdown-alert-tip {
+  --md-alert: #1a7f37;
+}
+.md .markdown-alert-important {
+  --md-alert: #8250df;
+}
+.md .markdown-alert-warning {
+  --md-alert: #9a6700;
+}
+.md .markdown-alert-caution {
+  --md-alert: #cf222e;
+}
