@@ -1,6 +1,7 @@
 export const project = {
   'pd.back': 'Projets',
   'pd.manage': 'Gérer le projet',
+  'pd.readonly': 'Lecture seule',
   'pd.viewerNote': 'Vous consultez ce projet en lecture seule.',
   'pd.previewAsClient': 'Aperçu client',
   'pd.exitPreview': 'Quitter l’aperçu',

@@ -159,6 +159,14 @@ export function RoadmapPage() {
         }
         actions={
           <>
+            {isViewer && (
+              <span
+                title={t('pd.viewerNote')}
+                className='border-hairline bg-secondary text-muted-ink inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium'
+              >
+                <Lock size={13} /> {t('pd.readonly')}
+              </span>
+            )}
             {isOwner && (
               <Button
                 variant={preview ? 'secondary' : 'outline'}
@@ -200,12 +208,6 @@ export function RoadmapPage() {
       />
 
       <div className='flex min-h-0 flex-1 flex-col px-6 py-6'>
-        {isViewer && (
-          <div className='bg-secondary border-hairline text-muted-ink mb-4 flex shrink-0 items-center gap-2 rounded-md border px-3 py-2 text-[13px]'>
-            <Lock size={14} /> {t('pd.viewerNote')}
-          </div>
-        )}
-
         <div className='mb-5 shrink-0'>
           <Segmented<Tab>
             aria-label='View'
