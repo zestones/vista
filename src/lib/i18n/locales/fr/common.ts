@@ -5,6 +5,7 @@ export const common = {
   'nav.language': 'Langue',
   'side.newProject': 'Nouveau projet',
   'side.admin': 'Administration',
+  'side.submissions': 'Soumissions',
   'side.overview': 'Vue d’ensemble',
   'side.projects': 'Projets',
   'side.logout': 'Se déconnecter',

@@ -2,7 +2,7 @@ import { env } from '@/config/env'
 import { mockDb } from '@/lib/mock'
 import { supabase } from '@/lib/supabase/client'
 import { auth } from '@/services/auth'
-import type { CreateSubmissionInput, SubmissionRow, SubmissionStatus } from './submissions.dto'
+import type { CreateSubmissionInput, OwnerInboxItem, SubmissionRow, SubmissionStatus } from './submissions.dto'
 
 /** Approve options (#32): the owner picks the target repo (a sole repo is auto-resolved) + an optional milestone. */
 export interface ApproveOptions {
@@ -12,6 +12,8 @@ export interface ApproveOptions {
 
 export interface SubmissionsApi {
   listSubmissions(projectId: string): Promise<SubmissionRow[]>
+  /** Pending submissions across the owner's projects (#145), each with its project name, for the inbox. */
+  listOwnerInbox(userId: string): Promise<OwnerInboxItem[]>
   createSubmission(input: CreateSubmissionInput): Promise<SubmissionRow>
   /** Deny (or other status flips). Owner-gated by RLS. Approval goes through `approveSubmission`. */
   setStatus(submissionId: string, status: SubmissionStatus): Promise<void>
@@ -24,6 +26,15 @@ let seq = 0
 const mock: SubmissionsApi = {
   listSubmissions(projectId) {
     return Promise.resolve(mockDb().submissions.filter((s) => s.project_id === projectId))
+  },
+  listOwnerInbox(userId) {
+    const db = mockDb()
+    const owned = new Map(db.projects.filter((p) => p.owner_id === userId).map((p) => [p.id, p.name] as const))
+    return Promise.resolve(
+      db.submissions
+        .filter((s) => s.status === 'pending' && owned.has(s.project_id))
+        .map((s) => ({ ...s, projectName: owned.get(s.project_id) ?? '' })),
+    )
   },
   createSubmission(input) {
     const me = auth.currentUser() // identity is server-stamped from the profile (#99); mirror it here
@@ -70,6 +81,17 @@ const supabaseApi: SubmissionsApi = {
       .order('created_at', { ascending: false })
     if (error) throw error
     return data
+  },
+  async listOwnerInbox(userId) {
+    // RLS returns the owner's projects' submissions + the user's own authored ones; the inner join +
+    // owner_id filter keeps only projects this user owns. Pending only -- the inbox is a triage queue.
+    const { data, error } = await supabase
+      .from('submissions')
+      .select('*, projects!inner(name, owner_id)')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data.filter((r) => r.projects.owner_id === userId).map(({ projects, ...s }) => ({ ...s, projectName: projects.name }))
   },
   async createSubmission(input) {
     const { data, error } = await supabase
