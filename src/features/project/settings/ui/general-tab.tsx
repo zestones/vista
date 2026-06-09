@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Check, Trash2 } from 'lucide-react'
 import { Button, Input, Label, Textarea } from '@/components/ui'
+import { GithubTab } from '@/features/project/github'
 import { useDeleteProject, useUpdateProject } from '../hooks/use-project-settings'
 import type { ProjectRow } from '@/services/projects'
 
@@ -79,6 +80,8 @@ export function GeneralTab({ project }: { project: ProjectRow }) {
           </Button>
         </div>
       </div>
+
+      <GithubTab projectId={project.id} />
 
       <section className='rounded-xl border border-[color-mix(in_oklch,var(--color-sig-coral)_30%,transparent)] bg-[color-mix(in_oklch,var(--color-sig-coral)_4%,transparent)] p-6'>
         <h2 className='text-sig-coral text-lg font-medium'>{t('ps.danger')}</h2>
