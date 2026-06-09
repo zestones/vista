@@ -1,14 +1,13 @@
 import { useTranslation } from 'react-i18next'
-import { useSearchParams } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
-import { ModerationInbox, useSubmissions } from '@/features/project/moderation'
 import { PeopleTab } from '@/features/project/members'
 import { GeneralTab } from './general-tab'
 import { ClientVisibilityTab } from './client-visibility-tab'
 import type { ProjectRow } from '@/services/projects'
 
-// Tab is driven by `?tab=` so notifications (#108) can deep-link straight to e.g. the submissions inbox.
-const TABS = ['general', 'people', 'visibility', 'submissions'] as const
+// Tab is driven by `?tab=` so notifications (#108) can deep-link straight to e.g. the People tab.
+const TABS = ['general', 'people', 'visibility'] as const
 // Legacy deep-links: Members+Requests → "people" (#137); Sharing → "visibility" (#139); GitHub → General (#141).
 const ALIAS: Record<string, (typeof TABS)[number]> = { members: 'people', requests: 'people', sharing: 'visibility', github: 'general' }
 
@@ -22,10 +21,10 @@ export function SettingsTabs({
   pendingMembers: number
 }) {
   const { t } = useTranslation()
-  const { data: subs } = useSubmissions(project.id)
-  const pendingSubs = subs?.filter((s) => s.status === 'pending').length ?? 0
   const [params, setParams] = useSearchParams()
   const raw = params.get('tab') ?? 'general'
+  // Submissions moved to their own surface (#143); legacy ?tab=submissions redirects there.
+  if (raw === 'submissions') return <Navigate to={`/app/projects/${project.id}/submissions`} replace />
   const resolved = ALIAS[raw] ?? raw
   const tab = TABS.some((v) => v === resolved) ? resolved : 'general'
   return (
@@ -37,10 +36,6 @@ export function SettingsTabs({
           {pendingMembers > 0 ? ` · ${String(pendingMembers)}` : ''}
         </TabsTrigger>
         <TabsTrigger value='visibility'>{t('ps.tab.visibility')}</TabsTrigger>
-        <TabsTrigger value='submissions'>
-          {t('ps.tab.submissions')}
-          {pendingSubs > 0 ? ` · ${String(pendingSubs)}` : ''}
-        </TabsTrigger>
       </TabsList>
 
       <TabsContent value='general' className='mt-6'>
@@ -51,9 +46,6 @@ export function SettingsTabs({
       </TabsContent>
       <TabsContent value='visibility' className='mt-6'>
         <ClientVisibilityTab project={project} />
-      </TabsContent>
-      <TabsContent value='submissions' className='mt-6'>
-        <ModerationInbox projectId={project.id} />
       </TabsContent>
     </Tabs>
   )

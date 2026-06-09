@@ -46,11 +46,6 @@ export function ModerationInbox({ projectId }: { projectId: string }) {
 
   return (
     <div className='flex flex-col gap-6'>
-      <section>
-        <h2 className='text-ink text-lg font-medium'>{t('mod.title')}</h2>
-        <p className='text-muted-ink mt-1 text-sm'>{t('mod.subtitle')}</p>
-      </section>
-
       <Segmented<SubmissionStatus>
         aria-label={t('mod.title')}
         value={tab}
