@@ -223,6 +223,12 @@ function CommentPanelBody({
         .cmt-md > :last-child { margin-bottom: 0; }
         .cmt-md p { margin: 0.7em 0; }
         .cmt-md h1, .cmt-md h2, .cmt-md h3, .cmt-md h4, .cmt-md h5, .cmt-md h6 { margin: 1em 0 0.45em; font-weight: 600; line-height: 1.3; }
+        /* Explicit scale — Tailwind preflight resets headings to body size (#155). */
+        .cmt-md h1 { font-size: 1.5em; }
+        .cmt-md h2 { font-size: 1.25em; }
+        .cmt-md h3 { font-size: 1.1em; }
+        .cmt-md h5 { font-size: 0.9em; }
+        .cmt-md h6 { font-size: 0.85em; color: var(--color-muted-ink, #777); }
         .cmt-md a { color: var(--color-link, #254fad); text-decoration: underline; }
         .cmt-md ul, .cmt-md ol { margin: 0.7em 0; padding-left: 1.3em; }
         .cmt-md li { margin: 0.2em 0; }
