@@ -33,7 +33,18 @@ function ProgressRing({ pct, size = 96, stroke = 9 }: { pct: number; size?: numb
           style={{ transition: 'stroke-dashoffset 0.8s cubic-bezier(.4,0,.2,1)' }}
         />
       </svg>
-      <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 600, color: 'var(--ink)' }}>
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'grid',
+          placeItems: 'center',
+          fontFamily: 'var(--font-display)',
+          fontSize: 22,
+          fontWeight: 600,
+          color: 'var(--ink)',
+        }}
+      >
         {pct}%
       </div>
     </div>
@@ -43,7 +54,18 @@ function ProgressRing({ pct, size = 96, stroke = 9 }: { pct: number; size?: numb
 function Tile({ value, label, sub, accent }: { value: number; label: string; sub?: string; accent?: string }) {
   return (
     <div>
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 500, lineHeight: 1, color: accent ?? 'var(--ink)', letterSpacing: '-0.01em' }}>{value}</div>
+      <div
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: 30,
+          fontWeight: 500,
+          lineHeight: 1,
+          color: accent ?? 'var(--ink)',
+          letterSpacing: '-0.01em',
+        }}
+      >
+        {value}
+      </div>
       <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink)', marginTop: 4 }}>{label}</div>
       {sub && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{sub}</div>}
     </div>
@@ -53,11 +75,32 @@ function Tile({ value, label, sub, accent }: { value: number; label: string; sub
 function StatsStrip({ stats }: { stats: Stats }) {
   const { t } = useTranslation()
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-xxl)', flexWrap: 'wrap', padding: 'var(--s-xl)', background: 'var(--surface-soft)', border: '1px solid var(--hairline)', borderRadius: 'var(--r-lg)' }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--s-xxl)',
+        flexWrap: 'wrap',
+        padding: 'var(--s-xl)',
+        background: 'var(--surface-soft)',
+        border: '1px solid var(--hairline)',
+        borderRadius: 'var(--r-lg)',
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-lg)' }}>
         <ProgressRing pct={stats.pct} />
         <div>
-          <div className='eyebrow' style={{ marginBottom: 4, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>
+          <div
+            className='eyebrow'
+            style={{
+              marginBottom: 4,
+              fontSize: 11,
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              color: 'var(--muted)',
+            }}
+          >
             {t('dash.completion')}
           </div>
           <div style={{ fontSize: 14, color: 'var(--muted)', maxWidth: 180 }}>
@@ -106,11 +149,15 @@ function MilestonesTable({ groups }: { groups: Group[] }) {
           </div>
           <div className='mt-req'>
             <span className='mt-lbl'>{t('mt.requests')}</span>
-            <span>{g.closed}/{g.total}</span>
+            <span>
+              {g.closed}/{g.total}
+            </span>
           </div>
           <div className='mt-due'>
             <span className='mt-lbl'>{t('mt.due')}</span>
-            <span style={{ color: g.due ? 'var(--body)' : 'var(--border-strong)' }}>{g.due ? fmtFull(g.due, lang) : t('milestones.noDue')}</span>
+            <span style={{ color: g.due ? 'var(--body)' : 'var(--border-strong)' }}>
+              {g.due ? fmtFull(g.due, lang) : t('milestones.noDue')}
+            </span>
           </div>
         </div>
       ))}
@@ -147,11 +194,26 @@ function MilestonesTable({ groups }: { groups: Group[] }) {
 }
 
 /** Overview tab: stats strip + unscheduled count + milestones table. */
-export function RoadmapOverview({ groups, unscheduled }: { groups: Group[]; unscheduled: IssueRow[] }) {
+export function RoadmapOverview({
+  groups,
+  unscheduled,
+  description,
+}: {
+  groups: Group[]
+  unscheduled: IssueRow[]
+  /** Project description, shown as the About block (#167) — it used to crowd the page header. */
+  description?: string | null
+}) {
   const { t } = useTranslation()
   const stats = overallStats(groups)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-lg)' }}>
+      {description != null && description.trim() !== '' && (
+        <section className='border-hairline bg-card rounded-xl border p-5'>
+          <h3 className='text-muted-ink mb-1.5 text-xs font-semibold tracking-wide uppercase'>{t('roadmap.about')}</h3>
+          <p className='text-body max-w-3xl text-sm leading-relaxed whitespace-pre-wrap'>{description}</p>
+        </section>
+      )}
       <StatsStrip stats={stats} />
       {unscheduled.length > 0 && (
         <p style={{ fontSize: 13, color: 'var(--muted)' }}>{`${String(unscheduled.length)} ${t('roadmap.unscheduled')}`}</p>
