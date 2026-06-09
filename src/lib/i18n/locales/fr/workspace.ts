@@ -27,10 +27,8 @@ export const workspace = {
   'np.repoLoading': 'Chargement des dépôts…',
   'np.repoConnectHint': 'Installez la GitHub App pour lister vos dépôts. Vous pourrez aussi les connecter plus tard dans les réglages.',
   'np.repoConnect': 'Connecter GitHub',
-  'np.visibility': 'Visibilité',
-  'np.visPrivate': 'Privé',
-  'np.visShared': 'Partagé (via lien)',
-  'np.available': 'Disponible sur Vista dès la création',
+  'np.clientAccess': 'Visible par les clients',
+  'np.clientAccessHint': 'Les clients invités peuvent ouvrir et consulter ce projet. Modifiable à tout moment dans les réglages.',
   'np.create': 'Créer le projet',
   'np.creating': 'Création…',
 }

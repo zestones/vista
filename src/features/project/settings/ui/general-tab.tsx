@@ -1,11 +1,11 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Check, Trash2 } from 'lucide-react'
-import { Button, Input, Label, Segmented, Switch, Textarea } from '@/components/ui'
+import { Check, Eye, EyeOff, Trash2 } from 'lucide-react'
+import { Button, Input, Label, Switch, Textarea } from '@/components/ui'
 import { useDeleteProject, useUpdateProject } from '../hooks/use-project-settings'
+import { publishState } from '@/services/projects'
 import type { ProjectRow } from '@/services/projects'
-import type { ProjectVisibility } from '@/services/projects'
 
 /** One settings row: a label column (title + hint) beside its controls -- fills the width while keeping inputs readable. */
 function Row({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
@@ -28,13 +28,19 @@ export function GeneralTab({ project }: { project: ProjectRow }) {
 
   const [name, setName] = useState(project.name)
   const [description, setDescription] = useState(project.description ?? '')
-  const [visibility, setVisibility] = useState<ProjectVisibility>(project.visibility)
-  const [available, setAvailable] = useState(project.available_on_vista)
+  // One control (#107): "visible to clients" drives both columns in lockstep, so the silent
+  // "shared but not available" trap can't happen. Live, so the banner reacts before saving.
+  const [visible, setVisible] = useState(publishState(project).published)
 
   const save = () => {
     update.mutate({
       id: project.id,
-      patch: { name: name.trim(), description: description.trim() || null, visibility, available_on_vista: available },
+      patch: {
+        name: name.trim(),
+        description: description.trim() || null,
+        visibility: visible ? 'shared' : 'private',
+        available_on_vista: visible,
+      },
     })
   }
 
@@ -49,6 +55,14 @@ export function GeneralTab({ project }: { project: ProjectRow }) {
 
   return (
     <div className='flex flex-col gap-8'>
+      <div className={`flex items-start gap-3 rounded-xl border p-4 ${visible ? 'border-success/30 bg-success/10' : 'border-hairline bg-secondary'}`}>
+        {visible ? <Eye size={18} className='text-success mt-0.5 shrink-0' /> : <EyeOff size={18} className='text-muted-ink mt-0.5 shrink-0' />}
+        <div className='min-w-0'>
+          <div className='text-ink text-sm font-semibold'>{visible ? t('ps.publish.visibleTitle') : t('ps.publish.hiddenTitle')}</div>
+          <p className='text-muted-ink mt-0.5 text-[13px]'>{visible ? t('ps.publish.visibleHint') : t('ps.publish.hiddenHint')}</p>
+        </div>
+      </div>
+
       <div className='border-hairline bg-card divide-hairline divide-y overflow-hidden rounded-xl border'>
         <Row title={t('ps.gen.secIdentity')} hint={t('ps.gen.secIdentityHint')}>
           <div className='flex flex-col gap-1.5'>
@@ -73,25 +87,11 @@ export function GeneralTab({ project }: { project: ProjectRow }) {
           </div>
         </Row>
 
-        <Row title={t('ps.gen.visibility')} hint={t('ps.gen.visibilityHint')}>
-          <Segmented<ProjectVisibility>
-            value={visibility}
-            onValueChange={setVisibility}
-            options={[
-              { value: 'private', label: t('ps.gen.visPrivate') },
-              { value: 'shared', label: t('ps.gen.visShared') },
-            ]}
-          />
-        </Row>
-
-        <Row title={t('ps.gen.available')} hint={t('ps.gen.availableHint')}>
-          <Switch
-            checked={available}
-            onCheckedChange={(v) => {
-              setAvailable(v)
-            }}
-            aria-label={t('ps.gen.available')}
-          />
+        <Row title={t('ps.gen.access')} hint={t('ps.gen.accessHint')}>
+          <label className='flex cursor-pointer items-center gap-3'>
+            <Switch checked={visible} onCheckedChange={setVisible} aria-label={t('ps.gen.access')} />
+            <span className='text-body text-sm'>{visible ? t('status.clientVisible') : t('status.clientHidden')}</span>
+          </label>
         </Row>
 
         <div className='bg-surface-soft flex items-center justify-end gap-3 px-6 py-4'>

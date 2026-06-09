@@ -27,10 +27,8 @@ export const workspace = {
   'np.repoLoading': 'Loading repositories…',
   'np.repoConnectHint': 'Install the GitHub App to list your repositories. You can also connect them later in Settings.',
   'np.repoConnect': 'Connect GitHub',
-  'np.visibility': 'Visibility',
-  'np.visPrivate': 'Private',
-  'np.visShared': 'Shared (via link)',
-  'np.available': 'Available on Vista right away',
+  'np.clientAccess': 'Visible to clients',
+  'np.clientAccessHint': 'Invited clients can open and view this project. You can change this anytime in Settings.',
   'np.create': 'Create project',
   'np.creating': 'Creating…',
 }

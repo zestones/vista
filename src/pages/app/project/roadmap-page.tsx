@@ -3,7 +3,7 @@ import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { Eye, Lock, Plus, Settings } from 'lucide-react'
+import { CalendarRange, Eye, Lock, Plus, Settings } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { usePreview } from '@/contexts/preview.context'
 import { RoadmapGantt, RoadmapMobile, RoadmapOverview, useRoadmap, useRoadmapRealtime, type Bar } from '@/features/project/roadmap'
@@ -122,6 +122,9 @@ export function RoadmapPage() {
   // Viewers have no "requests" tab, so a stray ?tab=requests falls back to gantt.
   const tabParam = searchParams.get('tab')
   const tab: Tab = tabParam === 'overview' ? 'overview' : tabParam === 'requests' && !isViewer ? 'requests' : 'gantt'
+  // An empty roadmap means different things to a client (#107): for the owner it's genuinely empty;
+  // for a client it usually means nothing has been shared yet (or the project isn't published).
+  const asClient = !isOwner || preview
 
   const view =
     tab === 'requests'
@@ -221,7 +224,15 @@ export function RoadmapPage() {
           ) : view === 'error' ? (
             <p className='text-muted-ink text-sm'>{t('state.errorTitle')}</p>
           ) : view === 'empty' ? (
-            <p className='text-muted-ink text-sm'>{t('state.empty')}</p>
+            <div className='grid flex-1 place-items-center'>
+              <div className='max-w-sm px-6 text-center'>
+                <span className='bg-secondary text-muted-ink mx-auto mb-4 inline-grid size-12 place-items-center rounded-full'>
+                  <CalendarRange size={22} />
+                </span>
+                <h3 className='text-ink mb-1 font-medium'>{asClient ? t('state.clientEmptyTitle') : t('state.ownerEmptyTitle')}</h3>
+                <p className='text-muted-ink text-sm'>{asClient ? t('state.clientEmptyBody') : t('state.ownerEmptyBody')}</p>
+              </div>
+            </div>
           ) : view === 'overview' ? (
             <RoadmapOverview groups={groups} unscheduled={unscheduled} />
           ) : view === 'mobile' ? (
