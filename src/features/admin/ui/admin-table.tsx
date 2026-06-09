@@ -50,7 +50,7 @@ export function AdminTable({ rows }: { rows: ProjectSummary[] }) {
                         <span className='size-2.5 shrink-0 rounded-[3px]' style={{ background: project.color ?? 'var(--color-ink)' }} />
                         <div>
                           <div className='text-ink font-semibold'>{project.name}</div>
-                          <div className='text-muted-ink text-xs'>{repoLabel(repos, t('np.sourceMock'))}</div>
+                          <div className='text-muted-ink text-xs'>{repoLabel(repos, t('ws.noRepo'))}</div>
                         </div>
                       </div>
                     </td>
