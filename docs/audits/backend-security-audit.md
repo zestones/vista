@@ -1,80 +1,177 @@
-# Backend & database audit — security + clean code/structure
+# Backend & database — adversarial security audit (with live POCs)
 
-**Date:** 2026-06-10 · **Auditor:** Claude (read-only; code on `main` @ `673d6d1`)
-**Surface:** 26 SQL migrations · 5 Edge Functions (+ `_shared`) · 9 client service domains · client env/bootstrap.
-
----
-
-## Part 1 — Security
-
-### Verdict at a glance
-
-The security architecture is **fundamentally sound and unusually disciplined**: deny-all RLS with narrowly additive policies, every `SECURITY DEFINER` function sets `search_path = ''`, the service-role key exists only inside Edge Functions, webhook HMAC is verified over the raw body with a constant-time compare, cron secrets live in `supabase_vault` (never in committed migrations), submitter identity is stamped server-side, and the anon surface is exactly one intentional RPC returning public fields. No secrets are committed (`supabase/functions/.env` is gitignored and was never tracked).
-
-Two real findings need fixing — one high, one medium.
-
-### Findings
-
-| ID | Severity | Finding | Evidence |
-|---|---|---|---|
-| S1 | **HIGH** | **`connect-installation` never proves the caller installed the App.** Any authenticated Vista user can claim an arbitrary `installation_id` (GitHub installation ids are global, enumerable integers): the function only checks the installation exists *for our App* (`getInstallation`), then writes `installed_by = caller`. First-come-wins (the unique constraint only helps after the legitimate owner linked). A successful claim lets the attacker list that installation's repos and attach them to their own project (`connect-repos` trusts `installed_by`), then sync **private repos' issues/milestones/comments** into their project. | `connect-installation/index.ts:36-49` (no caller↔account check); `connect-repos/index.ts` `availableRepos()` keyed on `installed_by` |
-| S2 | **MEDIUM** | **`public.notify()` is callable by any authenticated user.** Every other sensitive RPC pairs `revoke … from public` + targeted grant; `notify()` has no revoke, returns `void` (so PostgREST exposes it), and is `SECURITY DEFINER`. Any logged-in user can insert arbitrary notifications — any `kind`, any `data`, any `link` — for **any** user id: spam and in-app phishing (the bell renders the message and navigates to `link`). | `20260608140000_notifications.sql:28-33` (no revoke; compare `20260607190000_share_rpcs.sql:50-55`) |
-| S3 | LOW | **CORS defaults to `*`** when `APP_ORIGIN` is unset. JWT auth still gates everything, so this is defense-in-depth, but deployed envs must set `APP_ORIGIN`. | `_shared/cors.ts:3` |
-| S4 | LOW | **`set_member_comment_access` lacks the explicit revoke/grant pair** the other owner-gated RPCs have. It *is* internally gated by `is_owner` (safe), but the hygiene is inconsistent — future RPCs copying it might not be internally gated. | `20260608190000_comment_access_rls.sql:44-52` |
-| S5 | LOW | **`create-issue` rollback can clobber a concurrent deny.** The failure path resets `status='pending'` keyed on id only; if the owner denied in the meantime (client-side `setStatus('denied')`), the rollback resurrects the submission as pending. Condition the rollback on `status='approved'`. | `create-issue/index.ts:106` |
-| S6 | INFO | Minor notes: `sync-repo` compares the trigger secret with `!==` (not constant-time — 48-char random secret, negligible); webhook has no replay protection (GitHub provides none; idempotent upserts make replays harmless); boolean RLS helpers (`is_owner` etc.) are publicly callable (no data exposure — probing only); the inbox join exposes `projects.owner_id` to submission authors (a bare UUID, negligible). | — |
-
-### What's done right (worth keeping as invariants)
-
-- **RLS**: enabled deny-all at table creation; policies are additive and per-concern (`base_rls_policies` → owner-read → allowlist member-read → per-member comment grant). The 3-gate allowlist (published AND active member AND `shared`, with milestone/issue coherence) is exactly the documented model.
-- **`SECURITY DEFINER` discipline**: every definer function sets `search_path = ''` and schema-qualifies — no search-path hijack surface.
-- **Server-only trust**: identity stamping (`stamp_submission_submitter`, ignoring client values), the dedupe guard, the atomic pending→approved claim in `create-issue`, owner re-checks server-side ("never trust the client" is actually applied).
-- **Secrets**: vault for cron (`resync_all_repos` reads `vault.decrypted_secrets`, execute revoked from all client roles); GitHub App key imported once, tokens cached in memory, never logged or returned; `.env` ignored and never committed.
-- **Webhook**: HMAC-SHA256 over the raw bytes before parsing, constant-time compare, 401 on failure, fan-out idempotent, never touches `shared`.
-- **Anon surface**: exactly `get_project_by_token` (public fields only, revocable token, `available_on_vista` gate). Invite tokens are `crypto.randomUUID()` (122 bits).
-
-### Recommended fixes (ordered)
-
-1. **S1**: prove installer identity. The cleanest path: the post-install redirect carries `?code=` — exchange it via the GitHub App OAuth flow (`GITHUB_APP_CLIENT_ID`/`SECRET` are already provisioned in the env, currently unused) and verify the authenticated GitHub user matches the installation's account (or is an org admin of it) before writing `installed_by`. Interim mitigation: restrict `getInstallation` claims to installations whose `account.login` matches a GitHub login stored on the caller's profile, or queue links as "pending verification".
-2. **S2**: `revoke execute on function public.notify(uuid, uuid, public.notification_kind, jsonb, text) from public, anon, authenticated;` — the notify triggers are `SECURITY DEFINER` themselves and keep working.
-3. **S4**: add the same revoke/grant pair to `set_member_comment_access` for consistency.
-4. **S5**: add `.eq('status','approved')` to the rollback update.
-5. **S3**: document `APP_ORIGIN` as a required deploy variable (deploy checklist).
-
----
-
-## Part 2 — Clean code / structure
-
-### Verdict at a glance
-
-The backend structure is coherent and pattern-stable: per-domain services with a DTO file and twin `mock`/`supabase` implementations behind `env.backend`; Edge Functions composed from `_shared` modules (cors / admin / github / projection / sync) with a uniform JSON error envelope; migrations are narrative (issue refs, idempotence notes, "source: vault doc" pointers) and additive. Indexes cover the hot paths (`projects(owner_id)`, `project_members(project_id|user_id)`, `submissions(project_id,status)`, `notifications(user_id,created_at desc)`, natural-key uniques on the projection).
-
-### Findings
-
-| ID | Type | Finding | Evidence |
-|---|---|---|---|
-| C1 | **Parity gap (the real one)** | **`get_projects_for_user` hardcodes `'progress': null`** — the mock computes real progress, so progress bars and the Overview "Overall progress" stat render in dev and silently vanish in production (visible in the owner's screenshots: no bars on `/app`). Either compute the aggregate in the RPC (join `project_repos` → count open/closed issues) or drop the UI affordance. | `20260607122045_wire_rpcs.sql:46` vs `projects.service.ts` (mock summaries) |
-| C2 | Minor | `listOwnerInbox` filters `owner_id` client-side after an RLS-wide select; PostgREST can filter on the embedded relation (`projects.owner_id=eq.…`) server-side. Correctness is unaffected (RLS bounds the rows); it's a clarity/payload nit. | `submissions.service.ts:94` |
-| C3 | Minor | `20260608120000_submission_submitter_default.sql` was superseded the same day by the trigger migration — harmless history, but the default-drop + trigger could have been one migration. Pattern note only. | migrations 120000/130000 |
-| C4 | Minor | `notifications.link` stores frontend route strings in the DB, coupling schema to router shape (already bitten once: the `20260609140000` link-rewrite migration). The `kind`+`data` pair is already there — deriving links client-side would remove the coupling. | `notifications.sql`, `notification_links.sql`, `submission_inbox_link.sql` |
-| C5 | Minor | Edge functions hand-roll input validation per route (`String(body.x ?? '')`). Fine at 5 functions; a tiny shared `requireFields` helper would cut repetition if more are added. | all `index.ts` |
-| C6 | Note | Mock + supabase implementations co-live in one file per service (~100-200 lines). Consistent and readable today; if services keep growing, split `*.mock.ts` / `*.supabase.ts`. | `src/services/*/` |
-
-### Structure strengths
-
-- **One boundary, respected**: UI → hooks → services → (RLS-bounded PostgREST | RPCs | Edge). No component touches `supabase` directly; cross-feature imports go through feature barrels.
-- **Projection isolation**: GitHub cache tables are written exclusively by service-role code paths; client writes simply don't exist for them, and syncs can never flip `shared`.
-- **Realtime scoping**: only `submissions` + `notifications` + roadmap/access tables are in the publication, each with a documented reason; `replica identity full` only where filters need it.
-- **Migrations as documentation**: every file says *why*, cites the issue and the vault doc — the schema history reads as a narrative. Keep this.
-
----
-
-## Suggested issue carve-out
-
-1. `[security][high] Verify installer identity in connect-installation (OAuth code exchange)` — S1
-2. `[security][medium] Revoke client execute on public.notify (+ set_member_comment_access hygiene)` — S2 + S4
-3. `[security][low] create-issue rollback must not clobber a concurrent deny; APP_ORIGIN deploy doc` — S5 + S3
-4. `[backend] Compute real progress in get_projects_for_user (mock/prod parity)` — C1
+**Date:** 2026-06-10 · **Auditor:** Claude · **Target:** local Vista stack (own infrastructure, authorized test)
+**Method:** not code-reading alone — every finding was **attacked against the running Postgres** and verified by captured output.
 
 > [!IMPORTANT]
-> S1 should land before any external/multi-tenant beta: it is the one finding that crosses a tenant boundary. S2 is a quick migration. C1 is user-visible today (empty progress everywhere in prod).
+> This supersedes the read-only audit. Each finding below has a **reproducible POC** and **real output**. Severities changed after testing: **S2 escalated MEDIUM → HIGH** (anon-exploitable). A systemic root cause (default `PUBLIC EXECUTE`) was found and is the parent of S2/S4.
+
+---
+
+## Methodology — why these proofs are faithful
+
+PostgREST serves every browser request by setting `role authenticated` and `request.jwt.claims` from the bearer JWT; RLS then reads `auth.uid()` (= `claims->>'sub'`) and `auth.jwt()`. The harness reproduces that **exactly**, with no secret extraction and no GitHub dependency:
+
+```sql
+begin;
+set local role authenticated;                      -- or 'anon' for unauthenticated
+set local request.jwt.claims = '{"sub":"<uid>","email":"<e>","role":"authenticated"}';
+<attack>;
+rollback;                                           -- no state persists; tests are non-destructive
+```
+
+Verified the harness drives identity correctly: `current_user=authenticated`, `auth.uid()=<uid>`, `auth.jwt()->>'email'=<e>`.
+
+**Environment (real):** docker `supabase_db_vista` (Postgres 17), **all 26 migrations applied**, real data (6 projects, 10 profiles, 19 submissions, 536 issues). **Tenants used:** Victim **A** = `idrissbenguezzou@gmail.com` (`8e8fe03c…`, owns 5 projects incl. private *Monstrun*/*Videmo*); Attacker **B** = `zeronimeg@gmail.com` (`900a8043…`, viewer on ARIA, editor on Vista, owner of *test*, **outsider to Monstrun**).
+
+---
+
+## Scoreboard
+
+| Class | Tests | Result |
+|---|---|---|
+| Cross-tenant reads (private project, members, profiles/PII, notifications, submissions, issues, allowlist) | 9 | **9/9 blocked** |
+| Writes / privilege escalation (priv-esc, takeover, moderation hijack, injection, join-private, forge-notif, mint-invite) | 7 | **7/7 blocked** |
+| Owner-gated RPC cross-tenant calls (`set_project_shared`, `set_issue_shared`, `set_member_comment_access`) | 3 | **3/3 `forbidden`** |
+| Anti-spoofing / injection / anon token surface | 3 | **3/3 secure** |
+| **Exploits that SUCCEEDED** | — | **S2 (notify) authenticated + anon** |
+
+The data plane (RLS) is **genuinely solid**. The two real holes are in the **function/grant layer** and one **edge-function authorization gap**.
+
+---
+
+## FINDINGS
+
+### S2 — `notify()` lets ANY caller (incl. unauthenticated) write to any user's notification bell — **HIGH**
+
+**Root cause:** `notify()` is `SECURITY DEFINER` (bypasses RLS) and the migration never revoked the default `PUBLIC EXECUTE`. It has no authorization beyond "don't self-notify". `kind`, `data`, and **`link`** are attacker-controlled; the bell renders the message and navigates to `link` → **in-app phishing + spam at scale**.
+
+**POC (authenticated attacker B → victim A):**
+```sql
+begin;
+select count(*) from public.notifications where user_id='8e8fe03c-…';        -- before
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"900a8043-…","role":"authenticated"}';
+select public.notify('8e8fe03c-…'::uuid, null, 'access_approved',
+  '{"who":"IT"}'::jsonb, 'https://evil.example/credential-harvest');
+reset role;
+select count(*), bool_or(link='https://evil.example/credential-harvest')
+from public.notifications where user_id='8e8fe03c-…';                        -- after
+rollback;
+```
+**Captured output:** `before_count=12` → `after_count=13`, `phish_link_present=t`. The same write was **blocked** as a direct `INSERT` (see T2.6: `new row violates row-level security policy`) — the definer RPC bypasses that RLS.
+
+**Escalation — anon (no login at all):**
+```
+anon_can_execute_notify = t
+ANON notify() → before=12, after=13, anon_phish_present=t
+```
+Because the anon key ships in the client bundle, **an unauthenticated attacker can flood/phish any user's bell**. This is why severity is HIGH, not MEDIUM.
+
+**Fix (one migration):**
+```sql
+revoke execute on function public.notify(uuid,uuid,public.notification_kind,jsonb,text) from public, anon, authenticated;
+```
+The notify-triggers are `SECURITY DEFINER` and keep working (they don't rely on the caller's execute grant).
+
+---
+
+### S1 — `connect-installation` binds a GitHub installation to the caller with NO ownership check — **HIGH (conditional)**
+
+**Claim:** any authenticated user can claim an `installation_id` they don't own; `connect-repos` then mints tokens for it (keyed on `installed_by`) and syncs its **private** issues/milestones/comments into the attacker's project.
+
+**Code path (`connect-installation/index.ts`):** `requireUser` (any logged-in user) → `getInstallation(id)` (verifies the install exists *for our App*, **not** that the caller owns it) → `insert github_installations(installation_id, account_login, installed_by = caller)`.
+
+**POC — reproduce the exact service-role insert the function performs, for an attacker caller:**
+```sql
+begin;
+insert into public.github_installations(installation_id, account_login, installed_by)
+values (999999, 'some-victim-org', '900a8043-…');   -- attacker B
+select installation_id, account_login, installed_by from public.github_installations where installation_id=999999;
+rollback;
+```
+**Captured output:** `INSERT 0 1`; row `999999 | some-victim-org | 900a8043-…` — an arbitrary org's installation is now owned by the attacker in the DB. `connect-repos.availableRepos()` selects installs `where installed_by = caller` and mints a token per install → attacker gains that installation's private repos.
+
+**Honest scope:** a *live HTTP* exploit additionally needs (a) any Vista JWT (free signup), (b) a real `installation_id` of our App (sequential integers — enumerable) that is **not yet linked** (the `unique(installation_id)` returns 409 "already linked to another account" once a legit owner links it — so the window is *existing-but-unlinked* installations, e.g. install→redirect race, or an attacker installing then linking before the victim). I proved the missing check + the writeable state + the downstream trust chain; I did not mint a GitHub installation. Still HIGH: it crosses a tenant boundary to private source data.
+
+**Fix:** prove installer identity via the GitHub App OAuth `?code=` exchange (the redirect already carries it; `GITHUB_APP_CLIENT_ID/SECRET` are provisioned and currently unused) — verify the authenticated GitHub user owns/admins the installation's `account` before writing `installed_by`.
+
+---
+
+### S4 (reframed) — Systemic: `SECURITY DEFINER` functions default to `PUBLIC EXECUTE`; the revoke/grant pattern is applied inconsistently — **MEDIUM**
+
+**Evidence — every definer function and who can execute it:**
+
+| Executable by anon+authenticated, **no internal gate** | Status |
+|---|---|
+| `notify` | **EXPLOITABLE (S2)** |
+| `request_access` | anon-call blocked only by `email` NOT NULL (POC: `null value in column "email"… violates not-null`) — **fragile** |
+| `create_project` | anon-call blocked only by `owner_id` NOT NULL (POC: `… "owner_id" … violates not-null`) — **fragile** |
+| `get_projects_for_user`, `get_project_by_token` | `auth.uid()`-scoped / token-gated → return empty/public; safe |
+| trigger fns (`stamp_submission_submitter`, `on_submission_notify`, `handle_new_user`, …) | require trigger context; direct call errors; hygiene only |
+| `is_owner`, `has_role`, `is_*`, `member_can_view_comments` | boolean self-helpers about `auth.uid()`; no data exposure |
+
+`set_*` family + `claim_memberships` + `resync_all_repos` correctly `revoke … from public` (the latter two show `anon=f, authenticated=f`). The internally-gated `set_*` RPCs reject cross-tenant calls — **proven**: `set_project_shared`/`set_issue_shared`/`set_member_comment_access` on victim objects all raised `ERROR: forbidden` (errcode 42501).
+
+**Why MEDIUM:** today only `notify` is live-exploitable; `request_access`/`create_project` are saved by NOT NULL **by accident** (a future nullable column reopens anon spam). The robust fix is systemic, not per-function.
+
+**Fix:** add to a hardening migration —
+```sql
+revoke execute on all functions in schema public from public;        -- default deny
+-- then grant explicitly only what the client needs:
+grant execute on function public.create_project(...)        to authenticated;
+grant execute on function public.get_projects_for_user()    to authenticated;
+grant execute on function public.get_project_by_token(text)  to anon, authenticated;
+grant execute on function public.request_access(text)        to authenticated;  -- + add an auth.uid() not-null guard
+grant execute on function public.set_project_shared(...)     to authenticated;  -- (already)
+-- … the set_* family … ; leave notify/trigger fns ungranted.
+```
+
+---
+
+### S5 — `create-issue` rollback can resurrect a concurrently-denied submission — **LOW** (code-reasoned)
+On GitHub failure the function resets `status='pending'` keyed on id only (`create-issue/index.ts:106`). If the owner denied meanwhile, the rollback flips it back to pending. **Fix:** `.eq('status','approved')` on the rollback update. (Not live-tested — requires the edge runtime + induced concurrency.)
+
+### S3 — CORS defaults to `*` when `APP_ORIGIN` unset — **LOW**
+`_shared/cors.ts:3`. JWT auth still gates everything; defense-in-depth. **Fix:** require `APP_ORIGIN` in the deploy checklist.
+
+### S6 — Informational
+`sync-repo` secret compared with `!==` (not constant-time; 48-char random → negligible) · webhook has no replay protection (idempotent upserts make replays harmless) · inbox join exposes `projects.owner_id` (a bare UUID) to submission authors.
+
+---
+
+## What is provably secure (regression baseline)
+
+> [!NOTE]
+> These are not assertions — they are captured negative results. Keep them as invariants.
+
+- **Cross-tenant reads, 9/9 blocked.** Outsider B reading victim's private *Monstrun*: project `0`, members `0`, issues `0`. Other users' **profiles/emails**: `0` rows (PII protected). Victim **notifications**: `0`. Victim **submissions** (B as viewer on ARIA, and as editor on Vista): `0` others leaked. **Allowlist gate** (B viewer on ARIA): `232` shared issues seen, **`0` unshared leaked**.
+- **Writes/escalation, 7/7 blocked.** viewer→owner priv-esc `UPDATE 0`; project takeover `UPDATE 0`; **moderation hijack** (approve someone else's submission) `UPDATE 0`; submission injection / join-private / forge-notification / mint-invite all `new row violates row-level security policy`.
+- **Owner-gated RPCs, 3/3 `forbidden`** on cross-tenant targets.
+- **Anti-spoofing works:** B inserting a submission with forged `submitter_email=victim` is stamped back to B's real identity by `stamp_submission_submitter` (`submitted_by/name/email = zeronimeg`).
+- **Anon token surface tight:** `get_project_by_token` returns only `id,name,description,color,member_count` — no `owner_id`/`visibility`/`available_on_vista`.
+- **Injection surface nil:** `0` definer functions use dynamic SQL (`EXECUTE`/`format`); all RPCs are parameterized plpgsql.
+- **Co-member isolation:** editor B on Vista sees its own 8 submissions, `0` of the owner's.
+
+Architecture strengths that produced this: deny-all RLS with additive per-concern policies; every definer fn sets `search_path=''`; service-role key confined to Edge Functions; webhook HMAC over raw body + constant-time compare; cron secret in `supabase_vault`; server-side identity stamping + atomic approve claim; invite tokens `crypto.randomUUID()` (122-bit).
+
+---
+
+## C1 — Clean-code/UX (not security): `get_projects_for_user()` hardcodes `progress: null`
+
+**POC (as owner A):** `jsonb_path_query_array(get_projects_for_user(), '$.owned[*].progress')` → **`[null, null, null, null, null]`**. The mock computes real progress, so progress bars + the Overview "Overall progress" stat work in dev and are **empty in production** (matches the screenshots). **Fix:** compute the aggregate in the RPC (join `project_repos`→count open/closed issues) or drop the affordance.
+
+---
+
+## Remediation plan (priority order)
+
+| # | Fix | Effort | Why now |
+|---|---|---|---|
+| 1 | **S2** revoke execute on `notify()` from public/anon/authenticated | 1-line migration | Live, anon-exploitable phishing/spam |
+| 2 | **S1** verify installer identity (OAuth code exchange) in `connect-installation` | edge fn + flow | Crosses tenant boundary to private repos; do before any external beta |
+| 3 | **S4** systemic `revoke execute … from public` + explicit grants; add `auth.uid()` guard to `request_access` | 1 migration | Removes the fragile "saved by NOT NULL" class |
+| 4 | **C1** real progress in `get_projects_for_user` | RPC edit | User-visible everywhere in prod |
+| 5 | **S5** `.eq('status','approved')` rollback guard; **S3** require `APP_ORIGIN` | small | Hardening |
+
+> [!IMPORTANT]
+> Suggested issues: `[security][high] revoke notify() execute (S2)` · `[security][high] verify installer identity in connect-installation (S1)` · `[security][medium] default-deny EXECUTE on public functions + request_access guard (S4)` · `[backend] real progress in get_projects_for_user (C1)`.
