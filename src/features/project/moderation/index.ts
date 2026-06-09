@@ -1,4 +1,5 @@
 export * from './ui/moderation-inbox'
+export * from './ui/submission-card'
 export * from './ui/approve-dialog'
 export * from './hooks/use-submissions'
 export * from './hooks/use-owner-inbox'
