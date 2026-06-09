@@ -6,7 +6,6 @@ export const workspace = {
   'ws.joined': 'Partagés avec vous',
   'ws.empty': 'Aucun projet pour l’instant.',
   'ws.createFirst': 'Créer votre premier projet',
-  'ws.open': 'Ouvrir',
   'ws.attention': 'À traiter',
   'ws.attnSubs': 'soumissions à examiner',
   'ws.attnReqs': 'demandes d’accès',

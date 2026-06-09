@@ -39,9 +39,9 @@ function GlanceStrip({ owned }: { owned: ProjectSummary[] }) {
     ...(total > 0 ? [{ value: `${String(Math.round((closed / total) * 100))}%`, label: t('ws.statProgress') }] : []),
   ]
   return (
-    <div className='border-hairline bg-card divide-hairline grid grid-cols-2 divide-x rounded-xl border sm:grid-cols-3'>
+    <div className='border-hairline bg-card divide-hairline flex divide-x rounded-xl border'>
       {cells.map((c) => (
-        <div key={c.label} className='px-5 py-4'>
+        <div key={c.label} className='flex-1 px-5 py-4'>
           <span className='font-display text-ink text-2xl font-medium tabular-nums'>{c.value}</span>
           <span className='text-muted-ink mt-0.5 block text-[13px]'>{c.label}</span>
         </div>
