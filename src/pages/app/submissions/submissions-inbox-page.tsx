@@ -45,7 +45,7 @@ export function SubmissionsInboxPage() {
               <SubmissionCard
                 key={s.id}
                 sub={s}
-                projectName={s.projectName}
+                project={{ name: s.projectName, color: s.projectColor }}
                 disabled={moderate.isPending}
                 onApprove={() => setApproving(s)}
                 onDeny={() => deny(s.id)}
