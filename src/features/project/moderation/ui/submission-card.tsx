@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { AnimatePresence, motion } from 'motion/react'
 import { Bug, Check, ChevronDown, HelpCircle, Sparkles, Tag, X, type LucideIcon } from 'lucide-react'
 import type { SubmissionRow, SubmissionType } from '@/services/submissions'
 import { Badge, Button } from '@/components/ui'
@@ -50,7 +51,10 @@ export function SubmissionCard({
           aria-expanded={open}
           disabled={!hasBody}
           onClick={() => setOpen((v) => !v)}
-          className={cn('flex min-w-0 flex-1 items-center gap-3 text-left', hasBody && 'cursor-pointer')}
+          className={cn(
+            'flex min-w-0 flex-1 items-center gap-3 text-left',
+            hasBody && 'hover:bg-secondary/60 -m-2 cursor-pointer rounded-lg p-2 transition-colors',
+          )}
         >
           <span title={t(label)} className={`grid size-8 shrink-0 place-items-center rounded-lg ${chip}`}>
             <Icon size={16} />
@@ -86,13 +90,24 @@ export function SubmissionCard({
         )}
       </div>
 
-      {open && hasBody && (
-        <div className='border-hairline border-t px-4 py-3 text-sm'>
-          <Suspense fallback={<p className='text-body whitespace-pre-wrap'>{sub.body}</p>}>
-            <Markdown>{sub.body ?? ''}</Markdown>
-          </Suspense>
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {open && hasBody && (
+          <motion.div
+            key='body'
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+            className='overflow-hidden'
+          >
+            <div className='border-hairline border-t px-4 py-3 text-sm'>
+              <Suspense fallback={<p className='text-body whitespace-pre-wrap'>{sub.body}</p>}>
+                <Markdown>{sub.body ?? ''}</Markdown>
+              </Suspense>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </article>
   )
 }

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Bug, Check, Code2, Eye, HelpCircle, Sparkles, Tag, type LucideIcon } from 'lucide-react'
+import { Bug, Code2, Eye, HelpCircle, Sparkles, Tag, type LucideIcon } from 'lucide-react'
+import toast from 'react-hot-toast'
 import type { Editor } from '@tiptap/react'
 import { Button, Input, Label, Segmented, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui'
 import { Spinner } from '@/components/feedback'
@@ -152,38 +153,6 @@ export function RequestForm({
     }
   }
 
-  if (submit.isSuccess) {
-    return (
-      <div className='grid flex-1 place-items-center p-8'>
-        <div className='text-center'>
-          <div className='bg-success/10 text-success mx-auto mb-4 grid size-14 place-items-center rounded-full'>
-            <Check size={26} />
-          </div>
-          <h3 className='font-display text-ink mb-1.5 text-xl font-medium'>{t('form.successTitle')}</h3>
-          <p className='text-muted-ink mb-6'>{t('form.successMsg')}</p>
-          <div className='flex justify-center gap-2'>
-            <Button variant='outline' onClick={onClose}>
-              {t('form.close')}
-            </Button>
-            <Button
-              onClick={() => {
-                setType('feature')
-                setTitle('')
-                setDescription('')
-                setTouched(false)
-                setMode('rich')
-                setPane('write')
-                submit.reset()
-              }}
-            >
-              {t('form.another')}
-            </Button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <form
       className='flex min-h-0 flex-1 flex-col'
@@ -192,7 +161,16 @@ export function RequestForm({
         setTouched(true)
         if (title.trim() === '') return
         const body = currentMarkdown().trim()
-        submit.mutate({ projectId, type, title: title.trim(), body: body === '' ? undefined : body })
+        submit.mutate(
+          { projectId, type, title: title.trim(), body: body === '' ? undefined : body },
+          {
+            // No interstitial page (#159): confirm via toast and put the client back where they were.
+            onSuccess: () => {
+              toast.success(t('form.successTitle'))
+              onClose()
+            },
+          },
+        )
       }}
     >
       {/* Meta row: one-line summary + what it is (colored like the inbox type chips). */}

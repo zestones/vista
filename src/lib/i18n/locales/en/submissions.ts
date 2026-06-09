@@ -59,8 +59,6 @@ export const submissions = {
   'form.submit': 'Send request',
   'form.submitting': 'Sending…',
   'form.successTitle': 'Request sent',
-  'form.successMsg': 'Thanks! Your request has been created.',
-  'form.another': 'Send another request',
   'form.errorTitle': 'Couldn’t send',
   'form.errorGeneric': 'We couldn’t send your request. Please try again shortly.',
   'form.required': 'This field is required.',

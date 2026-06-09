@@ -26,6 +26,11 @@ if (!Element.prototype.animate) {
     }) as unknown as Animation
 }
 
+// jsdom has no layout: ProseMirror/TipTap's placeholder viewport tracking probes this.
+if (!document.elementFromPoint) {
+  document.elementFromPoint = () => null
+}
+
 if (!window.matchMedia) {
   window.matchMedia = (q: string) =>
     ({
