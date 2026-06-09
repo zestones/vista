@@ -37,6 +37,13 @@ describe('workspace (#50)', () => {
     expect(screen.getByText('Mobile app')).toBeInTheDocument()
   })
 
+  it('surfaces pending submissions in the needs-attention strip (#171)', async () => {
+    renderWorkspace()
+    // The seed has one pending submission on an owned project -> the home must surface it.
+    expect(await screen.findByText(/soumissions \u00e0 examiner|submissions to review/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/\u00c0 traiter|Needs attention/)).toBeInTheDocument()
+  })
+
   it('creates a project through the modal and shows it in the grid', async () => {
     renderWorkspace()
     await screen.findByText('Platform redesign')
