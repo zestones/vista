@@ -1,0 +1,15 @@
+export const admin = {
+  'admin.title': 'Administration',
+  'admin.subtitle': 'Choose which projects are available on Vista and which to share.',
+  'admin.stat.projects': 'Projects',
+  'admin.stat.available': 'Available',
+  'admin.stat.shared': 'Shared',
+  'admin.stat.pending': 'Pending requests',
+  'admin.col.project': 'Project',
+  'admin.col.visibility': 'Visibility',
+  'admin.col.available': 'Available',
+  'admin.col.members': 'Members',
+  'admin.col.requests': 'Requests',
+  'admin.col.manage': 'Manage',
+  'admin.empty': 'No projects yet. Create one to get started.',
+}
