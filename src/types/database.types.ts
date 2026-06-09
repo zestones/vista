@@ -187,6 +187,7 @@ export type Database = {
       }
       milestones: {
         Row: {
+          client_summary: string | null
           closed_issues: number | null
           description: string | null
           due_on: string | null
@@ -200,6 +201,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          client_summary?: string | null
           closed_issues?: number | null
           description?: string | null
           due_on?: string | null
@@ -213,6 +215,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          client_summary?: string | null
           closed_issues?: number | null
           description?: string | null
           due_on?: string | null
@@ -651,6 +654,10 @@ export type Database = {
       }
       set_member_comment_access: {
         Args: { m: string; value: boolean }
+        Returns: undefined
+      }
+      set_milestone_client_summary: {
+        Args: { m: string; value: string }
         Returns: undefined
       }
       set_milestone_issues_shared: {

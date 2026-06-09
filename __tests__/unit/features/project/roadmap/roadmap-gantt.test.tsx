@@ -11,6 +11,7 @@ function ms(id: string, repo: string, number: number, due: string): MilestoneRow
     project_repo_id: repo,
     number,
     title: `MS ${String(number)}`,
+    client_summary: null,
     description: null,
     due_on: due,
     state: 'open',

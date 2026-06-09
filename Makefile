@@ -83,7 +83,7 @@ lint: ## ESLint
 
 .PHONY: typecheck
 typecheck: ## TypeScript type-check
-	npx tsc -b
+	./node_modules/.bin/tsc -b
 
 .PHONY: test
 test: ## Unit + integration tests (vitest)

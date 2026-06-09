@@ -115,6 +115,7 @@ export function genRepo(projectRepoId: string, seedKey: string): { milestones: M
       project_repo_id: projectRepoId,
       number: m + 1,
       title: MS_TITLES[m % MS_TITLES.length],
+      client_summary: null,
       description: 'Key project stage, tracked in real time.',
       due_on: new Date(due).toISOString(),
       state: 'open',
