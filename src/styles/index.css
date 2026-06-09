@@ -300,6 +300,22 @@
 .md .cmt-mermaid {
   margin: 0.8em 0;
 }
+/* WYSIWYG composer pane (#151): the editable area reuses the .md typography. */
+.rich-editor .ProseMirror {
+  outline: none;
+  min-height: 100%;
+  padding: 1rem;
+}
+.rich-editor .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: color-mix(in srgb, var(--color-muted-ink) 70%, transparent);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.rich-editor .ProseMirror-selectednode {
+  outline: none;
+}
 /* Fullscreen diagram canvas dot grid — global so it also applies outside the comment panel (#149). */
 .cmt-canvas {
   background-color: var(--color-background, #fff);
