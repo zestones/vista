@@ -1,0 +1,11 @@
+export const notifications = {
+  'notif.title': 'Notifications',
+  'notif.empty': 'No notifications.',
+  'notif.markAll': 'Mark all read',
+  'notif.msg.submission_received': 'New request "{{title}}" on {{project}}',
+  'notif.msg.submission_approved': 'Your request "{{title}}" was approved',
+  'notif.msg.submission_denied': 'Your request "{{title}}" was declined',
+  'notif.msg.access_requested': '{{who}} requested access to {{project}}',
+  'notif.msg.access_approved': 'You now have access to {{project}}',
+  'notif.msg.access_denied': 'Your access request to {{project}} was declined',
+}
