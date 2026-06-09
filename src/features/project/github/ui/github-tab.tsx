@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ExternalLink, Plus, X } from 'lucide-react'
-import { Button, Input } from '@/components/ui'
+import { Badge, Button, Input } from '@/components/ui'
 import { GitHubMark } from '@/components/brand'
 import { GITHUB_INSTALL_URL, type AvailableRepo } from '@/services/connections'
 import { useAttachRepo, useAttachedRepos, useDetachRepo, useInstallationRepos } from '../hooks/use-connections'
@@ -18,8 +18,7 @@ export function GithubTab({ projectId }: { projectId: string }) {
   const toAttach = (available.data ?? []).filter((r) => !attachedKeys.has(`${r.owner}/${r.repo}`))
   const visible = toAttach.filter((r) => `${r.owner}/${r.repo}`.toLowerCase().includes(query.trim().toLowerCase()))
 
-  const attachOne = (r: AvailableRepo) =>
-    attach.mutate({ projectId, installationId: r.installation_id, owner: r.owner, repo: r.repo })
+  const attachOne = (r: AvailableRepo) => attach.mutate({ projectId, installationId: r.installation_id, owner: r.owner, repo: r.repo })
 
   return (
     <div className='flex flex-col gap-8'>
@@ -37,14 +36,23 @@ export function GithubTab({ projectId }: { projectId: string }) {
 
       <section className='border-hairline bg-card overflow-hidden rounded-xl border'>
         <header className='border-hairline border-b px-6 py-4'>
-          <h3 className='text-ink text-sm font-semibold'>{t('ps.gh.attached')}</h3>
+          <h3 className='text-ink text-sm font-semibold'>
+            {t('ps.gh.attached')}
+            {attached.data && attached.data.length > 0 && <span className='text-muted-ink ml-2 font-normal'>{attached.data.length}</span>}
+          </h3>
         </header>
         {attached.data && attached.data.length > 0 ? (
           <ul className='divide-hairline divide-y'>
             {attached.data.map((r) => (
-              <li key={r.id} className='flex items-center justify-between px-6 py-3'>
-                <span className='text-ink text-sm'>
-                  {r.owner}/{r.repo}
+              <li key={r.id} className='flex items-center justify-between gap-3 px-6 py-3'>
+                <span className='flex min-w-0 items-center gap-3'>
+                  <span className='border-hairline bg-secondary grid size-8 shrink-0 place-items-center rounded-lg border'>
+                    <GitHubMark size={15} />
+                  </span>
+                  <span className='text-ink truncate text-sm font-medium'>
+                    {r.owner}/{r.repo}
+                  </span>
+                  <Badge className='bg-success/10 text-success border-transparent'>{t('ps.gh.connected')}</Badge>
                 </span>
                 <Button variant='ghost' size='sm' onClick={() => detach.mutate(r.id)} disabled={detach.isPending}>
                   <X size={15} /> {t('ps.gh.detach')}
@@ -59,7 +67,10 @@ export function GithubTab({ projectId }: { projectId: string }) {
 
       <section className='border-hairline bg-card overflow-hidden rounded-xl border'>
         <header className='border-hairline border-b px-6 py-4'>
-          <h3 className='text-ink text-sm font-semibold'>{t('ps.gh.available')}</h3>
+          <h3 className='text-ink text-sm font-semibold'>
+            {t('ps.gh.available')}
+            {toAttach.length > 0 && <span className='text-muted-ink ml-2 font-normal'>{toAttach.length}</span>}
+          </h3>
         </header>
         {available.isLoading ? (
           <p className='text-muted-ink px-6 py-4 text-[13px]'>{t('ps.gh.loading')}</p>
@@ -76,7 +87,7 @@ export function GithubTab({ projectId }: { projectId: string }) {
               />
             </div>
             {visible.length > 0 ? (
-              <ul className='divide-hairline divide-y'>
+              <ul className='divide-hairline max-h-80 divide-y overflow-y-auto'>
                 {visible.map((r) => (
                   <li key={`${r.owner}/${r.repo}`} className='flex items-center justify-between px-6 py-3'>
                     <span className='text-ink text-sm'>

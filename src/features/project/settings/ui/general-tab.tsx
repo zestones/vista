@@ -29,8 +29,19 @@ export function GeneralTab({ project }: { project: ProjectRow }) {
   const [name, setName] = useState(project.name)
   const [description, setDescription] = useState(project.description ?? '')
 
+  // Dirty-aware save (#163): the button only acts when identity actually changed; the rest of the
+  // page applies instantly, so an always-armed Save read as page-wide.
+  const dirty = name.trim() !== project.name || (description.trim() || null) !== (project.description ?? null)
+  const nameEmpty = name.trim() === ''
+
+  const discard = () => {
+    setName(project.name)
+    setDescription(project.description ?? '')
+  }
+
   // Client visibility moved to its own tab (#139); General is just identity + danger.
   const save = () => {
+    if (!dirty || nameEmpty) return
     update.mutate({ id: project.id, patch: { name: name.trim(), description: description.trim() || null } })
   }
 
@@ -70,12 +81,21 @@ export function GeneralTab({ project }: { project: ProjectRow }) {
         </Row>
 
         <div className='bg-surface-soft flex items-center justify-end gap-3 px-6 py-4'>
-          {update.isSuccess && (
-            <span className='text-success inline-flex items-center gap-1.5 text-[13px] font-semibold'>
-              <Check size={15} /> {t('ps.gen.saved')}
-            </span>
+          {dirty ? (
+            <span className='text-muted-ink text-[13px]'>{t('ps.gen.unsaved')}</span>
+          ) : (
+            update.isSuccess && (
+              <span className='text-success inline-flex items-center gap-1.5 text-[13px] font-semibold'>
+                <Check size={15} /> {t('ps.gen.saved')}
+              </span>
+            )
           )}
-          <Button onClick={save} disabled={update.isPending}>
+          {dirty && (
+            <Button variant='ghost' onClick={discard} disabled={update.isPending}>
+              {t('ps.gen.discard')}
+            </Button>
+          )}
+          <Button onClick={save} disabled={!dirty || nameEmpty || update.isPending}>
             {t('ps.gen.save')}
           </Button>
         </div>
