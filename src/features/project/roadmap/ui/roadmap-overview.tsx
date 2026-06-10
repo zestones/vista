@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AnimatePresence, motion } from 'motion/react'
-import { ChevronDown, Circle, CircleCheck, MessageSquare, Search } from 'lucide-react'
+import { ChevronDown, Circle, CircleCheck, MessageSquare, Pencil, Search } from 'lucide-react'
 import { fmtFull } from '../lib/roadmap.dates'
 import { overallStats } from '../lib/roadmap.mappers'
 import type { Bar, Group } from '../types'
 import type { IssueRow } from '@/services/roadmap'
-import { Input, Segmented } from '@/components/ui'
+import { Button, Input, Segmented } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
 type StatusFilter = 'all' | 'open' | 'closed'
@@ -119,38 +119,67 @@ function MilestoneRow({
   lang,
   autoOpen,
   onIssueClick,
+  editable,
+  onSaveSummary,
 }: {
   g: Group
   bars: Bar[]
   lang: string
   autoOpen: boolean
   onIssueClick?: (b: Bar) => void
+  editable?: boolean
+  onSaveSummary?: (milestoneId: string, value: string) => void
 }) {
   const { t } = useTranslation()
   // Tri-state: null = follow autoOpen (search); once toggled, the user's choice wins (so a row stays collapsible).
   const [open, setOpen] = useState<boolean | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
   const st = statusOf(g)
   const expandable = g.bars.length > 0
   const isOpen = expandable && (open ?? autoOpen)
+  // Client-facing text: the owner-authored summary overrides the raw GitHub description (#192).
+  const human = g.clientSummary ?? g.description
 
   return (
     <article className='border-hairline bg-card rounded-xl border'>
-      <button
-        type='button'
+      {/* role=button (not <button>) so the owner edit affordance can nest without invalid markup. */}
+      <div
+        role='button'
+        tabIndex={expandable ? 0 : -1}
         aria-expanded={isOpen}
-        disabled={!expandable}
-        onClick={() => setOpen(!isOpen)}
-        className={cn(
-          'flex w-full items-center gap-3 rounded-xl p-4 text-left',
-          expandable && 'hover:bg-secondary/40 cursor-pointer transition-colors',
-        )}
+        onClick={() => expandable && setOpen(!isOpen)}
+        onKeyDown={(e) => {
+          if (expandable && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault()
+            setOpen(!isOpen)
+          }
+        }}
+        className={cn('flex items-center gap-3 rounded-xl p-4', expandable && 'hover:bg-secondary/40 cursor-pointer transition-colors')}
       >
         <span className={`grid size-7 shrink-0 place-items-center rounded-lg ${STATUS_CHIP[st]}`}>
           {st === 'delivered' ? <CircleCheck size={15} /> : <Circle size={15} />}
         </span>
         <div className='min-w-0 flex-1'>
-          <h4 className='text-ink truncate font-medium'>{g.title}</h4>
-          {g.description && <p className='text-muted-ink mt-0.5 line-clamp-1 text-[13px]'>{g.description}</p>}
+          <div className='flex items-center gap-1.5'>
+            <h4 className='text-ink truncate font-medium'>{g.title}</h4>
+            {editable && onSaveSummary && (
+              <button
+                type='button'
+                title={t('ov.editSummary')}
+                aria-label={t('ov.editSummary')}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setDraft(g.clientSummary ?? '')
+                  setEditing(true)
+                }}
+                className='text-muted-ink hover:text-ink shrink-0 cursor-pointer'
+              >
+                <Pencil size={13} />
+              </button>
+            )}
+          </div>
+          {human && <p className='text-muted-ink mt-0.5 line-clamp-1 text-[13px]'>{human}</p>}
           {st === 'active' && (
             <div className='bg-secondary mt-2 h-1 max-w-xs overflow-hidden rounded-xs'>
               <div className='bg-success h-full rounded-xs' style={{ width: `${String(g.pct)}%` }} />
@@ -166,7 +195,33 @@ function MilestoneRow({
         {expandable && (
           <ChevronDown size={16} className={cn('text-muted-ink shrink-0 transition-transform duration-200', isOpen && 'rotate-180')} />
         )}
-      </button>
+      </div>
+
+      {editing && onSaveSummary && (
+        <div className='border-hairline border-t p-3'>
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder={t('ov.summaryPh')}
+            rows={2}
+            className='border-hairline focus-visible:border-ring w-full resize-y rounded-md border bg-transparent p-2 text-sm outline-none'
+          />
+          <div className='mt-2 flex justify-end gap-2'>
+            <Button variant='ghost' size='sm' onClick={() => setEditing(false)}>
+              {t('ov.cancel')}
+            </Button>
+            <Button
+              size='sm'
+              onClick={() => {
+                onSaveSummary(g.id, draft)
+                setEditing(false)
+              }}
+            >
+              {t('ov.save')}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <AnimatePresence initial={false}>
         {isOpen && (
@@ -205,6 +260,8 @@ export function RoadmapOverview({
   description,
   onIssueClick,
   canComment = false,
+  editable = false,
+  onSaveSummary,
 }: {
   groups: Group[]
   unscheduled: IssueRow[]
@@ -212,6 +269,9 @@ export function RoadmapOverview({
   /** Opens an issue's comment panel; wired only when the viewer can view comments (#202). */
   onIssueClick?: (bar: Bar) => void
   canComment?: boolean
+  /** Owner-only: enables editing each milestone's client summary (#192). */
+  editable?: boolean
+  onSaveSummary?: (milestoneId: string, value: string) => void
 }) {
   const { t, i18n } = useTranslation()
   const lang = i18n.language
@@ -326,6 +386,8 @@ export function RoadmapOverview({
                     lang={lang}
                     autoOpen={searching}
                     onIssueClick={canComment ? onIssueClick : undefined}
+                    editable={editable}
+                    onSaveSummary={onSaveSummary}
                   />
                 ))}
               </div>

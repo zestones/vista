@@ -19,6 +19,8 @@ export interface Group {
   number: number
   title: string
   description: string | null
+  /** Owner-authored client-facing sentence (#192); overrides description for clients when set. */
+  clientSummary: string | null
   due: Date | null
   color: string
   total: number

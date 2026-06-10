@@ -12,6 +12,8 @@ export interface RoadmapApi {
   setIssueShared(issueId: string, shared: boolean): Promise<void>
   /** Flip every milestone + issue under a project ("share everything"). */
   setProjectShared(projectId: string, shared: boolean): Promise<void>
+  /** Owner-authored client-facing sentence per milestone (#192). Empty string clears it. */
+  setMilestoneClientSummary(milestoneId: string, summary: string): Promise<void>
 }
 
 const mock: RoadmapApi = {
@@ -56,6 +58,11 @@ const mock: RoadmapApi = {
     db.issues.filter((i) => repoIds.has(i.project_repo_id)).forEach((i) => (i.shared = shared))
     return Promise.resolve()
   },
+  setMilestoneClientSummary(milestoneId, summary) {
+    const milestone = mockDb().milestones.find((m) => m.id === milestoneId)
+    if (milestone) milestone.client_summary = summary.trim() === '' ? null : summary
+    return Promise.resolve()
+  },
 }
 
 // Supabase: getRoadmap reads the projection filtered by RLS (#26 -- owner sees all, member sees
@@ -90,6 +97,10 @@ const supabaseApi: RoadmapApi = {
   },
   async setProjectShared(projectId, shared) {
     const { error } = await supabase.rpc('set_project_shared', { p: projectId, value: shared })
+    if (error) throw error
+  },
+  async setMilestoneClientSummary(milestoneId, summary) {
+    const { error } = await supabase.rpc('set_milestone_client_summary', { m: milestoneId, value: summary.trim() === '' ? '' : summary })
     if (error) throw error
   },
 }
