@@ -6,7 +6,15 @@ import toast from 'react-hot-toast'
 import { CalendarRange, Eye, Inbox, Lock, Plus, Settings } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { usePreview } from '@/contexts/preview.context'
-import { RoadmapGantt, RoadmapMobile, RoadmapOverview, useRoadmap, useRoadmapRealtime, type Bar } from '@/features/project/roadmap'
+import {
+  RoadmapGantt,
+  RoadmapMobile,
+  RoadmapOverview,
+  useRoadmap,
+  useRoadmapRealtime,
+  useSetClientSummary,
+  type Bar,
+} from '@/features/project/roadmap'
 import { useProjectAccess } from '@/features/project/dashboard'
 import { MyRequests, RequestModal } from '@/features/project/submission'
 import { connections } from '@/services/connections'
@@ -49,6 +57,7 @@ export function RoadmapPage() {
   }, [id, closeComments])
 
   const access = useProjectAccess(id, user?.id ?? '')
+  const setSummary = useSetClientSummary()
   const roadmap = useRoadmap(id, preview)
   const groups = roadmap.data?.groups ?? []
   const unscheduled = roadmap.data?.unscheduled ?? []
@@ -249,6 +258,8 @@ export function RoadmapPage() {
               description={project.description}
               onIssueClick={openIssue}
               canComment={isOwner || canViewComments}
+              editable={isOwner}
+              onSaveSummary={(milestoneId, summary) => setSummary.mutate({ milestoneId, summary })}
             />
           ) : view === 'mobile' ? (
             <RoadmapMobile groups={groups} onIssueClick={openIssue} />

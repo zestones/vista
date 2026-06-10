@@ -67,6 +67,7 @@ export function buildGanttData(data: RoadmapData): RoadmapView {
       number: m.number,
       title: m.title,
       description: m.description,
+      clientSummary: m.client_summary,
       due: m.due_on ? new Date(m.due_on) : null,
       color: milestoneColor(idx),
       total: bars.length,
