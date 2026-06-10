@@ -54,6 +54,7 @@ export const roadmap = {
   'ov.summaryPh': 'A short, client-friendly sentence for this milestone',
   'ov.save': 'Save',
   'ov.cancel': 'Cancel',
+  'ov.recent': 'Recently delivered',
   'ov.upcoming': 'Upcoming',
   'dash.tab.requests': 'My requests',
   'stats.tasks': 'tasks',

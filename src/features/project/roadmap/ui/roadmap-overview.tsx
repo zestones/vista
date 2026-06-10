@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AnimatePresence, motion } from 'motion/react'
 import { ChevronDown, Circle, CircleCheck, MessageSquare, Pencil, Search } from 'lucide-react'
-import { fmtFull } from '../lib/roadmap.dates'
+import { fmtFull, fmtMonth } from '../lib/roadmap.dates'
 import { overallStats } from '../lib/roadmap.mappers'
 import type { Bar, Group } from '../types'
 import type { IssueRow } from '@/services/roadmap'
@@ -73,6 +73,44 @@ function MiniFocus({ label, g, accent }: { label: string; g: Group; accent?: boo
         <span className='text-ink shrink-0 text-[11px] font-semibold tabular-nums'>
           {g.closed}/{g.total}
         </span>
+      </div>
+    </div>
+  )
+}
+
+/** "What did I get" feed (#191): closed (delivered) shared issues, newest first, grouped by month. */
+function RecentlyDelivered({ groups, lang }: { groups: Group[]; lang: string }) {
+  const { t } = useTranslation()
+  const items = groups
+    .flatMap((g) => g.bars.filter((b) => b.state === 'closed').map((b) => ({ b })))
+    .sort((a, z) => z.b.end.getTime() - a.b.end.getTime())
+    .slice(0, 12)
+  if (items.length === 0) return null
+  // Group consecutive items by month label (already date-sorted).
+  const months: { label: string; bars: Bar[] }[] = []
+  for (const { b } of items) {
+    const label = fmtMonth(b.end, lang)
+    const last = months.at(-1)
+    if (last && last.label === label) last.bars.push(b)
+    else months.push({ label, bars: [b] })
+  }
+  return (
+    <div className='border-hairline bg-card rounded-xl border p-4'>
+      <h3 className='text-muted-ink mb-2 text-xs font-semibold tracking-wide uppercase'>{t('ov.recent')}</h3>
+      <div className='flex flex-col gap-3'>
+        {months.map((m) => (
+          <div key={m.label}>
+            <div className='text-muted-ink mb-1 text-[11px] font-medium capitalize'>{m.label}</div>
+            <ul className='flex flex-col gap-1'>
+              {m.bars.map((b) => (
+                <li key={b.id} className='flex items-start gap-2 text-[13px]'>
+                  <CircleCheck size={13} className='text-state-closed mt-0.5 shrink-0' />
+                  <span className='text-body min-w-0 truncate'>{b.title}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -314,6 +352,10 @@ export function RoadmapOverview({
   }
   const rows = ordered.map((g) => ({ g, bars: visibleBarsFor(g) })).filter(({ bars }) => !filtering || bars.length > 0)
 
+  const hasDesc = description != null && description.trim() !== ''
+  const hasDelivered = groups.some((g) => g.bars.some((b) => b.state === 'closed'))
+  const hasRail = hasDesc || hasDelivered
+
   return (
     <div className='min-h-0 flex-1 overflow-y-auto'>
       <div className='flex flex-col gap-6 pb-8'>
@@ -340,16 +382,21 @@ export function RoadmapOverview({
           )}
         </section>
 
-        {/* B. Milestones (main) + About rail. Rail comes first on mobile. */}
+        {/* B. Milestones (main) + rail (About + recently delivered). Rail comes first on mobile. */}
         <div className='grid gap-6 lg:grid-cols-3'>
-          {description != null && description.trim() !== '' && (
-            <aside className='bg-secondary/40 border-hairline self-start rounded-xl border p-5 lg:sticky lg:top-0 lg:order-2 lg:col-span-1'>
-              <h3 className='text-muted-ink mb-2 text-xs font-semibold tracking-wide uppercase'>{t('roadmap.about')}</h3>
-              <p className='text-body text-sm leading-relaxed whitespace-pre-wrap'>{description}</p>
+          {hasRail && (
+            <aside className='flex flex-col gap-4 self-start lg:order-2 lg:col-span-1 lg:sticky lg:top-0'>
+              {hasDesc && (
+                <div className='bg-secondary/40 border-hairline rounded-xl border p-5'>
+                  <h3 className='text-muted-ink mb-2 text-xs font-semibold tracking-wide uppercase'>{t('roadmap.about')}</h3>
+                  <p className='text-body text-sm leading-relaxed whitespace-pre-wrap'>{description}</p>
+                </div>
+              )}
+              <RecentlyDelivered groups={groups} lang={lang} />
             </aside>
           )}
 
-          <section className={cn('lg:order-1', description != null && description.trim() !== '' ? 'lg:col-span-2' : 'lg:col-span-3')}>
+          <section className={cn('lg:order-1', hasRail ? 'lg:col-span-2' : 'lg:col-span-3')}>
             <div className='mb-3 flex flex-wrap items-center gap-3'>
               <h3 className='text-muted-ink text-xs font-semibold tracking-wide uppercase'>{t('ov.milestones')}</h3>
               <div className='ml-auto flex items-center gap-2'>

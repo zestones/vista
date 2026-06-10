@@ -54,6 +54,7 @@ export const roadmap = {
   'ov.summaryPh': 'Une phrase courte et claire pour ce jalon',
   'ov.save': 'Enregistrer',
   'ov.cancel': 'Annuler',
+  'ov.recent': 'Livré récemment',
   'ov.upcoming': 'À venir',
   'dash.tab.requests': 'Mes demandes',
   'stats.tasks': 'tâches',
