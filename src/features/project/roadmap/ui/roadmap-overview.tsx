@@ -1,9 +1,15 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Circle, CircleCheck } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
+import { ChevronDown, Circle, CircleCheck, Search } from 'lucide-react'
 import { fmtFull } from '../lib/roadmap.dates'
 import { overallStats } from '../lib/roadmap.mappers'
-import type { Group } from '../types'
+import type { Bar, Group } from '../types'
 import type { IssueRow } from '@/services/roadmap'
+import { Input, Segmented } from '@/components/ui'
+import { cn } from '@/lib/utils'
+
+type StatusFilter = 'all' | 'open' | 'closed'
 
 /** Completion ring. Purple arc = closed/done work (GitHub convention, matches the Timeline). */
 function ProgressRing({ pct, size = 84, stroke = 8 }: { pct: number; size?: number; stroke?: number }) {
@@ -44,6 +50,7 @@ const STATUS_CHIP: Record<MStatus, string> = {
   active: 'bg-success/10 text-success',
   upcoming: 'bg-secondary text-muted-ink',
 }
+const issueColor = (state: string | null) => (state === 'closed' ? 'var(--color-state-closed)' : 'var(--color-success)')
 
 /** Earliest future due date among not-yet-complete milestones (module scope: keeps render pure). */
 function pickNextDelivery(groups: Group[]): Date | null {
@@ -59,34 +66,6 @@ function Stat({ label, value }: { label: string; value: string }) {
       <div className='font-display text-ink text-xl font-medium tabular-nums'>{value}</div>
       <div className='text-muted-ink mt-0.5 truncate text-[13px]'>{label}</div>
     </div>
-  )
-}
-
-/** One milestone as a readable card (replaces reading the Gantt). */
-function MilestoneRow({ g, lang }: { g: Group; lang: string }) {
-  const { t } = useTranslation()
-  const st = statusOf(g)
-  return (
-    <article className='border-hairline bg-card flex items-start gap-3 rounded-xl border p-4'>
-      <span className={`mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg ${STATUS_CHIP[st]}`}>
-        {st === 'delivered' ? <CircleCheck size={15} /> : <Circle size={15} />}
-      </span>
-      <div className='min-w-0 flex-1'>
-        <div className='flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5'>
-          <h4 className='text-ink min-w-0 truncate font-medium'>{g.title}</h4>
-          <span className='text-muted-ink shrink-0 text-xs'>
-            {st === 'delivered' ? t('ov.delivered') : st === 'upcoming' ? t('ov.upcoming') : `${String(g.closed)}/${String(g.total)}`}
-            {g.due ? ` · ${fmtFull(g.due, lang)}` : ''}
-          </span>
-        </div>
-        {g.description && <p className='text-muted-ink mt-0.5 line-clamp-2 text-[13px] leading-snug'>{g.description}</p>}
-        {st === 'active' && (
-          <div className='bg-secondary mt-2 h-1 overflow-hidden rounded-xs'>
-            <div className='bg-state-closed h-full rounded-xs' style={{ width: `${String(g.pct)}%` }} />
-          </div>
-        )}
-      </div>
-    </article>
   )
 }
 
@@ -110,11 +89,87 @@ function FocusCard({ label, g, lang, accent }: { label: string; g: Group; lang: 
   )
 }
 
+/** One milestone per row; click to expand its issues (#197). `bars` are the already-filtered issues. */
+function MilestoneRow({ g, bars, lang, forceOpen }: { g: Group; bars: Bar[]; lang: string; forceOpen: boolean }) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+  const st = statusOf(g)
+  const expandable = g.bars.length > 0
+  const isOpen = expandable && (open || forceOpen)
+
+  return (
+    <article className='border-hairline bg-card rounded-xl border'>
+      <button
+        type='button'
+        aria-expanded={isOpen}
+        disabled={!expandable}
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          'flex w-full items-center gap-3 rounded-xl p-4 text-left',
+          expandable && 'hover:bg-secondary/40 cursor-pointer transition-colors',
+        )}
+      >
+        <span className={`grid size-7 shrink-0 place-items-center rounded-lg ${STATUS_CHIP[st]}`}>
+          {st === 'delivered' ? <CircleCheck size={15} /> : <Circle size={15} />}
+        </span>
+        <div className='min-w-0 flex-1'>
+          <h4 className='text-ink truncate font-medium'>{g.title}</h4>
+          {g.description && <p className='text-muted-ink mt-0.5 line-clamp-1 text-[13px]'>{g.description}</p>}
+          {st === 'active' && (
+            <div className='bg-secondary mt-2 h-1 max-w-xs overflow-hidden rounded-xs'>
+              <div className='bg-state-closed h-full rounded-xs' style={{ width: `${String(g.pct)}%` }} />
+            </div>
+          )}
+        </div>
+        <div className='text-muted-ink shrink-0 text-right text-xs'>
+          <div className={st === 'delivered' ? 'text-state-closed font-medium' : undefined}>
+            {st === 'delivered' ? t('ov.delivered') : st === 'upcoming' ? t('ov.upcoming') : `${String(g.closed)}/${String(g.total)}`}
+          </div>
+          {g.due && <div className='mt-0.5'>{fmtFull(g.due, lang)}</div>}
+        </div>
+        {expandable && (
+          <ChevronDown size={16} className={cn('text-muted-ink shrink-0 transition-transform duration-200', isOpen && 'rotate-180')} />
+        )}
+      </button>
+
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            key='issues'
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+            className='overflow-hidden'
+          >
+            <ul className='border-hairline border-t px-4 py-2'>
+              {bars.length === 0 ? (
+                <li className='text-muted-ink py-2 text-sm'>{t('roadmap.noResults')}</li>
+              ) : (
+                bars.map((b) => (
+                  <li key={b.id} className='flex items-center gap-2 py-1.5 text-sm'>
+                    <span className='shrink-0' style={{ color: issueColor(b.state) }}>
+                      {b.state === 'closed' ? <CircleCheck size={14} /> : <Circle size={14} />}
+                    </span>
+                    <span className='text-muted-ink shrink-0 text-xs tabular-nums'>#{b.number}</span>
+                    <span className='text-body truncate'>{b.title}</span>
+                  </li>
+                ))
+              )}
+            </ul>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </article>
+  )
+}
+
 /**
- * Client-facing project Overview (#124/#190) — the primary view, full-width dashboard. Answers
- * "where are we / what's next" without reading the Gantt. Computed from the VISIBLE (shared) roadmap
- * data getRoadmap returns under the caller's session, so it's allowlist-scoped and leak-free.
- * Colors follow the Timeline / GitHub convention: closed/done purple, open/active green.
+ * Client-facing project Overview (#124/#190) — the primary, full-width view. Answers "where are we /
+ * what's next" without reading the Gantt: a status hero, a Now/Next/About rail, and a single-column
+ * milestone list (one per row, click to reveal its issues; filter by state + search, #197). Computed
+ * from the VISIBLE (shared) roadmap data getRoadmap returns -> allowlist-scoped, leak-free. Colors
+ * follow the Timeline / GitHub convention: closed/done purple, open/active green.
  */
 export function RoadmapOverview({
   groups,
@@ -128,6 +183,8 @@ export function RoadmapOverview({
   const { t, i18n } = useTranslation()
   const lang = i18n.language
   const stats = overallStats(groups)
+  const [query, setQuery] = useState('')
+  const [statusF, setStatusF] = useState<StatusFilter>('all')
 
   // due asc (nulls last), then milestone number.
   const ordered = [...groups].sort((a, b) => {
@@ -149,6 +206,19 @@ export function RoadmapOverview({
       : statusKey === 'active'
         ? 'bg-success/10 text-success'
         : 'bg-secondary text-muted-ink'
+
+  // Filtering: status + keyword over milestone titles and issue titles/numbers; matches auto-expand.
+  const q = query.trim().toLowerCase()
+  const filtering = q !== '' || statusF !== 'all'
+  const visibleBarsFor = (g: Group): Bar[] => {
+    const titleMatch = q === '' || g.title.toLowerCase().includes(q)
+    return g.bars.filter((b) => {
+      const statusOk = statusF === 'all' || (statusF === 'closed' ? b.state === 'closed' : b.state !== 'closed')
+      const queryOk = titleMatch || b.title.toLowerCase().includes(q) || `#${String(b.number)}`.includes(q)
+      return statusOk && queryOk
+    })
+  }
+  const rows = ordered.map((g) => ({ g, bars: visibleBarsFor(g) })).filter(({ bars }) => !filtering || bars.length > 0)
 
   return (
     <div className='min-h-0 flex-1 overflow-y-auto'>
@@ -184,20 +254,46 @@ export function RoadmapOverview({
             )}
           </aside>
 
-          {/* Main: milestones */}
+          {/* Main: milestones list + filters */}
           <section className='lg:order-1 lg:col-span-2'>
-            <h3 className='text-muted-ink mb-3 text-xs font-semibold tracking-wide uppercase'>{t('ov.milestones')}</h3>
-            {ordered.length > 0 ? (
-              <div className='grid gap-3 xl:grid-cols-2'>
-                {ordered.map((g) => (
-                  <MilestoneRow key={g.id} g={g} lang={lang} />
+            <div className='mb-3 flex flex-wrap items-center gap-3'>
+              <h3 className='text-muted-ink text-xs font-semibold tracking-wide uppercase'>{t('ov.milestones')}</h3>
+              <div className='ml-auto flex items-center gap-2'>
+                <div className='relative'>
+                  <Search size={14} className='text-muted-ink pointer-events-none absolute top-1/2 left-2 -translate-y-1/2' />
+                  <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder={t('roadmap.search')}
+                    className='h-8 w-44 pl-7 sm:w-56'
+                  />
+                </div>
+                <Segmented<StatusFilter>
+                  size='sm'
+                  aria-label={t('roadmap.all')}
+                  value={statusF}
+                  onValueChange={setStatusF}
+                  options={[
+                    { value: 'all', label: t('roadmap.all') },
+                    { value: 'open', label: t('roadmap.open') },
+                    { value: 'closed', label: t('roadmap.closed') },
+                  ]}
+                />
+              </div>
+            </div>
+
+            {rows.length > 0 ? (
+              <div className='flex flex-col gap-2'>
+                {rows.map(({ g, bars }) => (
+                  <MilestoneRow key={g.id} g={g} bars={bars} lang={lang} forceOpen={filtering} />
                 ))}
               </div>
             ) : (
               <p className='border-hairline text-muted-ink rounded-xl border border-dashed p-8 text-center text-sm'>
-                {t('ov.noMilestones')}
+                {groups.length === 0 ? t('ov.noMilestones') : t('roadmap.noResults')}
               </p>
             )}
+
             {unscheduled.length > 0 && (
               <p className='text-muted-ink mt-3 text-xs'>{`${String(unscheduled.length)} ${t('roadmap.unscheduled')}`}</p>
             )}
