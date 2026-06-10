@@ -33,13 +33,13 @@ const LABEL_W = 320
 const MONTH_H = 26
 const SUB_H = 22
 const HEADER_H = MONTH_H + SUB_H
+// Continuous zoom (#205): px/day from the fit floor (whole project visible) up to MAX_DAY_W.
 const MAX_DAY_W = 64
-const ZOOM = { year: 2, quarter: 5, month: 7, week: 16, day: 34 } as const
-// Coarse -> fine. Used by the zoom buttons + Ctrl/Cmd-wheel.
-const ZORDER = ['year', 'quarter', 'month', 'week', 'day'] as const
+const MIN_DAY_W = 0.5
+const ZOOM_STEP = 1.6 // factor per +/- click
+const DEFAULT_DAY_W = 16 // ~week density on open
 const TODAY = 'var(--sig-coral)'
 
-type Zoom = keyof typeof ZOOM
 type Filter = 'all' | 'open' | 'closed'
 
 type VRow = { type: 'ms'; group: Group; span: { start: Date | null; end: Date | null } } | { type: 'bar'; bar: Bar; color: string }
@@ -64,8 +64,8 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
   const { t, i18n } = useTranslation()
   const lang = i18n.language
   const [filter, setFilter] = useState<Filter>('all')
-  const [zoom, setZoom] = useState<Zoom>('week')
-  const [fit, setFit] = useState(false)
+  // Continuous zoom: the user's chosen px/day (clamped to [fit floor, MAX]). 0 -> Fit (whole project).
+  const [userW, setUserW] = useState(DEFAULT_DAY_W)
   const [msSort, setMsSort] = useState<MilestoneSort>('default')
   const [issueSort, setIssueSort] = useState<IssueSort>('chrono')
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set(groups.map((g) => g.id)))
@@ -164,10 +164,11 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
 
   const labelW = viewW > 0 && viewW < 560 ? 176 : LABEL_W
   const avail = Math.max(viewW - labelW, 0)
-  const fillW = avail > 0 ? Math.floor(avail / Math.max(totalDays, 1)) : 0
-  // Fit (#204): scale so the whole range exactly fills the viewport (px/day = avail/totalDays), no floor.
-  const fitW = avail > 0 ? avail / Math.max(totalDays, 1) : 0
-  const dayW = fit ? Math.max(fitW, 0.5) : Math.min(MAX_DAY_W, Math.max(ZOOM[zoom], fillW))
+  // Fit floor: px/day that makes the whole range exactly fill the viewport. dayW never goes below it,
+  // so the project is always at least fully visible; userW lets the client zoom in from there.
+  const minW = avail > 0 ? Math.max(avail / Math.max(totalDays, 1), MIN_DAY_W) : MIN_DAY_W
+  const dayW = Math.min(MAX_DAY_W, Math.max(userW, minW))
+  const isFit = dayW <= minW + 0.01
   // Adaptive axis: top row months->years, sub row days->weeks->months->quarters as we zoom out.
   const subMode: 'day' | 'week' | 'month' | 'quarter' = dayW >= 24 ? 'day' : dayW >= 7 ? 'week' : dayW >= 3 ? 'month' : 'quarter'
   const topMode: 'month' | 'year' = subMode === 'day' || subMode === 'week' ? 'month' : 'year'
@@ -178,21 +179,18 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
     wheelRef.current = (e: WheelEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return
       e.preventDefault()
-      const idx = ZORDER.indexOf(zoom)
-      const nextIdx = e.deltaY < 0 ? Math.min(idx + 1, ZORDER.length - 1) : Math.max(idx - 1, 0)
-      if (nextIdx === idx && !fit) return
+      const newDayW = Math.min(MAX_DAY_W, Math.max(dayW * (e.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP), minW))
+      if (newDayW === dayW) return
       const s = scrollerRef.current
       if (!s) return
       const localX = Math.max(e.clientX - s.getBoundingClientRect().left - labelW, 0)
       const dayAtCursor = (s.scrollLeft + localX) / dayW
-      const newDayW = Math.min(MAX_DAY_W, Math.max(ZOOM[ZORDER[nextIdx]], fillW))
-      setFit(false)
-      setZoom(ZORDER[nextIdx])
+      setUserW(newDayW)
       requestAnimationFrame(() => {
         if (scrollerRef.current) scrollerRef.current.scrollLeft = Math.max(0, dayAtCursor * newDayW - localX)
       })
     }
-  }, [zoom, fit, dayW, fillW, labelW])
+  }, [dayW, minW, labelW])
 
   const months = useMemo(() => {
     const out: { label: string; off: number }[] = []
@@ -312,26 +310,23 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
     })
   const toggleAll = () => setCollapsed(allCollapsed ? new Set() : new Set(filtered.map((g) => g.id)))
 
-  // dayW is floored by fillW (content always fills), so the selected enum can differ from what's
-  // actually shown. Drive the label + button bounds from the REAL scale so they never lie (#205 fix).
-  const zIdx = ZORDER.indexOf(zoom)
-  const dwAt = (z: Zoom) => Math.min(MAX_DAY_W, Math.max(ZOOM[z], fillW))
-  const canZoomOut = !fit && dwAt(ZORDER[Math.max(zIdx - 1, 0)]) < dayW
-  const canZoomIn = fit || dwAt(ZORDER[Math.min(zIdx + 1, ZORDER.length - 1)]) > dayW
-  const zoomIn = () => {
-    if (!canZoomIn) return
-    setFit(false)
-    setZoom(ZORDER[Math.min(zIdx + 1, ZORDER.length - 1)])
-  }
-  const zoomOut = () => {
-    if (!canZoomOut) return
-    setFit(false)
-    setZoom(ZORDER[Math.max(zIdx - 1, 0)])
-  }
-  // Label reflects the granularity actually on screen (quarter sub-ticks read as a year-level view).
-  const zoomLabel = fit
+  // Continuous zoom (#205): - goes out until everything fits (then disabled), + goes in to day detail.
+  const canZoomOut = dayW > minW + 0.01
+  const canZoomIn = dayW < MAX_DAY_W - 0.01
+  const zoomIn = () => setUserW(Math.min(MAX_DAY_W, dayW * ZOOM_STEP))
+  const zoomOut = () => setUserW(Math.max(minW, dayW / ZOOM_STEP))
+  // Label = the granularity actually on screen; "Fit" when the whole project is visible at the floor.
+  const zoomLabel = isFit
     ? t('roadmap.zoomFit')
-    : { day: t('roadmap.zoomDay'), week: t('roadmap.zoomWeek'), month: t('roadmap.zoomMonth'), quarter: t('roadmap.zoomYear') }[subMode]
+    : dayW >= 24
+      ? t('roadmap.zoomDay')
+      : dayW >= 10
+        ? t('roadmap.zoomWeek')
+        : dayW >= 4
+          ? t('roadmap.zoomMonth')
+          : dayW >= 1.8
+            ? t('roadmap.zoomQuarter')
+            : t('roadmap.zoomYear')
   const ctrlBtn: CSSProperties = {
     border: 'none',
     background: 'transparent',
@@ -1216,8 +1211,8 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
               </button>
               <button
                 title={t('roadmap.zoomFit')}
-                onClick={() => setFit(true)}
-                style={{ ...ctrlBtn, color: fit ? 'var(--link)' : 'var(--ink)' }}
+                onClick={() => setUserW(0)}
+                style={{ ...ctrlBtn, color: isFit ? 'var(--link)' : 'var(--ink)' }}
               >
                 <Scan size={15} />
               </button>
