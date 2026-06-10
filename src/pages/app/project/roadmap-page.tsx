@@ -18,7 +18,7 @@ import { TabTransition } from '@/components/motion'
 import { Spinner } from '@/components/feedback'
 import { useMediaQuery } from '@/hooks/use-media-query'
 
-type Tab = 'gantt' | 'overview' | 'requests'
+type Tab = 'overview' | 'timeline' | 'requests'
 
 export function RoadmapPage() {
   const { t } = useTranslation()
@@ -83,7 +83,7 @@ export function RoadmapPage() {
         canViewComments: acc.membership?.can_view_comments ?? false,
       })
       if (bar) {
-        setSearchParams({}, { replace: true }) // switch to the Gantt view
+        setSearchParams({ tab: 'timeline' }, { replace: true }) // jump to the Timeline (Gantt) where the bar lives
         setFocusBar({ id: bar.id, key: Date.now() })
       }
     },
@@ -119,9 +119,10 @@ export function RoadmapPage() {
     })
   }
 
-  // Viewers have no "requests" tab, so a stray ?tab=requests falls back to gantt.
+  // Overview is the primary view (#190): default tab. Timeline (the Gantt) is secondary (?tab=timeline);
+  // a stray ?tab=requests for a viewer falls back to Overview.
   const tabParam = searchParams.get('tab')
-  const tab: Tab = tabParam === 'overview' ? 'overview' : tabParam === 'requests' && !isViewer ? 'requests' : 'gantt'
+  const tab: Tab = tabParam === 'timeline' ? 'timeline' : tabParam === 'requests' && !isViewer ? 'requests' : 'overview'
   // An empty roadmap means different things to a client (#107): for the owner it's genuinely empty;
   // for a client it usually means nothing has been shared yet (or the project isn't published).
   const asClient = !isOwner || preview
@@ -212,10 +213,10 @@ export function RoadmapPage() {
           <Segmented<Tab>
             aria-label='View'
             value={tab}
-            onValueChange={(v) => setSearchParams(v === 'gantt' ? {} : { tab: v }, { replace: true })}
+            onValueChange={(v) => setSearchParams(v === 'overview' ? {} : { tab: v }, { replace: true })}
             options={[
-              { value: 'gantt', label: t('dash.tab.gantt') },
               { value: 'overview', label: t('dash.tab.overview') },
+              { value: 'timeline', label: t('dash.tab.timeline') },
               // Editors (who can submit) get a self-scoped "My requests" tab (#101).
               ...(!isViewer ? [{ value: 'requests' as const, label: t('dash.tab.requests') }] : []),
             ]}

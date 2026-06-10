@@ -47,15 +47,22 @@ const data: RoadmapData = {
 }
 const { groups, unscheduled } = buildGanttData(data)
 
-describe('RoadmapOverview (#56)', () => {
-  it('renders stats, the milestones table and the unscheduled count', () => {
+describe('RoadmapOverview (#56/#190)', () => {
+  it('renders the status hero, milestone cards and the unscheduled count', () => {
     render(
       <I18nextProvider i18n={i18n}>
-        <RoadmapOverview groups={groups} unscheduled={unscheduled} />
+        <RoadmapOverview groups={groups} unscheduled={unscheduled} description='Project blurb' />
       </I18nextProvider>,
     )
-    expect(screen.getByText('MS 1')).toBeTruthy()
-    expect(screen.getByText('A stage')).toBeTruthy()
+    // 1 of 2 visible issues closed -> 50%, in progress.
+    expect(screen.getByText('50%')).toBeTruthy()
+    // Unique status summary "1 of 2 … / 1 sur 2 …".
+    expect(screen.getByText(/1 (of|sur) 2/)).toBeTruthy()
+    // The milestone appears (in the focus card and the list -> use getAllByText).
+    expect(screen.getAllByText('MS 1').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('A stage').length).toBeGreaterThan(0)
+    // About block uses the description prop.
+    expect(screen.getByText('Project blurb')).toBeTruthy()
     expect(screen.getByText(/1 issues non planifiées|1 unscheduled issues/)).toBeTruthy()
   })
 })
