@@ -33,11 +33,13 @@ const LABEL_W = 320
 const MONTH_H = 26
 const SUB_H = 22
 const HEADER_H = MONTH_H + SUB_H
-// Continuous zoom (#205): px/day from the fit floor (whole project visible) up to MAX_DAY_W.
+// Zoom (#205): named stops in px/day, plus a fit floor (whole project visible). Each +/- moves one
+// stop so the label always changes; stops below the fit floor collapse to Fit.
 const MAX_DAY_W = 64
 const MIN_DAY_W = 0.5
-const ZOOM_STEP = 1.6 // factor per +/- click
 const DEFAULT_DAY_W = 16 // ~week density on open
+const STOPS = [2, 4, 7, 16, 34] as const // px/day
+const STOP_KEY = ['roadmap.zoomYear', 'roadmap.zoomQuarter', 'roadmap.zoomMonth', 'roadmap.zoomWeek', 'roadmap.zoomDay'] as const
 const TODAY = 'var(--sig-coral)'
 
 type Filter = 'all' | 'open' | 'closed'
@@ -169,6 +171,8 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
   const minW = avail > 0 ? Math.max(avail / Math.max(totalDays, 1), MIN_DAY_W) : MIN_DAY_W
   const dayW = Math.min(MAX_DAY_W, Math.max(userW, minW))
   const isFit = dayW <= minW + 0.01
+  // Named stops above the fit floor (the only reachable zoom levels for this project's length).
+  const usableStops = STOPS.filter((w) => w > minW + 0.01 && w <= MAX_DAY_W)
   // Adaptive axis: top row months->years, sub row days->weeks->months->quarters as we zoom out.
   const subMode: 'day' | 'week' | 'month' | 'quarter' = dayW >= 24 ? 'day' : dayW >= 7 ? 'week' : dayW >= 3 ? 'month' : 'quarter'
   const topMode: 'month' | 'year' = subMode === 'day' || subMode === 'week' ? 'month' : 'year'
@@ -179,18 +183,34 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
     wheelRef.current = (e: WheelEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return
       e.preventDefault()
-      const newDayW = Math.min(MAX_DAY_W, Math.max(dayW * (e.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP), minW))
-      if (newDayW === dayW) return
+      let newDayW: number
+      let newUser: number
+      if (e.deltaY < 0) {
+        const up = usableStops.find((w) => w > dayW + 0.01)
+        if (up === undefined) return
+        newDayW = up
+        newUser = up
+      } else {
+        const down = usableStops.filter((w) => w < dayW - 0.01)
+        if (down.length > 0) {
+          newDayW = down[down.length - 1]
+          newUser = newDayW
+        } else {
+          if (isFit) return
+          newDayW = minW // -> Fit
+          newUser = 0
+        }
+      }
       const s = scrollerRef.current
       if (!s) return
       const localX = Math.max(e.clientX - s.getBoundingClientRect().left - labelW, 0)
       const dayAtCursor = (s.scrollLeft + localX) / dayW
-      setUserW(newDayW)
+      setUserW(newUser)
       requestAnimationFrame(() => {
         if (scrollerRef.current) scrollerRef.current.scrollLeft = Math.max(0, dayAtCursor * newDayW - localX)
       })
     }
-  }, [dayW, minW, labelW])
+  }, [dayW, minW, isFit, usableStops, labelW])
 
   const months = useMemo(() => {
     const out: { label: string; off: number }[] = []
@@ -310,23 +330,19 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
     })
   const toggleAll = () => setCollapsed(allCollapsed ? new Set() : new Set(filtered.map((g) => g.id)))
 
-  // Continuous zoom (#205): - goes out until everything fits (then disabled), + goes in to day detail.
-  const canZoomOut = dayW > minW + 0.01
-  const canZoomIn = dayW < MAX_DAY_W - 0.01
-  const zoomIn = () => setUserW(Math.min(MAX_DAY_W, dayW * ZOOM_STEP))
-  const zoomOut = () => setUserW(Math.max(minW, dayW / ZOOM_STEP))
-  // Label = the granularity actually on screen; "Fit" when the whole project is visible at the floor.
-  const zoomLabel = isFit
-    ? t('roadmap.zoomFit')
-    : dayW >= 24
-      ? t('roadmap.zoomDay')
-      : dayW >= 10
-        ? t('roadmap.zoomWeek')
-        : dayW >= 4
-          ? t('roadmap.zoomMonth')
-          : dayW >= 1.8
-            ? t('roadmap.zoomQuarter')
-            : t('roadmap.zoomYear')
+  // Snapped zoom: each step moves one named stop (so the label always changes), down to Fit.
+  const canZoomOut = !isFit
+  const canZoomIn = usableStops.some((w) => w > dayW + 0.01)
+  const zoomOut = () => {
+    const down = usableStops.filter((w) => w < dayW - 0.01)
+    setUserW(down.length > 0 ? down[down.length - 1] : 0) // 0 -> Fit (clamped to the floor)
+  }
+  const zoomIn = () => {
+    const up = usableStops.find((w) => w > dayW + 0.01)
+    if (up !== undefined) setUserW(up)
+  }
+  const stopIdx = STOPS.findIndex((w) => Math.abs(w - dayW) < 0.01)
+  const zoomLabel = isFit || stopIdx < 0 ? t('roadmap.zoomFit') : t(STOP_KEY[stopIdx])
   const ctrlBtn: CSSProperties = {
     border: 'none',
     background: 'transparent',
