@@ -60,10 +60,15 @@ function pickNextDelivery(groups: Group[]): Date | null {
   return dates[0] ?? null
 }
 
-/** Compact Now / Next chip living in the hero band. */
+/** Compact Now / Next chip living in the hero band. Full-width when the content is tight (#219). */
 function MiniFocus({ label, g, accent }: { label: string; g: Group; accent?: boolean }) {
   return (
-    <div className={cn('w-56 rounded-lg border p-3', accent ? 'border-success/30 bg-success/5' : 'border-hairline')}>
+    <div
+      className={cn(
+        'w-full rounded-lg border p-3 @min-[30rem]/content:w-56',
+        accent ? 'border-success/30 bg-success/5' : 'border-hairline',
+      )}
+    >
       <div className='text-muted-ink text-[10px] font-semibold tracking-wide uppercase'>{label}</div>
       <div className='text-ink mt-0.5 truncate text-sm font-medium'>{g.title}</div>
       <div className='mt-2 flex items-center gap-2'>
@@ -374,7 +379,10 @@ export function RoadmapOverview({
   const hasRail = hasDesc || hasDelivered
 
   return (
-    <div className='min-h-0 flex-1 overflow-y-auto'>
+    // Container-driven layout (#219): children reflow to the CONTENT width (which shrinks when the
+    // comment panel opens / sidebar collapses), not the viewport. Scoped here (no fixed descendants)
+    // rather than on <main>, where container-type would trap the Gantt's fullscreen overlay.
+    <div className='@container/content min-h-0 flex-1 overflow-y-auto'>
       <div className='flex flex-col gap-6 pb-8'>
         {/* A. Status hero — progress + Now/Next, full-width band */}
         <section className='border-hairline bg-card flex flex-wrap items-center gap-x-10 gap-y-5 rounded-xl border p-6'>
@@ -399,21 +407,12 @@ export function RoadmapOverview({
           )}
         </section>
 
-        {/* B. Milestones (main) + rail (About + recently delivered). Rail comes first on mobile. */}
-        <div className='grid gap-6 lg:grid-cols-3'>
-          {hasRail && (
-            <aside className='flex flex-col gap-4 self-start lg:sticky lg:top-0 lg:order-2 lg:col-span-1 lg:max-h-[calc(100dvh-9rem)]'>
-              {hasDesc && (
-                <div className='bg-secondary/40 border-hairline shrink-0 rounded-xl border p-5'>
-                  <h3 className='text-muted-ink mb-2 text-xs font-semibold tracking-wide uppercase'>{t('roadmap.about')}</h3>
-                  <p className='text-body text-sm leading-relaxed whitespace-pre-wrap'>{description}</p>
-                </div>
-              )}
-              <RecentlyDelivered groups={groups} lang={lang} />
-            </aside>
-          )}
-
-          <section className={cn('lg:order-1', hasRail ? 'lg:col-span-2' : 'lg:col-span-3')}>
+        {/* B. Milestones (main) + rail. Container-driven (#219): wide content -> rail is a sticky right
+            column; as the comment panel / sidebar reclaim width, the rail relocates BELOW and goes
+            two-up on its own width (nested @container/rail) instead of being crushed into a thin column. */}
+        <div className={cn('grid gap-6', hasRail && '@min-[70rem]/content:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]')}>
+          {/* Main: milestones (DOM-first so it stacks on top when the layout collapses to one column). */}
+          <section className='min-w-0'>
             <div className='mb-3 flex flex-wrap items-center gap-3'>
               <h3 className='text-muted-ink text-xs font-semibold tracking-wide uppercase'>{t('ov.milestones')}</h3>
               <div className='ml-auto flex items-center gap-2'>
@@ -423,7 +422,7 @@ export function RoadmapOverview({
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder={t('roadmap.search')}
-                    className='h-8 w-44 pl-7 sm:w-56'
+                    className='h-8 w-44 pl-7 @min-[30rem]/content:w-56'
                   />
                 </div>
                 <Segmented<StatusFilter>
@@ -465,6 +464,21 @@ export function RoadmapOverview({
               <p className='text-muted-ink mt-3 text-xs'>{`${String(unscheduled.length)} ${t('roadmap.unscheduled')}`}</p>
             )}
           </section>
+
+          {/* Rail: sticky right column when wide; relocates below + goes two-up on its own width when tight. */}
+          {hasRail && (
+            <aside className='@container/rail flex min-w-0 flex-col self-start @min-[70rem]/content:sticky @min-[70rem]/content:top-0 @min-[70rem]/content:max-h-[calc(100dvh-9rem)]'>
+              <div className='flex min-h-0 flex-1 flex-col gap-4 @min-[34rem]/rail:grid @min-[34rem]/rail:grid-cols-2 @min-[34rem]/rail:items-start'>
+                {hasDesc && (
+                  <div className='bg-secondary/40 border-hairline shrink-0 rounded-xl border p-5'>
+                    <h3 className='text-muted-ink mb-2 text-xs font-semibold tracking-wide uppercase'>{t('roadmap.about')}</h3>
+                    <p className='text-body text-sm leading-relaxed whitespace-pre-wrap'>{description}</p>
+                  </div>
+                )}
+                <RecentlyDelivered groups={groups} lang={lang} />
+              </div>
+            </aside>
+          )}
         </div>
       </div>
     </div>
