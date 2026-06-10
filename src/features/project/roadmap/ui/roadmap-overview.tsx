@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 
 type StatusFilter = 'all' | 'open' | 'closed'
 
-/** Completion ring. Purple arc = closed/done work (GitHub convention, matches the Timeline). */
+/** Completion ring. Green arc = progress (GitHub milestone bars are green; violet is reserved for done/closed markers). */
 function ProgressRing({ pct, size = 84, stroke = 8 }: { pct: number; size?: number; stroke?: number }) {
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
@@ -24,7 +24,7 @@ function ProgressRing({ pct, size = 84, stroke = 8 }: { pct: number; size?: numb
           cy={size / 2}
           r={r}
           fill='none'
-          stroke='var(--color-state-closed)'
+          stroke='var(--color-success)'
           strokeWidth={stroke}
           strokeLinecap='round'
           strokeDasharray={c}
@@ -44,7 +44,7 @@ function statusOf(g: Group): MStatus {
   return 'upcoming'
 }
 
-// GitHub state colors (same as the Timeline): closed/done = purple, open/active = green.
+// State markers follow GitHub: done/closed = violet, open/active = green. Progress bars are green.
 const STATUS_CHIP: Record<MStatus, string> = {
   delivered: 'bg-state-closed/10 text-state-closed',
   active: 'bg-success/10 text-success',
@@ -60,42 +60,32 @@ function pickNextDelivery(groups: Group[]): Date | null {
   return dates[0] ?? null
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+/** Compact Now / Next chip living in the hero band. */
+function MiniFocus({ label, g, accent }: { label: string; g: Group; accent?: boolean }) {
   return (
-    <div className='min-w-0'>
-      <div className='font-display text-ink text-xl font-medium tabular-nums'>{value}</div>
-      <div className='text-muted-ink mt-0.5 truncate text-[13px]'>{label}</div>
-    </div>
-  )
-}
-
-/** Now / Next focus card (rail). */
-function FocusCard({ label, g, lang, accent }: { label: string; g: Group; lang: string; accent?: boolean }) {
-  return (
-    <div className={`bg-card rounded-xl border p-4 ${accent ? 'border-state-closed/30' : 'border-hairline'}`}>
-      <div className='text-muted-ink mb-1.5 text-[11px] font-semibold tracking-wide uppercase'>{label}</div>
-      <h4 className='text-ink font-medium'>{g.title}</h4>
-      {g.description && <p className='text-muted-ink mt-1 line-clamp-2 text-[13px] leading-snug'>{g.description}</p>}
-      <div className='mt-3 flex items-center gap-2'>
-        <div className='bg-secondary h-1.5 flex-1 overflow-hidden rounded-xs'>
-          <div className='bg-state-closed h-full rounded-xs' style={{ width: `${String(g.pct)}%` }} />
+    <div className={cn('w-56 rounded-lg border p-3', accent ? 'border-success/30 bg-success/5' : 'border-hairline')}>
+      <div className='text-muted-ink text-[10px] font-semibold tracking-wide uppercase'>{label}</div>
+      <div className='text-ink mt-0.5 truncate text-sm font-medium'>{g.title}</div>
+      <div className='mt-2 flex items-center gap-2'>
+        <div className='bg-secondary h-1 flex-1 overflow-hidden rounded-xs'>
+          <div className='bg-success h-full rounded-xs' style={{ width: `${String(g.pct)}%` }} />
         </div>
-        <span className='text-ink shrink-0 text-xs font-semibold tabular-nums'>
+        <span className='text-ink shrink-0 text-[11px] font-semibold tabular-nums'>
           {g.closed}/{g.total}
         </span>
       </div>
-      {g.due && <p className='text-muted-ink mt-2 text-xs'>{fmtFull(g.due, lang)}</p>}
     </div>
   )
 }
 
 /** One milestone per row; click to expand its issues (#197). `bars` are the already-filtered issues. */
-function MilestoneRow({ g, bars, lang, forceOpen }: { g: Group; bars: Bar[]; lang: string; forceOpen: boolean }) {
+function MilestoneRow({ g, bars, lang, autoOpen }: { g: Group; bars: Bar[]; lang: string; autoOpen: boolean }) {
   const { t } = useTranslation()
-  const [open, setOpen] = useState(false)
+  // Tri-state: null = follow autoOpen (search); once toggled, the user's choice wins (so a row stays collapsible).
+  const [open, setOpen] = useState<boolean | null>(null)
   const st = statusOf(g)
   const expandable = g.bars.length > 0
-  const isOpen = expandable && (open || forceOpen)
+  const isOpen = expandable && (open ?? autoOpen)
 
   return (
     <article className='border-hairline bg-card rounded-xl border'>
@@ -103,7 +93,7 @@ function MilestoneRow({ g, bars, lang, forceOpen }: { g: Group; bars: Bar[]; lan
         type='button'
         aria-expanded={isOpen}
         disabled={!expandable}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen(!isOpen)}
         className={cn(
           'flex w-full items-center gap-3 rounded-xl p-4 text-left',
           expandable && 'hover:bg-secondary/40 cursor-pointer transition-colors',
@@ -117,7 +107,7 @@ function MilestoneRow({ g, bars, lang, forceOpen }: { g: Group; bars: Bar[]; lan
           {g.description && <p className='text-muted-ink mt-0.5 line-clamp-1 text-[13px]'>{g.description}</p>}
           {st === 'active' && (
             <div className='bg-secondary mt-2 h-1 max-w-xs overflow-hidden rounded-xs'>
-              <div className='bg-state-closed h-full rounded-xs' style={{ width: `${String(g.pct)}%` }} />
+              <div className='bg-success h-full rounded-xs' style={{ width: `${String(g.pct)}%` }} />
             </div>
           )}
         </div>
@@ -166,10 +156,10 @@ function MilestoneRow({ g, bars, lang, forceOpen }: { g: Group; bars: Bar[]; lan
 
 /**
  * Client-facing project Overview (#124/#190) — the primary, full-width view. Answers "where are we /
- * what's next" without reading the Gantt: a status hero, a Now/Next/About rail, and a single-column
- * milestone list (one per row, click to reveal its issues; filter by state + search, #197). Computed
- * from the VISIBLE (shared) roadmap data getRoadmap returns -> allowlist-scoped, leak-free. Colors
- * follow the Timeline / GitHub convention: closed/done purple, open/active green.
+ * what's next" without reading the Gantt: a status hero (progress + Now/Next), an About rail, and a
+ * single-column milestone list (one per row, click to reveal its issues; filter by state + search).
+ * Computed from VISIBLE (shared) roadmap data -> allowlist-scoped, leak-free. Colors: progress green,
+ * done/closed markers violet (GitHub convention, matches the Timeline).
  */
 export function RoadmapOverview({
   groups,
@@ -207,9 +197,10 @@ export function RoadmapOverview({
         ? 'bg-success/10 text-success'
         : 'bg-secondary text-muted-ink'
 
-  // Filtering: status + keyword over milestone titles and issue titles/numbers; matches auto-expand.
+  // Filtering: status + keyword over milestone titles and issue titles/numbers. Only a SEARCH auto-expands.
   const q = query.trim().toLowerCase()
-  const filtering = q !== '' || statusF !== 'all'
+  const searching = q !== ''
+  const filtering = searching || statusF !== 'all'
   const visibleBarsFor = (g: Group): Bar[] => {
     const titleMatch = q === '' || g.title.toLowerCase().includes(q)
     return g.bars.filter((b) => {
@@ -223,7 +214,7 @@ export function RoadmapOverview({
   return (
     <div className='min-h-0 flex-1 overflow-y-auto'>
       <div className='flex flex-col gap-6 pb-8'>
-        {/* A. Status hero — full-width band */}
+        {/* A. Status hero — progress + Now/Next, full-width band */}
         <section className='border-hairline bg-card flex flex-wrap items-center gap-x-10 gap-y-5 rounded-xl border p-6'>
           <div className='flex items-center gap-5'>
             <ProgressRing pct={stats.pct} />
@@ -232,30 +223,30 @@ export function RoadmapOverview({
                 {t(`ov.status.${statusKey}`)}
               </span>
               <p className='text-ink mt-2 text-lg font-medium'>{t('ov.summary', { closed: stats.closed, total: stats.total })}</p>
+              <p className='text-muted-ink mt-1 text-[13px]'>
+                {`${String(milestonesDone)}/${String(stats.milestones)} ${t('ov.milestones').toLowerCase()}`}
+                {nextDelivery ? ` · ${t('ov.nextLabel').toLowerCase()} ${fmtFull(nextDelivery, lang)}` : ''}
+              </p>
             </div>
           </div>
-          <div className='ml-auto flex items-center gap-10'>
-            <Stat label={t('ov.milestones')} value={`${String(milestonesDone)}/${String(stats.milestones)}`} />
-            {nextDelivery && <Stat label={t('ov.nextLabel')} value={fmtFull(nextDelivery, lang)} />}
-          </div>
+          {(current ?? next) && (
+            <div className='ml-auto flex flex-wrap gap-3'>
+              {current && <MiniFocus label={t('ov.now')} g={current} accent />}
+              {next && <MiniFocus label={t('ov.next')} g={next} />}
+            </div>
+          )}
         </section>
 
-        {/* B. Dashboard: milestones (main) + rail (now/next/about). Rail comes first on mobile. */}
+        {/* B. Milestones (main) + About rail. Rail comes first on mobile. */}
         <div className='grid gap-6 lg:grid-cols-3'>
-          {/* Rail */}
-          <aside className='flex flex-col gap-4 lg:order-2 lg:col-span-1'>
-            {current && <FocusCard label={t('ov.now')} g={current} lang={lang} accent />}
-            {next && <FocusCard label={t('ov.next')} g={next} lang={lang} />}
-            {description != null && description.trim() !== '' && (
-              <div className='border-hairline bg-card rounded-xl border p-4'>
-                <h3 className='text-muted-ink mb-1.5 text-xs font-semibold tracking-wide uppercase'>{t('roadmap.about')}</h3>
-                <p className='text-body text-sm leading-relaxed whitespace-pre-wrap'>{description}</p>
-              </div>
-            )}
-          </aside>
+          {description != null && description.trim() !== '' && (
+            <aside className='bg-secondary/40 border-hairline rounded-xl border p-5 lg:order-2 lg:col-span-1'>
+              <h3 className='text-muted-ink mb-2 text-xs font-semibold tracking-wide uppercase'>{t('roadmap.about')}</h3>
+              <p className='text-body text-sm leading-relaxed whitespace-pre-wrap'>{description}</p>
+            </aside>
+          )}
 
-          {/* Main: milestones list + filters */}
-          <section className='lg:order-1 lg:col-span-2'>
+          <section className={cn('lg:order-1', description != null && description.trim() !== '' ? 'lg:col-span-2' : 'lg:col-span-3')}>
             <div className='mb-3 flex flex-wrap items-center gap-3'>
               <h3 className='text-muted-ink text-xs font-semibold tracking-wide uppercase'>{t('ov.milestones')}</h3>
               <div className='ml-auto flex items-center gap-2'>
@@ -285,7 +276,7 @@ export function RoadmapOverview({
             {rows.length > 0 ? (
               <div className='flex flex-col gap-2'>
                 {rows.map(({ g, bars }) => (
-                  <MilestoneRow key={g.id} g={g} bars={bars} lang={lang} forceOpen={filtering} />
+                  <MilestoneRow key={g.id} g={g} bars={bars} lang={lang} autoOpen={searching} />
                 ))}
               </div>
             ) : (
