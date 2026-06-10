@@ -1,12 +1,12 @@
 import { useTranslation } from 'react-i18next'
-import { Check, Circle, Loader } from 'lucide-react'
+import { Circle, CircleCheck } from 'lucide-react'
 import { fmtFull } from '../lib/roadmap.dates'
 import { overallStats } from '../lib/roadmap.mappers'
 import type { Group } from '../types'
 import type { IssueRow } from '@/services/roadmap'
 
-/** Big completion ring for the status hero. */
-function ProgressRing({ pct, size = 88, stroke = 8 }: { pct: number; size?: number; stroke?: number }) {
+/** Completion ring. Purple arc = closed/done work (GitHub convention, matches the Timeline). */
+function ProgressRing({ pct, size = 84, stroke = 8 }: { pct: number; size?: number; stroke?: number }) {
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
   return (
@@ -18,7 +18,7 @@ function ProgressRing({ pct, size = 88, stroke = 8 }: { pct: number; size?: numb
           cy={size / 2}
           r={r}
           fill='none'
-          stroke='var(--color-success)'
+          stroke='var(--color-state-closed)'
           strokeWidth={stroke}
           strokeLinecap='round'
           strokeDasharray={c}
@@ -38,6 +38,13 @@ function statusOf(g: Group): MStatus {
   return 'upcoming'
 }
 
+// GitHub state colors (same as the Timeline): closed/done = purple, open/active = green.
+const STATUS_CHIP: Record<MStatus, string> = {
+  delivered: 'bg-state-closed/10 text-state-closed',
+  active: 'bg-success/10 text-success',
+  upcoming: 'bg-secondary text-muted-ink',
+}
+
 /** Earliest future due date among not-yet-complete milestones (module scope: keeps render pure). */
 function pickNextDelivery(groups: Group[]): Date | null {
   const now = Date.now()
@@ -46,22 +53,23 @@ function pickNextDelivery(groups: Group[]): Date | null {
   return dates[0] ?? null
 }
 
-const STATUS_ICON: Record<MStatus, typeof Check> = { delivered: Check, active: Loader, upcoming: Circle }
-const STATUS_CHIP: Record<MStatus, string> = {
-  delivered: 'bg-success/10 text-success',
-  active: 'bg-link/10 text-link',
-  upcoming: 'bg-secondary text-muted-ink',
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className='min-w-0'>
+      <div className='font-display text-ink text-xl font-medium tabular-nums'>{value}</div>
+      <div className='text-muted-ink mt-0.5 truncate text-[13px]'>{label}</div>
+    </div>
+  )
 }
 
 /** One milestone as a readable card (replaces reading the Gantt). */
 function MilestoneRow({ g, lang }: { g: Group; lang: string }) {
   const { t } = useTranslation()
   const st = statusOf(g)
-  const Icon = STATUS_ICON[st]
   return (
     <article className='border-hairline bg-card flex items-start gap-3 rounded-xl border p-4'>
       <span className={`mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg ${STATUS_CHIP[st]}`}>
-        <Icon size={14} />
+        {st === 'delivered' ? <CircleCheck size={15} /> : <Circle size={15} />}
       </span>
       <div className='min-w-0 flex-1'>
         <div className='flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5'>
@@ -74,7 +82,7 @@ function MilestoneRow({ g, lang }: { g: Group; lang: string }) {
         {g.description && <p className='text-muted-ink mt-0.5 line-clamp-2 text-[13px] leading-snug'>{g.description}</p>}
         {st === 'active' && (
           <div className='bg-secondary mt-2 h-1 overflow-hidden rounded-xs'>
-            <div className='h-full rounded-xs' style={{ width: `${String(g.pct)}%`, background: g.color }} />
+            <div className='bg-state-closed h-full rounded-xs' style={{ width: `${String(g.pct)}%` }} />
           </div>
         )}
       </div>
@@ -82,16 +90,16 @@ function MilestoneRow({ g, lang }: { g: Group; lang: string }) {
   )
 }
 
-/** Now / Next focus card. */
-function FocusCard({ label, g, lang, highlight }: { label: string; g: Group; lang: string; highlight?: boolean }) {
+/** Now / Next focus card (rail). */
+function FocusCard({ label, g, lang, accent }: { label: string; g: Group; lang: string; accent?: boolean }) {
   return (
-    <div className={`bg-card rounded-xl border p-5 ${highlight ? 'border-ink/25' : 'border-hairline'}`}>
+    <div className={`bg-card rounded-xl border p-4 ${accent ? 'border-state-closed/30' : 'border-hairline'}`}>
       <div className='text-muted-ink mb-1.5 text-[11px] font-semibold tracking-wide uppercase'>{label}</div>
       <h4 className='text-ink font-medium'>{g.title}</h4>
       {g.description && <p className='text-muted-ink mt-1 line-clamp-2 text-[13px] leading-snug'>{g.description}</p>}
       <div className='mt-3 flex items-center gap-2'>
         <div className='bg-secondary h-1.5 flex-1 overflow-hidden rounded-xs'>
-          <div className='h-full rounded-xs' style={{ width: `${String(g.pct)}%`, background: g.color }} />
+          <div className='bg-state-closed h-full rounded-xs' style={{ width: `${String(g.pct)}%` }} />
         </div>
         <span className='text-ink shrink-0 text-xs font-semibold tabular-nums'>
           {g.closed}/{g.total}
@@ -103,9 +111,10 @@ function FocusCard({ label, g, lang, highlight }: { label: string; g: Group; lan
 }
 
 /**
- * Client-facing project Overview (#124/#190) — the primary view. Answers "where are we / what's
- * next" without reading the Gantt. Everything is computed from the VISIBLE (shared) roadmap data
- * getRoadmap already returns under the caller's session, so it stays allowlist-scoped and leak-free.
+ * Client-facing project Overview (#124/#190) — the primary view, full-width dashboard. Answers
+ * "where are we / what's next" without reading the Gantt. Computed from the VISIBLE (shared) roadmap
+ * data getRoadmap returns under the caller's session, so it's allowlist-scoped and leak-free.
+ * Colors follow the Timeline / GitHub convention: closed/done purple, open/active green.
  */
 export function RoadmapOverview({
   groups,
@@ -136,57 +145,64 @@ export function RoadmapOverview({
     stats.pct === 100 && stats.total > 0 ? 'delivered' : stats.closed === 0 ? 'starting' : 'active'
   const statusChip =
     statusKey === 'delivered'
-      ? 'bg-success/10 text-success'
+      ? 'bg-state-closed/10 text-state-closed'
       : statusKey === 'active'
-        ? 'bg-link/10 text-link'
+        ? 'bg-success/10 text-success'
         : 'bg-secondary text-muted-ink'
 
   return (
     <div className='min-h-0 flex-1 overflow-y-auto'>
-      <div className='mx-auto flex w-full max-w-4xl flex-col gap-6 pb-8'>
-        {/* A. Status hero */}
-        <section className='border-hairline bg-card flex items-center gap-6 rounded-xl border p-6'>
-          <ProgressRing pct={stats.pct} />
-          <div className='min-w-0 flex-1'>
-            <span className={`inline-flex items-center rounded-sm px-2 py-0.5 text-[11px] font-semibold ${statusChip}`}>
-              {t(`ov.status.${statusKey}`)}
-            </span>
-            <p className='text-ink mt-2 text-lg font-medium'>
-              {t('ov.summary', { closed: stats.closed, total: stats.total, done: milestonesDone, milestones: stats.milestones })}
-            </p>
-            {nextDelivery && <p className='text-muted-ink mt-1 text-sm'>{t('ov.nextDelivery', { date: fmtFull(nextDelivery, lang) })}</p>}
+      <div className='flex flex-col gap-6 pb-8'>
+        {/* A. Status hero — full-width band */}
+        <section className='border-hairline bg-card flex flex-wrap items-center gap-x-10 gap-y-5 rounded-xl border p-6'>
+          <div className='flex items-center gap-5'>
+            <ProgressRing pct={stats.pct} />
+            <div className='min-w-0'>
+              <span className={`inline-flex items-center rounded-sm px-2 py-0.5 text-[11px] font-semibold ${statusChip}`}>
+                {t(`ov.status.${statusKey}`)}
+              </span>
+              <p className='text-ink mt-2 text-lg font-medium'>{t('ov.summary', { closed: stats.closed, total: stats.total })}</p>
+            </div>
+          </div>
+          <div className='ml-auto flex items-center gap-10'>
+            <Stat label={t('ov.milestones')} value={`${String(milestonesDone)}/${String(stats.milestones)}`} />
+            {nextDelivery && <Stat label={t('ov.nextLabel')} value={fmtFull(nextDelivery, lang)} />}
           </div>
         </section>
 
-        {/* B. About */}
-        {description != null && description.trim() !== '' && (
-          <section className='border-hairline bg-card rounded-xl border p-5'>
-            <h3 className='text-muted-ink mb-1.5 text-xs font-semibold tracking-wide uppercase'>{t('roadmap.about')}</h3>
-            <p className='text-body max-w-3xl text-sm leading-relaxed whitespace-pre-wrap'>{description}</p>
-          </section>
-        )}
-
-        {/* C. Now & Next */}
-        {current && (
-          <section className='grid gap-3 sm:grid-cols-2'>
-            <FocusCard label={t('ov.now')} g={current} lang={lang} highlight />
+        {/* B. Dashboard: milestones (main) + rail (now/next/about). Rail comes first on mobile. */}
+        <div className='grid gap-6 lg:grid-cols-3'>
+          {/* Rail */}
+          <aside className='flex flex-col gap-4 lg:order-2 lg:col-span-1'>
+            {current && <FocusCard label={t('ov.now')} g={current} lang={lang} accent />}
             {next && <FocusCard label={t('ov.next')} g={next} lang={lang} />}
-          </section>
-        )}
+            {description != null && description.trim() !== '' && (
+              <div className='border-hairline bg-card rounded-xl border p-4'>
+                <h3 className='text-muted-ink mb-1.5 text-xs font-semibold tracking-wide uppercase'>{t('roadmap.about')}</h3>
+                <p className='text-body text-sm leading-relaxed whitespace-pre-wrap'>{description}</p>
+              </div>
+            )}
+          </aside>
 
-        {/* D. Milestones */}
-        {ordered.length > 0 && (
-          <section>
+          {/* Main: milestones */}
+          <section className='lg:order-1 lg:col-span-2'>
             <h3 className='text-muted-ink mb-3 text-xs font-semibold tracking-wide uppercase'>{t('ov.milestones')}</h3>
-            <div className='flex flex-col gap-2'>
-              {ordered.map((g) => (
-                <MilestoneRow key={g.id} g={g} lang={lang} />
-              ))}
-            </div>
+            {ordered.length > 0 ? (
+              <div className='grid gap-3 xl:grid-cols-2'>
+                {ordered.map((g) => (
+                  <MilestoneRow key={g.id} g={g} lang={lang} />
+                ))}
+              </div>
+            ) : (
+              <p className='border-hairline text-muted-ink rounded-xl border border-dashed p-8 text-center text-sm'>
+                {t('ov.noMilestones')}
+              </p>
+            )}
+            {unscheduled.length > 0 && (
+              <p className='text-muted-ink mt-3 text-xs'>{`${String(unscheduled.length)} ${t('roadmap.unscheduled')}`}</p>
+            )}
           </section>
-        )}
-
-        {unscheduled.length > 0 && <p className='text-muted-ink text-xs'>{`${String(unscheduled.length)} ${t('roadmap.unscheduled')}`}</p>}
+        </div>
       </div>
     </div>
   )
