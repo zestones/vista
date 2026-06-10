@@ -240,7 +240,7 @@ export function RoadmapOverview({
         {/* B. Milestones (main) + About rail. Rail comes first on mobile. */}
         <div className='grid gap-6 lg:grid-cols-3'>
           {description != null && description.trim() !== '' && (
-            <aside className='bg-secondary/40 border-hairline rounded-xl border p-5 lg:order-2 lg:col-span-1'>
+            <aside className='bg-secondary/40 border-hairline self-start rounded-xl border p-5 lg:sticky lg:top-0 lg:order-2 lg:col-span-1'>
               <h3 className='text-muted-ink mb-2 text-xs font-semibold tracking-wide uppercase'>{t('roadmap.about')}</h3>
               <p className='text-body text-sm leading-relaxed whitespace-pre-wrap'>{description}</p>
             </aside>
