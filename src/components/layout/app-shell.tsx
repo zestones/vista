@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAutoAnimate } from '@formkit/auto-animate/react'
@@ -221,11 +221,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false)
   const [previewActive, setPreviewActive] = useState(false)
   const [commentTarget, setCommentTarget] = useState<CommentTarget | null>(null)
+  // Auto-collapse coordination (#219): track whether WE collapsed the sidebar for a comment, so we
+  // only restore our own collapse and never override a manual toggle.
+  const autoCollapsedRef = useRef(false)
+  const prevCommentOpenRef = useRef(false)
 
   const sidebar = useMemo(
     () => ({
       collapsed,
       toggle: () => {
+        autoCollapsedRef.current = false // a manual toggle relinquishes auto-ownership
         setCollapsed((c) => !c)
       },
     }),
@@ -252,6 +257,23 @@ export function AppShell({ children }: { children: ReactNode }) {
     () => ({ target: commentTarget, open: openComments, close: closeComments, navigateToIssue, registerNavigator }),
     [commentTarget, openComments, closeComments, navigateToIssue, registerNavigator],
   )
+
+  // Premium coexistence (#219): on a tighter screen, opening a comment reclaims the sidebar's width so
+  // the content isn't crushed; closing restores it — but only the collapse WE caused (manual toggles win).
+  useEffect(() => {
+    const open = commentTarget !== null
+    const was = prevCommentOpenRef.current
+    prevCommentOpenRef.current = open
+    if (open && !was && window.innerWidth < 1400) {
+      setCollapsed((c) => {
+        if (!c) autoCollapsedRef.current = true
+        return true
+      })
+    } else if (!open && was && autoCollapsedRef.current) {
+      autoCollapsedRef.current = false
+      setCollapsed(false)
+    }
+  }, [commentTarget])
 
   return (
     <SidebarContext value={sidebar}>
