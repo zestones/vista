@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Plus, Search } from 'lucide-react'
+import { FolderPlus, Search } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { NewProjectModal, useWorkspace } from '@/features/workspace'
 import type { ProjectSummary } from '@/services/projects'
 import { Button, Input } from '@/components/ui'
 import { Spinner } from '@/components/feedback'
+import { NotificationBell } from '@/features/notifications'
 import { MobileProjectCard } from '../ui'
 
 /** Mobile home (#221): a large-title greeting + avatar, search, and owned/shared project cards. */
@@ -18,7 +18,6 @@ export default function MobileHome() {
   const [q, setQ] = useState('')
 
   const firstName = (user?.name ?? '').split(' ')[0]
-  const initial = (user?.name ?? user?.email ?? '?').charAt(0).toUpperCase()
   const norm = q.trim().toLowerCase()
   const filter = (list: ProjectSummary[]) => (norm ? list.filter((s) => s.project.name.toLowerCase().includes(norm)) : list)
   const owned = filter(data?.owned ?? [])
@@ -40,13 +39,7 @@ export default function MobileHome() {
             <h1 className='font-display text-ink text-[26px] font-semibold tracking-[-0.02em]'>{t('m.nav.home')}</h1>
           )}
         </div>
-        <Link
-          to='/app/account'
-          aria-label={t('m.nav.account')}
-          className='bg-ink font-display grid size-10 shrink-0 place-items-center rounded-full text-sm font-semibold text-white'
-        >
-          {initial}
-        </Link>
+        <NotificationBell />
       </header>
 
       {isLoading ? (
@@ -100,7 +93,7 @@ export default function MobileHome() {
           setNewOpen(true)
         }}
       >
-        <Plus className='size-6' />
+        <FolderPlus className='size-6' />
       </Button>
       <NewProjectModal open={newOpen} onOpenChange={setNewOpen} />
     </>

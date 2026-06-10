@@ -8,7 +8,8 @@ import { BottomNav } from './bottom-nav'
 export function MobileShell({ children }: { children: ReactNode }) {
   return (
     <div className='bg-background text-body flex h-[100dvh] flex-col overflow-hidden'>
-      <div className='min-h-0 flex-1 overflow-y-auto'>{children}</div>
+      {/* The viewport for the sliding screen stack: screens are absolutely positioned and scroll themselves. */}
+      <div className='relative min-h-0 flex-1 overflow-hidden'>{children}</div>
       <BottomNav />
     </div>
   )

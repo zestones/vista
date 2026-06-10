@@ -7,7 +7,6 @@ import { JoinPage } from '@/pages/join/join-page'
 import { GithubCallbackPage } from '@/pages/github/github-callback-page'
 import { AdminPage } from '@/pages/app/admin/admin-page'
 import { SubmissionsInboxPage } from '@/pages/app/submissions/submissions-inbox-page'
-import { RoadmapPage } from '@/pages/app/project/roadmap-page'
 import { SubmissionsPage } from '@/pages/app/project/submissions-page'
 import { SettingsPage } from '@/pages/app/settings/settings-page'
 import { MobileShellLayout } from './shell'
@@ -15,6 +14,8 @@ import { MobileShellLayout } from './shell'
 // Bespoke mobile screens are lazy so they ship as their own chunks, code-split from desktop (#220).
 const MobileHome = lazy(() => import('./screens/mobile-home'))
 const MobileAccount = lazy(() => import('./screens/mobile-account'))
+const MobileProject = lazy(() => import('./screens/mobile-project'))
+const MobileMilestone = lazy(() => import('./screens/mobile-milestone'))
 
 /**
  * Mobile route tree (#220). Built mobile screens render inside the MobileShell; every screen not yet
@@ -34,6 +35,8 @@ export const mobileRouteConfig: RouteObject[] = [
         children: [
           { path: '/app', element: <MobileHome /> },
           { path: '/app/account', element: <MobileAccount /> },
+          { path: '/app/projects/:id', element: <MobileProject /> },
+          { path: '/app/projects/:id/m/:num', element: <MobileMilestone /> },
         ],
       },
       {
@@ -42,7 +45,6 @@ export const mobileRouteConfig: RouteObject[] = [
         children: [
           { path: '/app/admin', element: <AdminPage /> },
           { path: '/app/submissions', element: <SubmissionsInboxPage /> },
-          { path: '/app/projects/:id', element: <RoadmapPage /> },
           { path: '/app/projects/:id/submissions', element: <SubmissionsPage /> },
           { path: '/app/projects/:id/settings', element: <SettingsPage /> },
         ],

@@ -8,6 +8,7 @@ export const mobile = {
   'm.useMobileSite': 'Mobile site',
   'm.home.hello': 'Hello,',
   'm.home.searchPh': 'Search projects',
+  'm.searchMs': 'Search milestones',
   'm.home.noResults': 'No projects match.',
   'm.home.empty': 'No projects yet.',
 }
