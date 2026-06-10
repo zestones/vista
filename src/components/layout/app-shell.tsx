@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAutoAnimate } from '@formkit/auto-animate/react'
-import { Globe, Inbox, LayoutGrid, LogOut, Menu, Plus, Shield } from 'lucide-react'
+import { Globe, Inbox, LayoutGrid, LogOut, Menu, Plus, Shield, Smartphone } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { SidebarContext } from '@/contexts/sidebar.context'
 import { PreviewContext } from '@/contexts/preview.context'
@@ -18,6 +18,7 @@ import { NotificationBell } from '@/features/notifications'
 import { VistaMark } from '@/components/brand'
 import { cn } from '@/lib/utils'
 import { env } from '@/config/env'
+import { getPlatformOverride, prefersMobile, setPlatformOverride } from '@/platform'
 
 function NavItem({
   to,
@@ -216,6 +217,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   // App-wide live membership (#122): mounted once here (SidebarContent renders twice) so a member
   // gets access live + a toast on approval, and the owner's pending badge / members tab self-update.
   useMembershipRealtime(user?.id ?? '')
+  const { t } = useTranslation()
+  // Offer a "use mobile site" revert only to someone on a phone who forced the desktop site (#220).
+  const showUseMobile = getPlatformOverride() === 'desktop' && prefersMobile()
   const [newOpen, setNewOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
@@ -301,17 +305,30 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <VistaMark size={20} />
                 <span className='font-display text-[17px] font-semibold'>Vista</span>
               </Link>
-              <Button
-                variant='outline'
-                size='sm'
-                aria-expanded={drawerOpen}
-                aria-label='Menu'
-                onClick={() => {
-                  setDrawerOpen((d) => !d)
-                }}
-              >
-                <Menu size={18} />
-              </Button>
+              <div className='flex items-center gap-2'>
+                {showUseMobile && (
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => {
+                      setPlatformOverride(null)
+                    }}
+                  >
+                    <Smartphone size={16} /> {t('m.useMobileSite')}
+                  </Button>
+                )}
+                <Button
+                  variant='outline'
+                  size='sm'
+                  aria-expanded={drawerOpen}
+                  aria-label='Menu'
+                  onClick={() => {
+                    setDrawerOpen((d) => !d)
+                  }}
+                >
+                  <Menu size={18} />
+                </Button>
+              </div>
             </div>
 
             {drawerOpen && (

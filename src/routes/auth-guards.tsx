@@ -19,7 +19,16 @@ export function RequireAuth() {
     return <Navigate to='/login' state={{ from: location }} replace />
   }
 
-  // Per-route boundary inside the shell: a page crash degrades only the content.
+  return <Outlet />
+}
+
+/**
+ * Desktop chrome as a layout route (#220): the AppShell (sidebar + comment panel + the sidebar/preview/
+ * comment-panel providers) wraps the page, with a per-route ErrorBoundary + page transition inside.
+ * Split out of RequireAuth so the mobile route tree can pair the same auth gate with its own shell.
+ */
+export function DesktopShellLayout() {
+  const location = useLocation()
   return (
     <AppShell>
       <ErrorBoundary variant='inline' resetKeys={[location.pathname]}>
