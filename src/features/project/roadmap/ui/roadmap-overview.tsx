@@ -103,10 +103,10 @@ function RecentlyDelivered({ groups, lang }: { groups: Group[]; lang: string }) 
     else months.push({ label, bars: [b] })
   }
   return (
-    <div className='border-hairline bg-card rounded-xl border p-4'>
-      <h3 className='text-muted-ink mb-2 text-xs font-semibold tracking-wide uppercase'>{t('ov.recent')}</h3>
-      {/* Bounded + internally scrollable so a long feed never overflows the (sticky) rail (#216). */}
-      <div className='flex max-h-80 flex-col gap-3 overflow-y-auto pr-1'>
+    <div className='border-hairline bg-card flex min-h-0 flex-1 flex-col rounded-xl border p-4'>
+      <h3 className='text-muted-ink mb-2 shrink-0 text-xs font-semibold tracking-wide uppercase'>{t('ov.recent')}</h3>
+      {/* Fills the remaining rail height; scrolls internally only when it would overflow (#216/#218). */}
+      <div className='flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1'>
         {months.map((m) => (
           <div key={m.label}>
             <div className='text-muted-ink mb-1 text-[11px] font-medium capitalize'>{m.label}</div>
@@ -402,9 +402,9 @@ export function RoadmapOverview({
         {/* B. Milestones (main) + rail (About + recently delivered). Rail comes first on mobile. */}
         <div className='grid gap-6 lg:grid-cols-3'>
           {hasRail && (
-            <aside className='flex flex-col gap-4 self-start lg:order-2 lg:col-span-1 lg:sticky lg:top-0'>
+            <aside className='flex flex-col gap-4 self-start lg:sticky lg:top-0 lg:order-2 lg:col-span-1 lg:max-h-[calc(100dvh-9rem)]'>
               {hasDesc && (
-                <div className='bg-secondary/40 border-hairline rounded-xl border p-5'>
+                <div className='bg-secondary/40 border-hairline shrink-0 rounded-xl border p-5'>
                   <h3 className='text-muted-ink mb-2 text-xs font-semibold tracking-wide uppercase'>{t('roadmap.about')}</h3>
                   <p className='text-body text-sm leading-relaxed whitespace-pre-wrap'>{description}</p>
                 </div>
