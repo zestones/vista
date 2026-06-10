@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AnimatePresence, motion } from 'motion/react'
 import { ChevronDown, Circle, CircleCheck, MessageSquare, Pencil, Search } from 'lucide-react'
@@ -63,12 +63,7 @@ function pickNextDelivery(groups: Group[]): Date | null {
 /** Compact Now / Next chip living in the hero band. Full-width when the content is tight (#219). */
 function MiniFocus({ label, g, accent }: { label: string; g: Group; accent?: boolean }) {
   return (
-    <div
-      className={cn(
-        'w-full rounded-lg border p-3 @min-[30rem]/content:w-56',
-        accent ? 'border-success/30 bg-success/5' : 'border-hairline',
-      )}
-    >
+    <div className={cn('w-56 max-w-full rounded-lg border p-3', accent ? 'border-success/30 bg-success/5' : 'border-hairline')}>
       <div className='text-muted-ink text-[10px] font-semibold tracking-wide uppercase'>{label}</div>
       <div className='text-ink mt-0.5 truncate text-sm font-medium'>{g.title}</div>
       <div className='mt-2 flex items-center gap-2'>
@@ -338,6 +333,19 @@ export function RoadmapOverview({
   const stats = overallStats(groups)
   const [query, setQuery] = useState('')
   const [statusF, setStatusF] = useState<StatusFilter>('all')
+  // Reflow to the CONTENT width (shrinks when the comment panel opens/sidebar collapses), measured
+  // directly (#219) — robust and avoids container-type trapping the Gantt's fullscreen overlay.
+  const rootRef = useRef<HTMLDivElement>(null)
+  const [wide, setWide] = useState(true)
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el) return
+    const ro = new ResizeObserver((entries) => {
+      for (const e of entries) setWide(e.contentRect.width >= 720)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   // due asc (nulls last), then milestone number.
   const ordered = [...groups].sort((a, b) => {
@@ -377,15 +385,75 @@ export function RoadmapOverview({
   const hasDesc = description != null && description.trim() !== ''
   const hasDelivered = groups.some((g) => g.bars.some((b) => b.state === 'closed'))
   const hasRail = hasDesc || hasDelivered
-  const railItems = (hasDesc ? 1 : 0) + (hasDelivered ? 1 : 0) // right-column rows when wide
+
+  const aboutCard = hasDesc ? (
+    <aside className='bg-secondary/40 border-hairline rounded-xl border p-5'>
+      <h3 className='text-muted-ink mb-2 text-xs font-semibold tracking-wide uppercase'>{t('roadmap.about')}</h3>
+      <p className='text-body text-sm leading-relaxed whitespace-pre-wrap'>{description}</p>
+    </aside>
+  ) : null
+
+  const recentCard = hasDelivered ? <RecentlyDelivered groups={groups} lang={lang} /> : null
+
+  const milestonesSection = (
+    <section className='min-w-0'>
+      <div className='mb-3 flex flex-wrap items-center gap-3'>
+        <h3 className='text-muted-ink text-xs font-semibold tracking-wide uppercase'>{t('ov.milestones')}</h3>
+        <div className='ml-auto flex items-center gap-2'>
+          <div className='relative'>
+            <Search size={14} className='text-muted-ink pointer-events-none absolute top-1/2 left-2 -translate-y-1/2' />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t('roadmap.search')}
+              className='h-8 w-44 pl-7 sm:w-56'
+            />
+          </div>
+          <Segmented<StatusFilter>
+            size='sm'
+            aria-label={t('roadmap.all')}
+            value={statusF}
+            onValueChange={setStatusF}
+            options={[
+              { value: 'all', label: t('roadmap.all') },
+              { value: 'open', label: t('roadmap.open') },
+              { value: 'closed', label: t('roadmap.closed') },
+            ]}
+          />
+        </div>
+      </div>
+
+      {rows.length > 0 ? (
+        <div className='flex flex-col gap-2'>
+          {rows.map(({ g, bars }) => (
+            <MilestoneRow
+              key={g.id}
+              g={g}
+              bars={bars}
+              lang={lang}
+              autoOpen={searching}
+              onIssueClick={canComment ? onIssueClick : undefined}
+              editable={editable}
+              onSaveSummary={onSaveSummary}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className='border-hairline text-muted-ink rounded-xl border border-dashed p-8 text-center text-sm'>
+          {groups.length === 0 ? t('ov.noMilestones') : t('roadmap.noResults')}
+        </p>
+      )}
+
+      {unscheduled.length > 0 && (
+        <p className='text-muted-ink mt-3 text-xs'>{`${String(unscheduled.length)} ${t('roadmap.unscheduled')}`}</p>
+      )}
+    </section>
+  )
 
   return (
-    // Container-driven layout (#219): children reflow to the CONTENT width (which shrinks when the
-    // comment panel opens / sidebar collapses), not the viewport. Scoped here (no fixed descendants)
-    // rather than on <main>, where container-type would trap the Gantt's fullscreen overlay.
-    <div className='@container/content min-h-0 flex-1 overflow-y-auto'>
+    <div ref={rootRef} className='min-h-0 min-w-0 flex-1 overflow-y-auto'>
       <div className='flex flex-col gap-6 pb-8'>
-        {/* A. Status hero — progress + Now/Next, full-width band */}
+        {/* A. Status hero — progress + Now/Next, full-width band (flex-wrap adapts on its own). */}
         <section className='border-hairline bg-card flex flex-wrap items-center gap-x-10 gap-y-5 rounded-xl border p-6'>
           <div className='flex items-center gap-5'>
             <ProgressRing pct={stats.pct} />
@@ -408,88 +476,23 @@ export function RoadmapOverview({
           )}
         </section>
 
-        {/* B. Three bricks that reflow to CONTENT width (#219). Wide: milestones (left, spanning) with
-            About + Recently in a right column. Tight (1-col): About ON TOP, then milestones, then the
-            Recently feed at the bottom -- context first, never a crushed side column. */}
-        <div className={cn('grid gap-6', hasRail && '@min-[44rem]/content:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]')}>
-          {hasDesc && (
-            <aside className='bg-secondary/40 border-hairline rounded-xl border p-5 @min-[44rem]/content:col-start-2 @min-[44rem]/content:row-start-1'>
-              <h3 className='text-muted-ink mb-2 text-xs font-semibold tracking-wide uppercase'>{t('roadmap.about')}</h3>
-              <p className='text-body text-sm leading-relaxed whitespace-pre-wrap'>{description}</p>
-            </aside>
-          )}
-
-          {/* Milestones (left column, spans the right-column rows when wide). */}
-          <section
-            className={cn(
-              'min-w-0',
-              hasRail && '@min-[44rem]/content:col-start-1 @min-[44rem]/content:row-start-1',
-              railItems === 2 && '@min-[44rem]/content:row-span-2',
-            )}
-          >
-            <div className='mb-3 flex flex-wrap items-center gap-3'>
-              <h3 className='text-muted-ink text-xs font-semibold tracking-wide uppercase'>{t('ov.milestones')}</h3>
-              <div className='ml-auto flex items-center gap-2'>
-                <div className='relative'>
-                  <Search size={14} className='text-muted-ink pointer-events-none absolute top-1/2 left-2 -translate-y-1/2' />
-                  <Input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder={t('roadmap.search')}
-                    className='h-8 w-44 pl-7 @min-[30rem]/content:w-56'
-                  />
-                </div>
-                <Segmented<StatusFilter>
-                  size='sm'
-                  aria-label={t('roadmap.all')}
-                  value={statusF}
-                  onValueChange={setStatusF}
-                  options={[
-                    { value: 'all', label: t('roadmap.all') },
-                    { value: 'open', label: t('roadmap.open') },
-                    { value: 'closed', label: t('roadmap.closed') },
-                  ]}
-                />
-              </div>
+        {/* B. Reflow (#219): wide -> milestones (left) + About/Recently rail (right). Tight -> stacked,
+            About ON TOP (context first), milestones, then the Recently feed. Measured, not viewport. */}
+        {wide && hasRail ? (
+          <div className='grid grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] items-start gap-6'>
+            {milestonesSection}
+            <div className='flex min-w-0 flex-col gap-4'>
+              {aboutCard}
+              {recentCard}
             </div>
-
-            {rows.length > 0 ? (
-              <div className='flex flex-col gap-2'>
-                {rows.map(({ g, bars }) => (
-                  <MilestoneRow
-                    key={g.id}
-                    g={g}
-                    bars={bars}
-                    lang={lang}
-                    autoOpen={searching}
-                    onIssueClick={canComment ? onIssueClick : undefined}
-                    editable={editable}
-                    onSaveSummary={onSaveSummary}
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className='border-hairline text-muted-ink rounded-xl border border-dashed p-8 text-center text-sm'>
-                {groups.length === 0 ? t('ov.noMilestones') : t('roadmap.noResults')}
-              </p>
-            )}
-
-            {unscheduled.length > 0 && (
-              <p className='text-muted-ink mt-3 text-xs'>{`${String(unscheduled.length)} ${t('roadmap.unscheduled')}`}</p>
-            )}
-          </section>
-
-          {hasDelivered && (
-            <div
-              className={cn(
-                '@min-[44rem]/content:col-start-2',
-                hasDesc ? '@min-[44rem]/content:row-start-2' : '@min-[44rem]/content:row-start-1',
-              )}
-            >
-              <RecentlyDelivered groups={groups} lang={lang} />
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className='flex flex-col gap-6'>
+            {aboutCard}
+            {milestonesSection}
+            {recentCard}
+          </div>
+        )}
       </div>
     </div>
   )
