@@ -15,7 +15,7 @@ import { ScreenHeader, Sheet } from '../shell'
 import { MobileMilestoneCard } from '../ui'
 
 const MyRequests = lazy(() => import('@/features/project/submission/ui/my-requests').then((m) => ({ default: m.MyRequests })))
-const RequestModal = lazy(() => import('@/features/project/submission/ui/request-modal').then((m) => ({ default: m.RequestModal })))
+const MobileComposer = lazy(() => import('../ui/mobile-composer').then((m) => ({ default: m.MobileComposer })))
 
 type Tab = 'overview' | 'requests'
 type Filter = 'all' | 'open' | 'closed'
@@ -192,7 +192,7 @@ export default function MobileProject() {
 
       {requestOpen && (
         <Suspense fallback={null}>
-          <RequestModal open={requestOpen} onOpenChange={setRequestOpen} projectId={id} />
+          <MobileComposer open={requestOpen} onOpenChange={setRequestOpen} projectId={id} />
         </Suspense>
       )}
 

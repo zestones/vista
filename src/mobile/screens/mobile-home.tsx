@@ -1,13 +1,15 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FolderPlus, Search } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
-import { NewProjectModal, useWorkspace } from '@/features/workspace'
+import { useWorkspace } from '@/features/workspace'
 import type { ProjectSummary } from '@/services/projects'
 import { Button, Input } from '@/components/ui'
 import { Spinner } from '@/components/feedback'
 import { NotificationBell } from '@/features/notifications'
 import { MobileProjectCard } from '../ui'
+
+const MobileNewProject = lazy(() => import('../ui/mobile-new-project').then((m) => ({ default: m.MobileNewProject })))
 
 /** Mobile home (#221): a large-title greeting + avatar, search, and owned/shared project cards. */
 export default function MobileHome() {
@@ -95,7 +97,11 @@ export default function MobileHome() {
       >
         <FolderPlus className='size-6' />
       </Button>
-      <NewProjectModal open={newOpen} onOpenChange={setNewOpen} />
+      {newOpen && (
+        <Suspense fallback={null}>
+          <MobileNewProject open={newOpen} onOpenChange={setNewOpen} />
+        </Suspense>
+      )}
     </>
   )
 }
