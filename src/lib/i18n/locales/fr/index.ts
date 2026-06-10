@@ -4,6 +4,7 @@ import { auth } from './auth'
 import { comments } from './comments'
 import { common } from './common'
 import { landing } from './landing'
+import { mobile } from './mobile'
 import { moderation } from './moderation'
 import { notifications } from './notifications'
 import { project } from './project'
@@ -18,6 +19,7 @@ export const fr: Record<TranslationKey, string> = {
   ...comments,
   ...common,
   ...landing,
+  ...mobile,
   ...moderation,
   ...notifications,
   ...project,
