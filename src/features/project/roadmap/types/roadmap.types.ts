@@ -11,6 +11,7 @@ export interface Bar {
   url: string | null
   author: string | null
   avatarUrl: string | null
+  labels: string[]
 }
 
 /** A milestone group (one per milestone row — multi-repo safe). */

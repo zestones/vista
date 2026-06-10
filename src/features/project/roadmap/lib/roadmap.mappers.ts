@@ -57,6 +57,7 @@ export function buildGanttData(data: RoadmapData): RoadmapView {
         url: issue.html_url,
         author: issue.author_login,
         avatarUrl: issue.author_avatar_url,
+        labels: Array.isArray(issue.labels) ? issue.labels.filter((l): l is string => typeof l === 'string') : [],
       }
     })
 

@@ -78,6 +78,14 @@ function MiniFocus({ label, g, accent }: { label: string; g: Group; accent?: boo
   )
 }
 
+/** Stable pastel color per label name (we only store names, not GitHub colors) so each label reads
+ * consistently (#214). Hash -> hue; pastel background + darker text. */
+function labelColor(name: string): { background: string; color: string } {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360
+  return { background: `hsl(${String(h)} 65% 93%)`, color: `hsl(${String(h)} 45% 32%)` }
+}
+
 /** "What did I get" feed (#191): closed (delivered) shared issues, newest first, grouped by month. */
 function RecentlyDelivered({ groups, lang }: { groups: Group[]; lang: string }) {
   const { t } = useTranslation()
@@ -105,7 +113,18 @@ function RecentlyDelivered({ groups, lang }: { groups: Group[]; lang: string }) 
               {m.bars.map((b) => (
                 <li key={b.id} className='flex items-start gap-2 text-[13px]'>
                   <CircleCheck size={13} className='text-state-closed mt-0.5 shrink-0' />
-                  <span className='text-body min-w-0 truncate'>{b.title}</span>
+                  <div className='min-w-0 flex-1'>
+                    <div className='text-body truncate'>{b.title}</div>
+                    {b.labels.length > 0 && (
+                      <div className='mt-1 flex flex-wrap gap-1'>
+                        {b.labels.slice(0, 3).map((l) => (
+                          <span key={l} className='rounded-sm px-1.5 py-0.5 text-[10px] font-medium' style={labelColor(l)}>
+                            {l}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
@@ -208,7 +227,8 @@ function MilestoneRow({
                 aria-label={t('ov.editSummary')}
                 onClick={(e) => {
                   e.stopPropagation()
-                  setDraft(g.clientSummary ?? '')
+                  // Start from the existing summary, else the milestone's GitHub description (#214).
+                  setDraft(g.clientSummary ?? g.description ?? '')
                   setEditing(true)
                 }}
                 className='text-muted-ink hover:text-ink shrink-0 cursor-pointer'
