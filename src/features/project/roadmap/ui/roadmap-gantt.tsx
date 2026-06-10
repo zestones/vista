@@ -14,6 +14,7 @@ import {
   LocateFixed,
   Minus,
   Plus,
+  Scan,
   Search,
   TriangleAlert,
   X,
@@ -33,7 +34,9 @@ const MONTH_H = 26
 const SUB_H = 22
 const HEADER_H = MONTH_H + SUB_H
 const MAX_DAY_W = 64
-const ZOOM = { month: 7, week: 16, day: 34 } as const
+const ZOOM = { year: 2, quarter: 5, month: 7, week: 16, day: 34 } as const
+// Coarse -> fine. Used by the zoom buttons + Ctrl/Cmd-wheel.
+const ZORDER = ['year', 'quarter', 'month', 'week', 'day'] as const
 const TODAY = 'var(--sig-coral)'
 
 type Zoom = keyof typeof ZOOM
@@ -62,6 +65,7 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
   const lang = i18n.language
   const [filter, setFilter] = useState<Filter>('all')
   const [zoom, setZoom] = useState<Zoom>('week')
+  const [fit, setFit] = useState(false)
   const [msSort, setMsSort] = useState<MilestoneSort>('default')
   const [issueSort, setIssueSort] = useState<IssueSort>('chrono')
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set(groups.map((g) => g.id)))
@@ -161,8 +165,12 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
   const labelW = viewW > 0 && viewW < 560 ? 176 : LABEL_W
   const avail = Math.max(viewW - labelW, 0)
   const fillW = avail > 0 ? Math.floor(avail / Math.max(totalDays, 1)) : 0
-  const dayW = Math.min(MAX_DAY_W, Math.max(ZOOM[zoom], fillW))
-  const subMode = dayW >= 24 ? 'day' : 'week'
+  // Fit (#204): scale so the whole range exactly fills the viewport (px/day = avail/totalDays), no floor.
+  const fitW = avail > 0 ? avail / Math.max(totalDays, 1) : 0
+  const dayW = fit ? Math.max(fitW, 0.5) : Math.min(MAX_DAY_W, Math.max(ZOOM[zoom], fillW))
+  // Adaptive axis: top row months->years, sub row days->weeks->months->quarters as we zoom out.
+  const subMode: 'day' | 'week' | 'month' | 'quarter' = dayW >= 24 ? 'day' : dayW >= 7 ? 'week' : dayW >= 3 ? 'month' : 'quarter'
+  const topMode: 'month' | 'year' = subMode === 'day' || subMode === 'week' ? 'month' : 'year'
   const chartW = Math.max(totalDays * dayW, avail)
 
   // Ctrl/Cmd + wheel → zoom, anchored on the cursor.
@@ -170,21 +178,21 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
     wheelRef.current = (e: WheelEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return
       e.preventDefault()
-      const order: Zoom[] = ['month', 'week', 'day']
-      const idx = order.indexOf(zoom)
-      const nextIdx = e.deltaY < 0 ? Math.min(idx + 1, 2) : Math.max(idx - 1, 0)
-      if (nextIdx === idx) return
+      const idx = ZORDER.indexOf(zoom)
+      const nextIdx = e.deltaY < 0 ? Math.min(idx + 1, ZORDER.length - 1) : Math.max(idx - 1, 0)
+      if (nextIdx === idx && !fit) return
       const s = scrollerRef.current
       if (!s) return
       const localX = Math.max(e.clientX - s.getBoundingClientRect().left - labelW, 0)
       const dayAtCursor = (s.scrollLeft + localX) / dayW
-      const newDayW = Math.min(MAX_DAY_W, Math.max(ZOOM[order[nextIdx]], fillW))
-      setZoom(order[nextIdx])
+      const newDayW = Math.min(MAX_DAY_W, Math.max(ZOOM[ZORDER[nextIdx]], fillW))
+      setFit(false)
+      setZoom(ZORDER[nextIdx])
       requestAnimationFrame(() => {
         if (scrollerRef.current) scrollerRef.current.scrollLeft = Math.max(0, dayAtCursor * newDayW - localX)
       })
     }
-  }, [zoom, dayW, fillW, labelW])
+  }, [zoom, fit, dayW, fillW, labelW])
 
   const months = useMemo(() => {
     const out: { label: string; off: number }[] = []
@@ -209,6 +217,37 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
     }
     return out
   }, [tStart, tEnd, lang])
+
+  // Coarse-zoom ticks (#204): years for the top row, quarters for the sub row.
+  const years = useMemo(() => {
+    const out: { off: number; label: string }[] = []
+    const d = new Date(tStart)
+    d.setMonth(0, 1)
+    while (d <= tEnd) {
+      out.push({ off: Math.max(daysBetween(tStart, d), 0), label: String(d.getFullYear()) })
+      d.setFullYear(d.getFullYear() + 1)
+    }
+    return out
+  }, [tStart, tEnd])
+
+  const quarters = useMemo(() => {
+    const out: { off: number; label: string }[] = []
+    const d = new Date(tStart)
+    d.setDate(1)
+    d.setMonth(Math.floor(d.getMonth() / 3) * 3)
+    while (d <= tEnd) {
+      const off = daysBetween(tStart, d)
+      if (off >= 0) out.push({ off, label: `T${String(Math.floor(d.getMonth() / 3) + 1)}` })
+      d.setMonth(d.getMonth() + 3)
+    }
+    return out
+  }, [tStart, tEnd])
+
+  // Which ticks the adaptive axis draws at the current scale.
+  const topTicks = topMode === 'year' ? years : months
+  const subTicks = subMode === 'week' ? weeks : subMode === 'month' ? months : subMode === 'quarter' ? quarters : []
+  const gridTicks = subMode === 'day' ? weeks : subTicks
+  const showBands = subMode !== 'day'
 
   const days = useMemo(() => {
     const out: { off: number; dom: number; dow: number }[] = []
@@ -271,10 +310,23 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
     })
   const toggleAll = () => setCollapsed(allCollapsed ? new Set() : new Set(filtered.map((g) => g.id)))
 
-  const ZORDER: Zoom[] = ['month', 'week', 'day']
-  const zoomIn = () => setZoom(ZORDER[Math.min(ZORDER.indexOf(zoom) + 1, 2)])
-  const zoomOut = () => setZoom(ZORDER[Math.max(ZORDER.indexOf(zoom) - 1, 0)])
-  const zoomLabel = { month: t('roadmap.zoomMonth'), week: t('roadmap.zoomWeek'), day: t('roadmap.zoomDay') }[zoom]
+  const zoomIn = () => {
+    setFit(false)
+    setZoom(ZORDER[Math.min(ZORDER.indexOf(zoom) + 1, ZORDER.length - 1)])
+  }
+  const zoomOut = () => {
+    setFit(false)
+    setZoom(ZORDER[Math.max(ZORDER.indexOf(zoom) - 1, 0)])
+  }
+  const zoomLabel = fit
+    ? t('roadmap.zoomFit')
+    : {
+        year: t('roadmap.zoomYear'),
+        quarter: t('roadmap.zoomQuarter'),
+        month: t('roadmap.zoomMonth'),
+        week: t('roadmap.zoomWeek'),
+        day: t('roadmap.zoomDay'),
+      }[zoom]
   const ctrlBtn: CSSProperties = {
     border: 'none',
     background: 'transparent',
@@ -808,9 +860,9 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
                         borderBottom: '1px solid var(--hairline)',
                       }}
                     >
-                      {months.map((m, i) => (
+                      {topTicks.map((m, i) => (
                         <div
-                          key={m.label}
+                          key={`${m.label}-${String(m.off)}`}
                           style={{
                             position: 'absolute',
                             left: m.off * dayW,
@@ -860,9 +912,9 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
                               </div>
                             )
                           })
-                        : weeks.map((w) => (
+                        : subTicks.map((w) => (
                             <div
-                              key={w.off}
+                              key={`${w.label}-${String(w.off)}`}
                               style={{
                                 position: 'absolute',
                                 left: w.off * dayW,
@@ -903,7 +955,26 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
                           />
                         ))}
 
-                    {weeks.map((w) => (
+                    {/* Alternating month bands (#204) for scannability at coarse zoom. */}
+                    {showBands &&
+                      months.map((m, i) =>
+                        i % 2 === 0 ? null : (
+                          <div
+                            key={`band-${String(m.off)}`}
+                            style={{
+                              position: 'absolute',
+                              left: m.off * dayW,
+                              top: 0,
+                              bottom: 0,
+                              width: ((months[i + 1]?.off ?? totalDays) - m.off) * dayW,
+                              background: 'var(--surface-soft)',
+                              opacity: 0.5,
+                            }}
+                          />
+                        ),
+                      )}
+
+                    {gridTicks.map((w) => (
                       <div
                         key={`g-${String(w.off)}`}
                         style={{
@@ -919,9 +990,23 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
                     ))}
 
                     {todayInRange && (
-                      <div
-                        style={{ position: 'absolute', left: todayOff * dayW, top: 0, bottom: 0, width: 2, background: TODAY, zIndex: 8 }}
-                      />
+                      <>
+                        <div
+                          style={{ position: 'absolute', left: todayOff * dayW, top: 0, bottom: 0, width: 2, background: TODAY, zIndex: 8 }}
+                        />
+                        <div
+                          style={{
+                            position: 'absolute',
+                            left: todayOff * dayW - 3,
+                            top: 0,
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            background: TODAY,
+                            zIndex: 9,
+                          }}
+                        />
+                      </>
                     )}
 
                     {vrows.map((row) => {
@@ -1124,12 +1209,23 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
               >
                 <LocateFixed size={15} />
               </button>
+              <button
+                title={t('roadmap.zoomFit')}
+                onClick={() => setFit(true)}
+                style={{ ...ctrlBtn, color: fit ? 'var(--link)' : 'var(--ink)' }}
+              >
+                <Scan size={15} />
+              </button>
               <span style={{ width: 1, height: 18, background: 'var(--hairline)', margin: '0 3px' }} />
               <button
                 title='Zoom -'
                 onClick={zoomOut}
-                disabled={zoom === 'month'}
-                style={{ ...ctrlBtn, opacity: zoom === 'month' ? 0.4 : 1, cursor: zoom === 'month' ? 'not-allowed' : 'pointer' }}
+                disabled={!fit && zoom === 'year'}
+                style={{
+                  ...ctrlBtn,
+                  opacity: !fit && zoom === 'year' ? 0.4 : 1,
+                  cursor: !fit && zoom === 'year' ? 'not-allowed' : 'pointer',
+                }}
               >
                 <Minus size={15} />
               </button>
@@ -1137,8 +1233,12 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
               <button
                 title='Zoom +'
                 onClick={zoomIn}
-                disabled={zoom === 'day'}
-                style={{ ...ctrlBtn, opacity: zoom === 'day' ? 0.4 : 1, cursor: zoom === 'day' ? 'not-allowed' : 'pointer' }}
+                disabled={!fit && zoom === 'day'}
+                style={{
+                  ...ctrlBtn,
+                  opacity: !fit && zoom === 'day' ? 0.4 : 1,
+                  cursor: !fit && zoom === 'day' ? 'not-allowed' : 'pointer',
+                }}
               >
                 <Plus size={15} />
               </button>
