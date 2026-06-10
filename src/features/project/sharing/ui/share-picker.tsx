@@ -1,10 +1,11 @@
 import type { CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Info } from 'lucide-react'
+import { CheckCheck, Info } from 'lucide-react'
 import { filterShared } from '@/services/roadmap'
 import { milestoneColor, useRoadmapData } from '@/features/project/roadmap'
 import { Button, Switch } from '@/components/ui'
 import { Spinner } from '@/components/feedback'
+import { cn } from '@/lib/utils'
 import { useSetShared } from '../hooks/use-set-shared'
 
 const INK = 'var(--color-ink)'
@@ -63,12 +64,15 @@ export function SharePicker({ projectId }: { projectId: string }) {
         )}
       </section>
 
-      <div className='grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]'>
+      {/* Preview stays on the right but narrow (280px) so the curation -- the milestone NAMES, the
+          primary info -- keeps the main space. minmax(0,1fr) lets long titles truncate (no overflow). */}
+      <div className='grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px]'>
         {/* Curation */}
-        <div className='border-hairline bg-card overflow-hidden rounded-xl border'>
+        <div className='border-hairline bg-card min-w-0 overflow-hidden rounded-xl border'>
           {groups.map(({ milestone, issues }) => {
             const color = colorById.get(milestone.id) ?? INK
             const allShared = milestone.shared && issues.every((i) => i.shared)
+            const wholeLabel = allShared ? t('share.unshareWhole') : t('share.shareWhole')
             return (
               <div key={milestone.id} className='border-hairline border-b p-4 last:border-b-0'>
                 <div className='flex items-center gap-3'>
@@ -82,15 +86,24 @@ export function SharePicker({ projectId }: { projectId: string }) {
                     }}
                   />
                   <span className='size-2.5 shrink-0 rounded-[3px]' style={{ background: color }} />
-                  <span className='text-ink flex-1 truncate font-medium'>{milestone.title}</span>
+                  <span className='text-ink min-w-0 flex-1 truncate font-medium'>{milestone.title}</span>
+                  {/* Cascade share/unshare (milestone + all its issues) -- icon-only to give the name room. */}
                   <Button
-                    variant={allShared ? 'secondary' : 'outline'}
-                    size='sm'
+                    variant='outline'
+                    size='icon-sm'
+                    className={cn(
+                      'shrink-0 transition-colors',
+                      allShared
+                        ? 'border-success/50 bg-success/15 text-success hover:bg-success/20 hover:text-success'
+                        : 'text-muted-ink',
+                    )}
+                    title={wholeLabel}
+                    aria-label={wholeLabel}
                     onClick={() => {
                       setShared.mutate({ kind: 'milestone', id: milestone.id, shared: !allShared, cascade: true })
                     }}
                   >
-                    {allShared ? t('share.unshareWhole') : t('share.shareWhole')}
+                    <CheckCheck />
                   </Button>
                 </div>
                 {issues.length > 0 && (
@@ -149,7 +162,7 @@ export function SharePicker({ projectId }: { projectId: string }) {
               {preview.milestones.map((m) => (
                 <li key={m.id} className='border-hairline flex items-center gap-2.5 border-b p-3 text-sm last:border-b-0'>
                   <span className='size-2 shrink-0 rounded-[3px]' style={{ background: colorById.get(m.id) ?? INK }} />
-                  <span className='text-ink flex-1 truncate'>{m.title}</span>
+                  <span className='text-ink min-w-0 flex-1 truncate'>{m.title}</span>
                   <span className='text-muted-ink shrink-0 text-xs'>
                     {preview.issues.filter((i) => i.milestone_id === m.id).length} {t('share.sharedIssues')}
                   </span>
