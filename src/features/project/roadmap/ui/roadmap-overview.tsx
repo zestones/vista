@@ -92,7 +92,7 @@ function RecentlyDelivered({ groups, lang }: { groups: Group[]; lang: string }) 
   const items = groups
     .flatMap((g) => g.bars.filter((b) => b.state === 'closed').map((b) => ({ b })))
     .sort((a, z) => z.b.end.getTime() - a.b.end.getTime())
-    .slice(0, 12)
+    .slice(0, 30)
   if (items.length === 0) return null
   // Group consecutive items by month label (already date-sorted).
   const months: { label: string; bars: Bar[] }[] = []
@@ -105,26 +105,23 @@ function RecentlyDelivered({ groups, lang }: { groups: Group[]; lang: string }) 
   return (
     <div className='border-hairline bg-card rounded-xl border p-4'>
       <h3 className='text-muted-ink mb-2 text-xs font-semibold tracking-wide uppercase'>{t('ov.recent')}</h3>
-      <div className='flex flex-col gap-3'>
+      {/* Bounded + internally scrollable so a long feed never overflows the (sticky) rail (#216). */}
+      <div className='flex max-h-80 flex-col gap-3 overflow-y-auto pr-1'>
         {months.map((m) => (
           <div key={m.label}>
             <div className='text-muted-ink mb-1 text-[11px] font-medium capitalize'>{m.label}</div>
-            <ul className='flex flex-col gap-1'>
+            <ul className='flex flex-col gap-1.5'>
               {m.bars.map((b) => (
-                <li key={b.id} className='flex items-start gap-2 text-[13px]'>
-                  <CircleCheck size={13} className='text-state-closed mt-0.5 shrink-0' />
-                  <div className='min-w-0 flex-1'>
-                    <div className='text-body truncate'>{b.title}</div>
-                    {b.labels.length > 0 && (
-                      <div className='mt-1 flex flex-wrap gap-1'>
-                        {b.labels.slice(0, 3).map((l) => (
-                          <span key={l} className='rounded-sm px-1.5 py-0.5 text-[10px] font-medium' style={labelColor(l)}>
-                            {l}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                <li
+                  key={b.id}
+                  className='flex items-center gap-2 text-[13px]'
+                  title={b.labels.length > 0 ? b.labels.join(' · ') : undefined}
+                >
+                  <CircleCheck size={13} className='text-state-closed shrink-0' />
+                  <span className='text-body min-w-0 flex-1 truncate'>{b.title}</span>
+                  {b.labels.length > 0 && (
+                    <span className='size-2 shrink-0 rounded-full' style={{ background: labelColor(b.labels[0]).color }} />
+                  )}
                 </li>
               ))}
             </ul>
