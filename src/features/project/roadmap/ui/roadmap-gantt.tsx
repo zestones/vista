@@ -247,7 +247,9 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
   const topTicks = topMode === 'year' ? years : months
   const subTicks = subMode === 'week' ? weeks : subMode === 'month' ? months : subMode === 'quarter' ? quarters : []
   const gridTicks = subMode === 'day' ? weeks : subTicks
-  const showBands = subMode !== 'day'
+  // Bands only at coarse zoom (month/quarter); at day/week the gridlines suffice and a trailing
+  // shaded month over empty padding reads as a glitch (#205).
+  const showBands = subMode === 'month' || subMode === 'quarter'
 
   const days = useMemo(() => {
     const out: { off: number; dom: number; dow: number }[] = []
@@ -310,23 +312,26 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
     })
   const toggleAll = () => setCollapsed(allCollapsed ? new Set() : new Set(filtered.map((g) => g.id)))
 
+  // dayW is floored by fillW (content always fills), so the selected enum can differ from what's
+  // actually shown. Drive the label + button bounds from the REAL scale so they never lie (#205 fix).
+  const zIdx = ZORDER.indexOf(zoom)
+  const dwAt = (z: Zoom) => Math.min(MAX_DAY_W, Math.max(ZOOM[z], fillW))
+  const canZoomOut = !fit && dwAt(ZORDER[Math.max(zIdx - 1, 0)]) < dayW
+  const canZoomIn = fit || dwAt(ZORDER[Math.min(zIdx + 1, ZORDER.length - 1)]) > dayW
   const zoomIn = () => {
+    if (!canZoomIn) return
     setFit(false)
-    setZoom(ZORDER[Math.min(ZORDER.indexOf(zoom) + 1, ZORDER.length - 1)])
+    setZoom(ZORDER[Math.min(zIdx + 1, ZORDER.length - 1)])
   }
   const zoomOut = () => {
+    if (!canZoomOut) return
     setFit(false)
-    setZoom(ZORDER[Math.max(ZORDER.indexOf(zoom) - 1, 0)])
+    setZoom(ZORDER[Math.max(zIdx - 1, 0)])
   }
+  // Label reflects the granularity actually on screen (quarter sub-ticks read as a year-level view).
   const zoomLabel = fit
     ? t('roadmap.zoomFit')
-    : {
-        year: t('roadmap.zoomYear'),
-        quarter: t('roadmap.zoomQuarter'),
-        month: t('roadmap.zoomMonth'),
-        week: t('roadmap.zoomWeek'),
-        day: t('roadmap.zoomDay'),
-      }[zoom]
+    : { day: t('roadmap.zoomDay'), week: t('roadmap.zoomWeek'), month: t('roadmap.zoomMonth'), quarter: t('roadmap.zoomYear') }[subMode]
   const ctrlBtn: CSSProperties = {
     border: 'none',
     background: 'transparent',
@@ -1220,11 +1225,11 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
               <button
                 title='Zoom -'
                 onClick={zoomOut}
-                disabled={!fit && zoom === 'year'}
+                disabled={!canZoomOut}
                 style={{
                   ...ctrlBtn,
-                  opacity: !fit && zoom === 'year' ? 0.4 : 1,
-                  cursor: !fit && zoom === 'year' ? 'not-allowed' : 'pointer',
+                  opacity: canZoomOut ? 1 : 0.4,
+                  cursor: canZoomOut ? 'pointer' : 'not-allowed',
                 }}
               >
                 <Minus size={15} />
@@ -1233,11 +1238,11 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
               <button
                 title='Zoom +'
                 onClick={zoomIn}
-                disabled={!fit && zoom === 'day'}
+                disabled={!canZoomIn}
                 style={{
                   ...ctrlBtn,
-                  opacity: !fit && zoom === 'day' ? 0.4 : 1,
-                  cursor: !fit && zoom === 'day' ? 'not-allowed' : 'pointer',
+                  opacity: canZoomIn ? 1 : 0.4,
+                  cursor: canZoomIn ? 'pointer' : 'not-allowed',
                 }}
               >
                 <Plus size={15} />
