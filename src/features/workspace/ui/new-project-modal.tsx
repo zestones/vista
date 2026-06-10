@@ -22,8 +22,9 @@ import type { NewProjectInput } from '@/services/projects'
 
 const EMPTY: NewProjectInput = { name: '', description: '', visibility: 'private', availableOnVista: false }
 
-/** Lives inside DialogContent, which Radix unmounts on close, so the form resets on each open. */
-function NewProjectForm({ onDone }: { onDone: () => void }) {
+/** Lives inside DialogContent (desktop) or the mobile MobileFormSheet (#225); the container unmounts
+ * on close, so the form resets on each open. */
+export function NewProjectForm({ onDone }: { onDone: () => void }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const create = useCreateProject()
