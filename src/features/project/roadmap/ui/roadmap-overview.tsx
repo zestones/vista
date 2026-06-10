@@ -1,199 +1,112 @@
 import { useTranslation } from 'react-i18next'
+import { Check, Circle, Loader } from 'lucide-react'
 import { fmtFull } from '../lib/roadmap.dates'
 import { overallStats } from '../lib/roadmap.mappers'
 import type { Group } from '../types'
 import type { IssueRow } from '@/services/roadmap'
 
-interface Stats {
-  total: number
-  open: number
-  closed: number
-  milestones: number
-  pct: number
-}
-
-function ProgressRing({ pct, size = 96, stroke = 9 }: { pct: number; size?: number; stroke?: number }) {
+/** Big completion ring for the status hero. */
+function ProgressRing({ pct, size = 88, stroke = 8 }: { pct: number; size?: number; stroke?: number }) {
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
-  const offset = c - (pct / 100) * c
   return (
-    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+    <div className='relative shrink-0' style={{ width: size, height: size }}>
       <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill='none' stroke='var(--surface-strong)' strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill='none' stroke='var(--color-secondary)' strokeWidth={stroke} />
         <circle
           cx={size / 2}
           cy={size / 2}
           r={r}
           fill='none'
-          stroke='var(--success)'
+          stroke='var(--color-success)'
           strokeWidth={stroke}
           strokeLinecap='round'
           strokeDasharray={c}
-          strokeDashoffset={offset}
+          strokeDashoffset={c - (pct / 100) * c}
           style={{ transition: 'stroke-dashoffset 0.8s cubic-bezier(.4,0,.2,1)' }}
         />
       </svg>
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'grid',
-          placeItems: 'center',
-          fontFamily: 'var(--font-display)',
-          fontSize: 22,
-          fontWeight: 600,
-          color: 'var(--ink)',
-        }}
-      >
-        {pct}%
-      </div>
+      <div className='font-display text-ink absolute inset-0 grid place-items-center text-xl font-semibold tabular-nums'>{pct}%</div>
     </div>
   )
 }
 
-function Tile({ value, label, sub, accent }: { value: number; label: string; sub?: string; accent?: string }) {
-  return (
-    <div>
-      <div
-        style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: 30,
-          fontWeight: 500,
-          lineHeight: 1,
-          color: accent ?? 'var(--ink)',
-          letterSpacing: '-0.01em',
-        }}
-      >
-        {value}
-      </div>
-      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink)', marginTop: 4 }}>{label}</div>
-      {sub && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{sub}</div>}
-    </div>
-  )
+type MStatus = 'delivered' | 'active' | 'upcoming'
+function statusOf(g: Group): MStatus {
+  if (g.total > 0 && g.pct === 100) return 'delivered'
+  if (g.closed > 0) return 'active'
+  return 'upcoming'
 }
 
-function StatsStrip({ stats }: { stats: Stats }) {
+/** Earliest future due date among not-yet-complete milestones (module scope: keeps render pure). */
+function pickNextDelivery(groups: Group[]): Date | null {
+  const now = Date.now()
+  const dates = groups.filter((g) => g.pct < 100 && g.due && g.due.getTime() > now).map((g) => g.due as Date)
+  dates.sort((a, b) => a.getTime() - b.getTime())
+  return dates[0] ?? null
+}
+
+const STATUS_ICON: Record<MStatus, typeof Check> = { delivered: Check, active: Loader, upcoming: Circle }
+const STATUS_CHIP: Record<MStatus, string> = {
+  delivered: 'bg-success/10 text-success',
+  active: 'bg-link/10 text-link',
+  upcoming: 'bg-secondary text-muted-ink',
+}
+
+/** One milestone as a readable card (replaces reading the Gantt). */
+function MilestoneRow({ g, lang }: { g: Group; lang: string }) {
   const { t } = useTranslation()
+  const st = statusOf(g)
+  const Icon = STATUS_ICON[st]
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 'var(--s-xxl)',
-        flexWrap: 'wrap',
-        padding: 'var(--s-xl)',
-        background: 'var(--surface-soft)',
-        border: '1px solid var(--hairline)',
-        borderRadius: 'var(--r-lg)',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-lg)' }}>
-        <ProgressRing pct={stats.pct} />
-        <div>
-          <div
-            className='eyebrow'
-            style={{
-              marginBottom: 4,
-              fontSize: 11,
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              color: 'var(--muted)',
-            }}
-          >
-            {t('dash.completion')}
-          </div>
-          <div style={{ fontSize: 14, color: 'var(--muted)', maxWidth: 180 }}>
-            {stats.closed}/{stats.total} {t('stats.tasks')} · {stats.milestones} {t('stats.milestones').toLowerCase()}
-          </div>
+    <article className='border-hairline bg-card flex items-start gap-3 rounded-xl border p-4'>
+      <span className={`mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg ${STATUS_CHIP[st]}`}>
+        <Icon size={14} />
+      </span>
+      <div className='min-w-0 flex-1'>
+        <div className='flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5'>
+          <h4 className='text-ink min-w-0 truncate font-medium'>{g.title}</h4>
+          <span className='text-muted-ink shrink-0 text-xs'>
+            {st === 'delivered' ? t('ov.delivered') : st === 'upcoming' ? t('ov.upcoming') : `${String(g.closed)}/${String(g.total)}`}
+            {g.due ? ` · ${fmtFull(g.due, lang)}` : ''}
+          </span>
         </div>
+        {g.description && <p className='text-muted-ink mt-0.5 line-clamp-2 text-[13px] leading-snug'>{g.description}</p>}
+        {st === 'active' && (
+          <div className='bg-secondary mt-2 h-1 overflow-hidden rounded-xs'>
+            <div className='h-full rounded-xs' style={{ width: `${String(g.pct)}%`, background: g.color }} />
+          </div>
+        )}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, auto)', gap: 'var(--s-xxl)', marginLeft: 'auto' }}>
-        <Tile value={stats.milestones} label={t('stats.milestones')} />
-        <Tile value={stats.open} label={t('stats.open')} sub={t('stats.tasks')} accent='var(--link)' />
-        <Tile value={stats.closed} label={t('stats.closed')} sub={t('stats.tasks')} accent='var(--success)' />
+    </article>
+  )
+}
+
+/** Now / Next focus card. */
+function FocusCard({ label, g, lang, highlight }: { label: string; g: Group; lang: string; highlight?: boolean }) {
+  return (
+    <div className={`bg-card rounded-xl border p-5 ${highlight ? 'border-ink/25' : 'border-hairline'}`}>
+      <div className='text-muted-ink mb-1.5 text-[11px] font-semibold tracking-wide uppercase'>{label}</div>
+      <h4 className='text-ink font-medium'>{g.title}</h4>
+      {g.description && <p className='text-muted-ink mt-1 line-clamp-2 text-[13px] leading-snug'>{g.description}</p>}
+      <div className='mt-3 flex items-center gap-2'>
+        <div className='bg-secondary h-1.5 flex-1 overflow-hidden rounded-xs'>
+          <div className='h-full rounded-xs' style={{ width: `${String(g.pct)}%`, background: g.color }} />
+        </div>
+        <span className='text-ink shrink-0 text-xs font-semibold tabular-nums'>
+          {g.closed}/{g.total}
+        </span>
       </div>
+      {g.due && <p className='text-muted-ink mt-2 text-xs'>{fmtFull(g.due, lang)}</p>}
     </div>
   )
 }
 
-function MilestonesTable({ groups }: { groups: Group[] }) {
-  const { t, i18n } = useTranslation()
-  const lang = i18n.language
-  if (groups.length === 0) return null
-
-  return (
-    <div className='mt'>
-      <div className='mt-head'>
-        <span>{t('mt.milestone')}</span>
-        <span>{t('mt.progress')}</span>
-        <span className='mt-c'>{t('mt.requests')}</span>
-        <span className='mt-r'>{t('mt.due')}</span>
-      </div>
-
-      {groups.map((g) => (
-        <div className='mt-row' key={g.id}>
-          <div className='mt-name'>
-            <span className='mt-dot' style={{ background: g.color }} />
-            <div style={{ minWidth: 0 }}>
-              <div className='mt-title'>{g.title}</div>
-              {g.description && <div className='mt-desc'>{g.description}</div>}
-            </div>
-          </div>
-          <div className='mt-prog'>
-            <span className='mt-lbl'>{t('mt.progress')}</span>
-            <div className='mt-bar'>
-              <div style={{ width: `${String(g.pct)}%`, background: g.color }} />
-            </div>
-            <span className='mt-pct'>{g.pct}%</span>
-          </div>
-          <div className='mt-req'>
-            <span className='mt-lbl'>{t('mt.requests')}</span>
-            <span>
-              {g.closed}/{g.total}
-            </span>
-          </div>
-          <div className='mt-due'>
-            <span className='mt-lbl'>{t('mt.due')}</span>
-            <span style={{ color: g.due ? 'var(--body)' : 'var(--border-strong)' }}>
-              {g.due ? fmtFull(g.due, lang) : t('milestones.noDue')}
-            </span>
-          </div>
-        </div>
-      ))}
-
-      <style>{`
-        .mt { border: 1px solid var(--hairline); border-radius: var(--r-lg); overflow: hidden; background: var(--canvas); }
-        .mt-head, .mt-row { display: grid; grid-template-columns: 1fr 36% 110px 150px; gap: var(--s-md); align-items: center; padding: 14px 16px; }
-        .mt-head { background: var(--surface-soft); border-bottom: 1px solid var(--hairline); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
-        .mt-head .mt-c { text-align: center; }
-        .mt-head .mt-r { text-align: right; }
-        .mt-row { border-top: 1px solid var(--hairline); }
-        .mt-row:first-of-type { border-top: none; }
-        .mt-name { display: flex; gap: 10px; align-items: flex-start; }
-        .mt-dot { width: 10px; height: 10px; border-radius: 3px; margin-top: 5px; flex-shrink: 0; }
-        .mt-title { font-weight: 600; color: var(--ink); }
-        .mt-desc { font-size: 12px; color: var(--muted); line-height: 1.45; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .mt-prog { display: flex; align-items: center; gap: 12px; }
-        .mt-bar { flex: 1; height: 6px; min-width: 60px; background: var(--surface-strong); border-radius: var(--r-xs); overflow: hidden; }
-        .mt-bar > div { height: 100%; border-radius: var(--r-xs); }
-        .mt-pct { font-size: 13px; font-weight: 600; color: var(--ink); min-width: 38px; text-align: right; }
-        .mt-req { text-align: center; color: var(--body); }
-        .mt-due { text-align: right; color: var(--body); white-space: nowrap; }
-        .mt-lbl { display: none; }
-        @media (max-width: 760px) {
-          .mt-head { display: none; }
-          .mt-row { grid-template-columns: 1fr; gap: 10px; padding: 16px; }
-          .mt-req, .mt-due { display: flex; align-items: center; justify-content: space-between; text-align: left; }
-          .mt-lbl { display: inline; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
-          .mt-pct { min-width: auto; }
-        }
-      `}</style>
-    </div>
-  )
-}
-
-/** Overview tab: stats strip + unscheduled count + milestones table. */
+/**
+ * Client-facing project Overview (#124/#190) — the primary view. Answers "where are we / what's
+ * next" without reading the Gantt. Everything is computed from the VISIBLE (shared) roadmap data
+ * getRoadmap already returns under the caller's session, so it stays allowlist-scoped and leak-free.
+ */
 export function RoadmapOverview({
   groups,
   unscheduled,
@@ -201,24 +114,80 @@ export function RoadmapOverview({
 }: {
   groups: Group[]
   unscheduled: IssueRow[]
-  /** Project description, shown as the About block (#167) — it used to crowd the page header. */
   description?: string | null
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const lang = i18n.language
   const stats = overallStats(groups)
+
+  // due asc (nulls last), then milestone number.
+  const ordered = [...groups].sort((a, b) => {
+    if (a.due && b.due) return a.due.getTime() - b.due.getTime()
+    if (a.due) return -1
+    if (b.due) return 1
+    return a.number - b.number
+  })
+  const milestonesDone = groups.filter((g) => g.total > 0 && g.pct === 100).length
+  const activeGroups = ordered.filter((g) => statusOf(g) !== 'delivered')
+  const current = activeGroups.find((g) => statusOf(g) === 'active') ?? activeGroups.at(0)
+  const next = activeGroups.find((g) => g.id !== current?.id)
+  const nextDelivery = pickNextDelivery(groups)
+  const statusKey: 'delivered' | 'active' | 'starting' =
+    stats.pct === 100 && stats.total > 0 ? 'delivered' : stats.closed === 0 ? 'starting' : 'active'
+  const statusChip =
+    statusKey === 'delivered'
+      ? 'bg-success/10 text-success'
+      : statusKey === 'active'
+        ? 'bg-link/10 text-link'
+        : 'bg-secondary text-muted-ink'
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-lg)' }}>
-      {description != null && description.trim() !== '' && (
-        <section className='border-hairline bg-card rounded-xl border p-5'>
-          <h3 className='text-muted-ink mb-1.5 text-xs font-semibold tracking-wide uppercase'>{t('roadmap.about')}</h3>
-          <p className='text-body max-w-3xl text-sm leading-relaxed whitespace-pre-wrap'>{description}</p>
+    <div className='min-h-0 flex-1 overflow-y-auto'>
+      <div className='mx-auto flex w-full max-w-4xl flex-col gap-6 pb-8'>
+        {/* A. Status hero */}
+        <section className='border-hairline bg-card flex items-center gap-6 rounded-xl border p-6'>
+          <ProgressRing pct={stats.pct} />
+          <div className='min-w-0 flex-1'>
+            <span className={`inline-flex items-center rounded-sm px-2 py-0.5 text-[11px] font-semibold ${statusChip}`}>
+              {t(`ov.status.${statusKey}`)}
+            </span>
+            <p className='text-ink mt-2 text-lg font-medium'>
+              {t('ov.summary', { closed: stats.closed, total: stats.total, done: milestonesDone, milestones: stats.milestones })}
+            </p>
+            {nextDelivery && <p className='text-muted-ink mt-1 text-sm'>{t('ov.nextDelivery', { date: fmtFull(nextDelivery, lang) })}</p>}
+          </div>
         </section>
-      )}
-      <StatsStrip stats={stats} />
-      {unscheduled.length > 0 && (
-        <p style={{ fontSize: 13, color: 'var(--muted)' }}>{`${String(unscheduled.length)} ${t('roadmap.unscheduled')}`}</p>
-      )}
-      <MilestonesTable groups={groups} />
+
+        {/* B. About */}
+        {description != null && description.trim() !== '' && (
+          <section className='border-hairline bg-card rounded-xl border p-5'>
+            <h3 className='text-muted-ink mb-1.5 text-xs font-semibold tracking-wide uppercase'>{t('roadmap.about')}</h3>
+            <p className='text-body max-w-3xl text-sm leading-relaxed whitespace-pre-wrap'>{description}</p>
+          </section>
+        )}
+
+        {/* C. Now & Next */}
+        {current && (
+          <section className='grid gap-3 sm:grid-cols-2'>
+            <FocusCard label={t('ov.now')} g={current} lang={lang} highlight />
+            {next && <FocusCard label={t('ov.next')} g={next} lang={lang} />}
+          </section>
+        )}
+
+        {/* D. Milestones */}
+        {ordered.length > 0 && (
+          <section>
+            <h3 className='text-muted-ink mb-3 text-xs font-semibold tracking-wide uppercase'>{t('ov.milestones')}</h3>
+            <div className='flex flex-col gap-2'>
+              {ordered.map((g) => (
+                <MilestoneRow key={g.id} g={g} lang={lang} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {unscheduled.length > 0 && <p className='text-muted-ink text-xs'>{`${String(unscheduled.length)} ${t('roadmap.unscheduled')}`}</p>}
+      </div>
     </div>
   )
 }
