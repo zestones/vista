@@ -243,7 +243,13 @@ export function RoadmapPage() {
               </div>
             </div>
           ) : view === 'overview' ? (
-            <RoadmapOverview groups={groups} unscheduled={unscheduled} description={project.description} />
+            <RoadmapOverview
+              groups={groups}
+              unscheduled={unscheduled}
+              description={project.description}
+              onIssueClick={openIssue}
+              canComment={isOwner || canViewComments}
+            />
           ) : view === 'mobile' ? (
             <RoadmapMobile groups={groups} onIssueClick={openIssue} />
           ) : (

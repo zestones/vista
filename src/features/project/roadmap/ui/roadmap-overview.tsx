@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AnimatePresence, motion } from 'motion/react'
-import { ChevronDown, Circle, CircleCheck, Search } from 'lucide-react'
+import { ChevronDown, Circle, CircleCheck, MessageSquare, Search } from 'lucide-react'
 import { fmtFull } from '../lib/roadmap.dates'
 import { overallStats } from '../lib/roadmap.mappers'
 import type { Bar, Group } from '../types'
@@ -78,8 +78,54 @@ function MiniFocus({ label, g, accent }: { label: string; g: Group; accent?: boo
   )
 }
 
+/** A single issue line inside an expanded milestone. Clickable -> comments only when accessible (#202). */
+function IssueLine({ b, onClick }: { b: Bar; onClick?: () => void }) {
+  const icon = (
+    <span className='shrink-0' style={{ color: issueColor(b.state) }}>
+      {b.state === 'closed' ? <CircleCheck size={14} /> : <Circle size={14} />}
+    </span>
+  )
+  const num = <span className='text-muted-ink shrink-0 text-xs tabular-nums'>#{b.number}</span>
+  const title = <span className='text-body min-w-0 flex-1 truncate'>{b.title}</span>
+  if (!onClick) {
+    return (
+      <li className='flex items-center gap-2 px-2 py-1.5 text-sm'>
+        {icon}
+        {num}
+        {title}
+      </li>
+    )
+  }
+  return (
+    <li>
+      <button
+        type='button'
+        onClick={onClick}
+        className='group/issue hover:bg-secondary/50 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors'
+      >
+        {icon}
+        {num}
+        {title}
+        <MessageSquare size={13} className='text-muted-ink shrink-0 opacity-0 transition-opacity group-hover/issue:opacity-100' />
+      </button>
+    </li>
+  )
+}
+
 /** One milestone per row; click to expand its issues (#197). `bars` are the already-filtered issues. */
-function MilestoneRow({ g, bars, lang, autoOpen }: { g: Group; bars: Bar[]; lang: string; autoOpen: boolean }) {
+function MilestoneRow({
+  g,
+  bars,
+  lang,
+  autoOpen,
+  onIssueClick,
+}: {
+  g: Group
+  bars: Bar[]
+  lang: string
+  autoOpen: boolean
+  onIssueClick?: (b: Bar) => void
+}) {
   const { t } = useTranslation()
   // Tri-state: null = follow autoOpen (search); once toggled, the user's choice wins (so a row stays collapsible).
   const [open, setOpen] = useState<boolean | null>(null)
@@ -132,19 +178,11 @@ function MilestoneRow({ g, bars, lang, autoOpen }: { g: Group; bars: Bar[]; lang
             transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
             className='overflow-hidden'
           >
-            <ul className='border-hairline border-t px-4 py-2'>
+            <ul className='border-hairline border-t px-2 py-2'>
               {bars.length === 0 ? (
-                <li className='text-muted-ink py-2 text-sm'>{t('roadmap.noResults')}</li>
+                <li className='text-muted-ink px-2 py-2 text-sm'>{t('roadmap.noResults')}</li>
               ) : (
-                bars.map((b) => (
-                  <li key={b.id} className='flex items-center gap-2 py-1.5 text-sm'>
-                    <span className='shrink-0' style={{ color: issueColor(b.state) }}>
-                      {b.state === 'closed' ? <CircleCheck size={14} /> : <Circle size={14} />}
-                    </span>
-                    <span className='text-muted-ink shrink-0 text-xs tabular-nums'>#{b.number}</span>
-                    <span className='text-body truncate'>{b.title}</span>
-                  </li>
-                ))
+                bars.map((b) => <IssueLine key={b.id} b={b} onClick={onIssueClick ? () => onIssueClick(b) : undefined} />)
               )}
             </ul>
           </motion.div>
@@ -165,10 +203,15 @@ export function RoadmapOverview({
   groups,
   unscheduled,
   description,
+  onIssueClick,
+  canComment = false,
 }: {
   groups: Group[]
   unscheduled: IssueRow[]
   description?: string | null
+  /** Opens an issue's comment panel; wired only when the viewer can view comments (#202). */
+  onIssueClick?: (bar: Bar) => void
+  canComment?: boolean
 }) {
   const { t, i18n } = useTranslation()
   const lang = i18n.language
@@ -276,7 +319,14 @@ export function RoadmapOverview({
             {rows.length > 0 ? (
               <div className='flex flex-col gap-2'>
                 {rows.map(({ g, bars }) => (
-                  <MilestoneRow key={g.id} g={g} bars={bars} lang={lang} autoOpen={searching} />
+                  <MilestoneRow
+                    key={g.id}
+                    g={g}
+                    bars={bars}
+                    lang={lang}
+                    autoOpen={searching}
+                    onIssueClick={canComment ? onIssueClick : undefined}
+                  />
                 ))}
               </div>
             ) : (
