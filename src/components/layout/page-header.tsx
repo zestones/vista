@@ -75,7 +75,7 @@ export function PageHeader({ title, description, actions, backTo, leading, cente
             {identity}
           </div>
           <div className='hidden justify-center lg:flex'>{center}</div>
-          <div className='flex shrink-0 items-center gap-2 lg:justify-end'>{actions}</div>
+          <div className='flex min-w-0 shrink flex-wrap items-center justify-end gap-2'>{actions}</div>
         </div>
       ) : (
         <div className='flex items-start gap-3'>
@@ -83,7 +83,7 @@ export function PageHeader({ title, description, actions, backTo, leading, cente
           <div className='min-w-0 flex-1'>
             <div className='flex flex-wrap items-start justify-between gap-3'>
               {identity}
-              {actions && <div className='flex shrink-0 items-center gap-2'>{actions}</div>}
+              {actions && <div className='flex flex-wrap items-center justify-end gap-2'>{actions}</div>}
             </div>
           </div>
         </div>
