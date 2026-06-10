@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import { cn } from '@/lib/utils'
 
@@ -30,7 +31,9 @@ export function Sheet({
     }
   }, [open, onClose])
 
-  return (
+  // Portal to the body so the fixed overlay escapes the screen-stack's transformed/scrolling ancestor
+  // (otherwise a `fixed` element is positioned relative to it and clipped -> jank + wrong placement).
+  return createPortal(
     <AnimatePresence>
       {open && (
         <div className='fixed inset-0 z-50 flex flex-col justify-end'>
@@ -68,6 +71,7 @@ export function Sheet({
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   )
 }
