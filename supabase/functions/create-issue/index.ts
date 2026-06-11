@@ -103,7 +103,14 @@ Deno.serve(async (req) => {
     console.log(`create-issue ${repo.owner}/${repo.repo}#${issue.number} from submission ${submissionId}`)
     return jsonResponse({ github_issue_number: issue.number })
   } catch (e) {
-    await admin.from('submissions').update({ status: sub.status, decided_by: null, decided_at: null }).eq('id', submissionId)
+    // Roll back only the claim we made: guard on the 'planned' state (and still-uncreated) so a
+    // concurrent owner decision (e.g. decline) made during the GitHub call is not clobbered. (#187 / S5)
+    await admin
+      .from('submissions')
+      .update({ status: sub.status, decided_by: null, decided_at: null })
+      .eq('id', submissionId)
+      .eq('status', 'planned')
+      .is('github_issue_number', null)
     return jsonResponse({ error: e instanceof Error ? e.message : 'github create failed' }, 502)
   }
 })
