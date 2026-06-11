@@ -10,6 +10,7 @@ import { RoadmapPage } from '@/pages/app/project/roadmap-page'
 import { SubmissionsPage } from '@/pages/app/project/submissions-page'
 import { SettingsPage } from '@/pages/app/settings/settings-page'
 import { GithubCallbackPage } from '@/pages/github/github-callback-page'
+import { PublicSharePage } from '@/pages/share'
 
 export const routeConfig: RouteObject[] = [
   { path: '/', element: <LandingPage /> },
@@ -18,6 +19,8 @@ export const routeConfig: RouteObject[] = [
   { path: '/github/callback', element: <GithubCallbackPage /> },
   // Public: an invitee must see the project + sign in before they're a member (#105).
   { path: '/join/:token', element: <JoinPage /> },
+  // Public: read-only allowlist-scoped roadmap via a share token, no account (#193).
+  { path: '/s/:token', element: <PublicSharePage /> },
   {
     element: <RequireAuth />,
     children: [

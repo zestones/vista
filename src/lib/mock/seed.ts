@@ -11,6 +11,18 @@ export type SubmissionRow = Tables['submissions']['Row']
 export type NotificationRow = Tables['notifications']['Row']
 export type CommentRow = Tables['comments']['Row']
 
+/** Public read-only share link (#193). Not a GitHub projection, so it lives outside database.types. */
+export interface ShareLinkRow {
+  id: string
+  project_id: string
+  token: string
+  expires_at: string
+  created_at: string
+  revoked_at: string | null
+  last_accessed_at: string | null
+  access_count: number
+}
+
 /** Normalized in-memory shape that mirrors the Postgres tables (rows, not a nested tree). */
 export interface MockDb {
   projects: ProjectRow[]
@@ -21,6 +33,7 @@ export interface MockDb {
   submissions: SubmissionRow[]
   notifications: NotificationRow[]
   comments: CommentRow[]
+  shareLinks: ShareLinkRow[]
 }
 
 // ─── Seeded RNG (mulberry32) — deterministic per key ─────────────
@@ -164,6 +177,7 @@ export function buildSeed(): MockDb {
     submissions: [],
     notifications: [],
     comments: [],
+    shareLinks: [],
   }
 
   PROJECT_DEFS.forEach((d, di) => {
