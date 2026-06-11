@@ -2,8 +2,6 @@ import { lazy } from 'react'
 import { type RouteObject } from 'react-router-dom'
 import { DesktopShellLayout, GuestOnly, RequireAuth } from '@/routes/auth-guards'
 import { LandingPage } from '@/pages/landing/landing-page'
-import { LoginPage } from '@/pages/auth/login-page'
-import { JoinPage } from '@/pages/join/join-page'
 import { GithubCallbackPage } from '@/pages/github/github-callback-page'
 import { AdminPage } from '@/pages/app/admin/admin-page'
 import { SubmissionsInboxPage } from '@/pages/app/submissions/submissions-inbox-page'
@@ -16,17 +14,20 @@ const MobileHome = lazy(() => import('./screens/mobile-home'))
 const MobileAccount = lazy(() => import('./screens/mobile-account'))
 const MobileProject = lazy(() => import('./screens/mobile-project'))
 const MobileMilestone = lazy(() => import('./screens/mobile-milestone'))
+const MobileLogin = lazy(() => import('./screens/mobile-login'))
+const MobileJoin = lazy(() => import('./screens/mobile-join'))
 
 /**
  * Mobile route tree (#220). Built mobile screens render inside the MobileShell; every screen not yet
  * rebuilt for mobile FALLS BACK to its desktop page under the desktop shell (no regression), and
- * migrates to the MobileShell as its own issue lands (#221+). Public routes are shared until #228.
+ * migrates to the MobileShell as its own issue lands (#221+). Auth is bespoke mobile (#228); the
+ * landing + GitHub callback stay shared.
  */
 export const mobileRouteConfig: RouteObject[] = [
   { path: '/', element: <LandingPage /> },
-  { element: <GuestOnly />, children: [{ path: '/login', element: <LoginPage /> }] },
+  { element: <GuestOnly />, children: [{ path: '/login', element: <MobileLogin /> }] },
   { path: '/github/callback', element: <GithubCallbackPage /> },
-  { path: '/join/:token', element: <JoinPage /> },
+  { path: '/join/:token', element: <MobileJoin /> },
   {
     element: <RequireAuth />,
     children: [
