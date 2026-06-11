@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
-import type { SubmissionRow, SubmissionStatus } from '@/services/submissions'
+import { submissionGroup, type SubmissionRow, type SubmissionStatusGroup } from '@/services/submissions'
 import { Segmented } from '@/components/ui'
 import { Spinner } from '@/components/feedback'
 import { submissionKeys } from '@/lib/query-keys/submission.keys'
@@ -11,14 +11,14 @@ import { useModerateSubmission } from '../hooks/use-moderate-submission'
 import { ApproveDialog } from './approve-dialog'
 import { SubmissionCard } from './submission-card'
 
-const STATUSES: SubmissionStatus[] = ['pending', 'approved', 'denied']
+const GROUPS: SubmissionStatusGroup[] = ['review', 'accepted', 'declined']
 
-/** Owner moderation inbox (#6/#99) for one project: submissions by status, approve/deny. */
+/** Owner moderation inbox (#6/#99) for one project: submissions grouped by lifecycle stage, approve/deny. */
 export function ModerationInbox({ projectId }: { projectId: string }) {
   const { t } = useTranslation()
   const { data, isLoading } = useSubmissions(projectId)
   const moderate = useModerateSubmission()
-  const [tab, setTab] = useState<SubmissionStatus>('pending')
+  const [tab, setTab] = useState<SubmissionStatusGroup>('review')
   // Approve opens a picker (target repo + optional milestone); deny is immediate.
   const [approving, setApproving] = useState<SubmissionRow | null>(null)
   // Live updates (#37): the inbox reflects new/decided submissions without a refresh.
@@ -32,8 +32,8 @@ export function ModerationInbox({ projectId }: { projectId: string }) {
     )
   }
 
-  const rows = data.filter((s) => s.status === tab)
-  const count = (s: SubmissionStatus) => data.filter((r) => r.status === s).length
+  const rows = data.filter((s) => submissionGroup(s.status) === tab)
+  const count = (g: SubmissionStatusGroup) => data.filter((r) => submissionGroup(r.status) === g).length
 
   const deny = (id: string) =>
     moderate.mutate(
@@ -46,16 +46,16 @@ export function ModerationInbox({ projectId }: { projectId: string }) {
 
   return (
     <div className='flex flex-col gap-6'>
-      <Segmented<SubmissionStatus>
+      <Segmented<SubmissionStatusGroup>
         aria-label={t('mod.title')}
         value={tab}
         onValueChange={setTab}
-        options={STATUSES.map((s) => ({ value: s, label: count(s) > 0 ? `${t(`mod.tab.${s}`)} ${String(count(s))}` : t(`mod.tab.${s}`) }))}
+        options={GROUPS.map((g) => ({ value: g, label: count(g) > 0 ? `${t(`mod.tab.${g}`)} ${String(count(g))}` : t(`mod.tab.${g}`) }))}
       />
 
       {rows.length === 0 ? (
         <p className='border-hairline text-muted-ink rounded-xl border border-dashed p-6 text-center text-sm'>
-          {tab === 'pending' ? t('mod.empty') : t('mod.emptyOther')}
+          {tab === 'review' ? t('mod.empty') : t('mod.emptyOther')}
         </p>
       ) : (
         <div className='flex flex-col gap-3'>

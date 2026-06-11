@@ -2,7 +2,14 @@ import { env } from '@/config/env'
 import { mockDb } from '@/lib/mock'
 import { supabase } from '@/lib/supabase/client'
 import { auth } from '@/services/auth'
-import type { CreateSubmissionInput, OwnerInboxItem, SubmissionRow, SubmissionStatus } from './submissions.dto'
+import {
+  REVIEW_STATUSES,
+  type CreateSubmissionInput,
+  type OwnerInboxItem,
+  type SubmissionMessageRow,
+  type SubmissionRow,
+  type SubmissionStatus,
+} from './submissions.dto'
 
 /** Approve options (#32): the owner picks the target repo (a sole repo is auto-resolved) + an optional milestone. */
 export interface ApproveOptions {
@@ -12,16 +19,21 @@ export interface ApproveOptions {
 
 export interface SubmissionsApi {
   listSubmissions(projectId: string): Promise<SubmissionRow[]>
-  /** Pending submissions across the owner's projects (#145), each with its project name, for the inbox. */
+  /** Undecided submissions across the owner's projects (#145), each with its project name, for the inbox. */
   listOwnerInbox(userId: string): Promise<OwnerInboxItem[]>
   createSubmission(input: CreateSubmissionInput): Promise<SubmissionRow>
-  /** Deny (or other status flips). Owner-gated by RLS. Approval goes through `approveSubmission`. */
+  /** Set the lifecycle status (#249). Owner-gated by RLS. Approval goes through `approveSubmission`. */
   setStatus(submissionId: string, status: SubmissionStatus): Promise<void>
-  /** Approve (#32): opens the GitHub issue via the `create-issue` edge, stores the number, sets `approved`. */
+  /** Approve (#32): opens the GitHub issue via the `create-issue` edge, stores the number, sets `planned`. */
   approveSubmission(submissionId: string, opts?: ApproveOptions): Promise<void>
+  /** The discussion thread on a submission (#249), oldest first. */
+  listMessages(submissionId: string): Promise<SubmissionMessageRow[]>
+  /** Post a message; author identity is server-stamped from the profile (#99 pattern). */
+  postMessage(submissionId: string, body: string): Promise<SubmissionMessageRow>
 }
 
 let seq = 0
+let msgSeq = 0
 
 const mock: SubmissionsApi = {
   listSubmissions(projectId) {
@@ -32,7 +44,7 @@ const mock: SubmissionsApi = {
     const owned = new Map(db.projects.filter((p) => p.owner_id === userId).map((p) => [p.id, p] as const))
     return Promise.resolve(
       db.submissions
-        .filter((s) => s.status === 'pending' && owned.has(s.project_id))
+        .filter((s) => REVIEW_STATUSES.includes(s.status) && owned.has(s.project_id))
         .map((s) => ({ ...s, projectName: owned.get(s.project_id)?.name ?? '', projectColor: owned.get(s.project_id)?.color ?? null })),
     )
   },
@@ -47,7 +59,7 @@ const mock: SubmissionsApi = {
       submitted_by: me?.id ?? null,
       submitter_name: me?.name ?? null,
       submitter_email: me?.email ?? null,
-      status: 'pending',
+      status: 'received',
       github_issue_number: null,
       created_at: new Date().toISOString(),
       decided_at: null,
@@ -64,10 +76,31 @@ const mock: SubmissionsApi = {
   approveSubmission(submissionId) {
     const sub = mockDb().submissions.find((s) => s.id === submissionId)
     if (sub) {
-      sub.status = 'approved'
+      sub.status = 'planned'
       sub.github_issue_number = 1000 + Math.floor(Math.random() * 9000) // simulate the GitHub write-back
     }
     return Promise.resolve()
+  },
+  listMessages(submissionId) {
+    return Promise.resolve(
+      mockDb()
+        .submissionMessages.filter((m) => m.submission_id === submissionId)
+        .sort((a, b) => a.created_at.localeCompare(b.created_at)),
+    )
+  },
+  postMessage(submissionId, body) {
+    const me = auth.currentUser()
+    const row: SubmissionMessageRow = {
+      id: `msg-${String((msgSeq += 1))}`,
+      submission_id: submissionId,
+      author_id: me?.id ?? null,
+      author_name: me?.name ?? null,
+      author_email: me?.email ?? null,
+      body,
+      created_at: new Date().toISOString(),
+    }
+    mockDb().submissionMessages.push(row)
+    return Promise.resolve(row)
   },
 }
 
@@ -84,11 +117,11 @@ const supabaseApi: SubmissionsApi = {
   },
   async listOwnerInbox(userId) {
     // RLS returns the owner's projects' submissions + the user's own authored ones; the inner join +
-    // owner_id filter keeps only projects this user owns. Pending only -- the inbox is a triage queue.
+    // owner_id filter keeps only projects this user owns. Review group only -- the inbox is a triage queue.
     const { data, error } = await supabase
       .from('submissions')
       .select('*, projects!inner(name, owner_id, color)')
-      .eq('status', 'pending')
+      .in('status', REVIEW_STATUSES)
       .order('created_at', { ascending: false })
     if (error) throw error
     return data
@@ -115,11 +148,26 @@ const supabaseApi: SubmissionsApi = {
     if (error) throw error
   },
   async approveSubmission(submissionId, opts) {
-    // The edge re-checks owner, opens the issue, stores the number, and sets `approved` (idempotent).
+    // The edge re-checks owner, opens the issue, stores the number, and sets `planned` (idempotent).
     const { error } = (await supabase.functions.invoke('create-issue', {
       body: { submission_id: submissionId, project_repo_id: opts?.projectRepoId, milestone_number: opts?.milestoneNumber },
     })) as { data: unknown; error: Error | null }
     if (error) throw error
+  },
+  async listMessages(submissionId) {
+    const { data, error } = await supabase
+      .from('submission_messages')
+      .select('*')
+      .eq('submission_id', submissionId)
+      .order('created_at', { ascending: true })
+    if (error) throw error
+    return data
+  },
+  async postMessage(submissionId, body) {
+    // author_id + name/email are stamped server-side from the profile (#99 trigger).
+    const { data, error } = await supabase.from('submission_messages').insert({ submission_id: submissionId, body }).select().single()
+    if (error) throw error
+    return data
   },
 }
 

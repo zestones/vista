@@ -37,7 +37,7 @@ describe('mock seed (issue #2)', () => {
 
   it('has a submissions collection (renamed from legacy requests)', () => {
     expect(db.submissions.length).toBeGreaterThan(0)
-    expect(db.submissions[0].status).toBe('pending')
+    expect(db.submissions[0].status).toBe('received')
   })
 
   it('uses valid membership roles', () => {

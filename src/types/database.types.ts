@@ -523,6 +523,44 @@ export type Database = {
           },
         ]
       }
+      submission_messages: {
+        Row: {
+          author_email: string | null
+          author_id: string | null
+          author_name: string | null
+          body: string
+          created_at: string
+          id: string
+          submission_id: string
+        }
+        Insert: {
+          author_email?: string | null
+          author_id?: string | null
+          author_name?: string | null
+          body: string
+          created_at?: string
+          id?: string
+          submission_id: string
+        }
+        Update: {
+          author_email?: string | null
+          author_id?: string | null
+          author_name?: string | null
+          body?: string
+          created_at?: string
+          id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submission_messages_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       submissions: {
         Row: {
           body: string | null
@@ -740,7 +778,7 @@ export type Database = {
         | "access_approved"
         | "access_denied"
       project_visibility: "private" | "shared"
-      submission_status: "pending" | "approved" | "denied"
+      submission_status: "received" | "under_review" | "needs_info" | "planned" | "in_progress" | "delivered" | "declined"
       submission_type: "feature" | "bug" | "question" | "other"
     }
     CompositeTypes: {
@@ -875,7 +913,7 @@ export const Constants = {
         "access_denied",
       ],
       project_visibility: ["private", "shared"],
-      submission_status: ["pending", "approved", "denied"],
+      submission_status: ["received", "under_review", "needs_info", "planned", "in_progress", "delivered", "declined"],
       submission_type: ["feature", "bug", "question", "other"],
     },
   },

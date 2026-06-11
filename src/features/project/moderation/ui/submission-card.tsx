@@ -2,7 +2,7 @@ import { lazy, Suspense, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AnimatePresence, motion } from 'motion/react'
 import { Bug, Check, ChevronDown, HelpCircle, Sparkles, Tag, X, type LucideIcon } from 'lucide-react'
-import type { SubmissionRow, SubmissionStatus, SubmissionType } from '@/services/submissions'
+import { submissionGroup, type SubmissionRow, type SubmissionStatus, type SubmissionType } from '@/services/submissions'
 import { Badge, Button } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
@@ -15,9 +15,13 @@ const TYPE_META: Record<SubmissionType, { Icon: LucideIcon; chip: string; label:
   other: { Icon: Tag, chip: 'bg-secondary text-muted-ink', label: 'mod.type.other' },
 }
 const STATUS_PILL: Record<SubmissionStatus, { key: string; cls: string }> = {
-  pending: { key: 'mod.tab.pending', cls: 'bg-secondary text-muted-ink' },
-  approved: { key: 'mod.tab.approved', cls: 'bg-success/10 text-success' },
-  denied: { key: 'mod.tab.denied', cls: 'bg-sig-coral/10 text-sig-coral' },
+  received: { key: 'mod.status.received', cls: 'bg-secondary text-muted-ink' },
+  under_review: { key: 'mod.status.under_review', cls: 'bg-link/10 text-link' },
+  needs_info: { key: 'mod.status.needs_info', cls: 'bg-sig-yellow/20 text-sig-coral' },
+  planned: { key: 'mod.status.planned', cls: 'bg-link/10 text-link' },
+  in_progress: { key: 'mod.status.in_progress', cls: 'bg-link/10 text-link' },
+  delivered: { key: 'mod.status.delivered', cls: 'bg-success/10 text-success' },
+  declined: { key: 'mod.status.declined', cls: 'bg-sig-coral/10 text-sig-coral' },
 }
 const formatDate = (iso: string, lang: string) =>
   new Date(iso).toLocaleDateString(lang, { day: 'numeric', month: 'short', year: 'numeric' })
@@ -89,7 +93,7 @@ export function SubmissionCard({
           )}
         </button>
 
-        {sub.status === 'pending' && onApprove && onDeny ? (
+        {submissionGroup(sub.status) === 'review' && onApprove && onDeny ? (
           <div className='flex shrink-0 items-center justify-end gap-1.5'>
             <Button variant='ghost' size='sm' disabled={disabled} onClick={onDeny}>
               <X /> {t('mod.deny')}
@@ -110,7 +114,7 @@ export function SubmissionCard({
               </span>
             )}
             <div className='text-muted-ink text-right text-xs'>
-              {sub.status === 'approved' && sub.github_issue_number != null && (
+              {sub.github_issue_number != null && (
                 <div className='text-ink font-medium'>{t('mod.issue', { n: sub.github_issue_number })}</div>
               )}
               {sub.decided_at && <div>{formatDate(sub.decided_at, i18n.language)}</div>}

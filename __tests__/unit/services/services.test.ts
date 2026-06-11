@@ -83,7 +83,7 @@ describe('services — mock branch (issue #8)', () => {
   it('submissions.createSubmission appends a pending row', async () => {
     const before = (await submissions.listSubmissions('prj-apollo')).length
     const row = await submissions.createSubmission({ projectId: 'prj-apollo', type: 'bug', title: 'Test' })
-    expect(row.status).toBe('pending')
+    expect(row.status).toBe('received')
     expect((await submissions.listSubmissions('prj-apollo')).length).toBe(before + 1)
   })
 })

@@ -15,7 +15,7 @@ export function useModerateSubmission() {
     mutationFn: (v: ModerateVars) =>
       v.decision === 'approve'
         ? submissions.approveSubmission(v.id, { projectRepoId: v.projectRepoId, milestoneNumber: v.milestoneNumber })
-        : submissions.setStatus(v.id, 'denied'),
+        : submissions.setStatus(v.id, 'declined'),
     onSuccess: () => qc.invalidateQueries({ queryKey: submissionKeys.all }),
   })
 }
