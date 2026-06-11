@@ -52,7 +52,8 @@ export function SubmissionCard({
 
   return (
     <article className='border-hairline bg-card rounded-xl border'>
-      <div className='flex items-center gap-3 p-4'>
+      {/* Header stacks on mobile (title gets full width) and is a single row on desktop (sm+). */}
+      <div className='flex flex-col gap-3 p-4 sm:flex-row sm:items-center'>
         <button
           type='button'
           aria-expanded={open}
@@ -89,7 +90,7 @@ export function SubmissionCard({
         </button>
 
         {sub.status === 'pending' && onApprove && onDeny ? (
-          <div className='flex shrink-0 items-center gap-1.5'>
+          <div className='flex shrink-0 items-center justify-end gap-1.5'>
             <Button variant='ghost' size='sm' disabled={disabled} onClick={onDeny}>
               <X /> {t('mod.deny')}
             </Button>
@@ -98,7 +99,7 @@ export function SubmissionCard({
             </Button>
           </div>
         ) : (
-          <div className='flex shrink-0 items-center gap-3'>
+          <div className='flex shrink-0 items-center justify-end gap-3'>
             {/* Read-only rows (client view) carry an explicit status pill; moderation rows don't need
                 one for pending (the actions imply it) nor on the per-project page (tabs carry it). */}
             {!(onApprove && onDeny) && (
