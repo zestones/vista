@@ -3,13 +3,13 @@ import { useTranslation } from 'react-i18next'
 import { Spinner } from '@/components/feedback'
 import { PeopleTab } from '@/features/project/members'
 import { ScreenHeader } from '../shell'
-import { useSettingsAccess } from './use-settings-access'
+import { useOwnerProject } from './use-owner-project'
 
 /** Mobile People settings (#230): invite link, pending requests, members, reusing `PeopleTab`. */
 export default function MobileSettingsPeople() {
   const { t } = useTranslation()
   const { id = '' } = useParams()
-  const { isLoading, denied, data } = useSettingsAccess(id)
+  const { isLoading, denied, data } = useOwnerProject(id)
 
   if (isLoading) {
     return (
