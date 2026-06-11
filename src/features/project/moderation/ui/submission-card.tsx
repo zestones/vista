@@ -114,7 +114,8 @@ export function SubmissionCard({
           <div className='flex shrink-0 items-center justify-end gap-3'>
             {/* The status pill now lives in the header for every card; here we keep the issue + decided date. */}
             <div className='text-muted-ink text-right text-xs'>
-              {sub.github_issue_number != null && (
+              {/* Owner-only (onApprove present = owner context): the GitHub issue # is internal/private-repo detail. */}
+              {onApprove != null && sub.github_issue_number != null && (
                 <div className='text-ink font-medium'>{t('mod.issue', { n: sub.github_issue_number })}</div>
               )}
               {sub.decided_at && <div>{formatDate(sub.decided_at, i18n.language)}</div>}
