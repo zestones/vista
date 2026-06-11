@@ -1,9 +1,8 @@
 import { lazy } from 'react'
 import { type RouteObject } from 'react-router-dom'
-import { DesktopShellLayout, GuestOnly, RequireAuth } from '@/routes/auth-guards'
+import { GuestOnly, RequireAuth } from '@/routes/auth-guards'
 import { LandingPage } from '@/pages/landing/landing-page'
 import { GithubCallbackPage } from '@/pages/github/github-callback-page'
-import { AdminPage } from '@/pages/app/admin/admin-page'
 import { MobileShellLayout } from './shell'
 
 // Bespoke mobile screens are lazy so they ship as their own chunks, code-split from desktop (#220).
@@ -19,12 +18,12 @@ const MobileSettingsPeople = lazy(() => import('./screens/mobile-settings-people
 const MobileSettingsVisibility = lazy(() => import('./screens/mobile-settings-visibility'))
 const MobileSubmissions = lazy(() => import('./screens/mobile-submissions'))
 const MobileProjectSubmissions = lazy(() => import('./screens/mobile-project-submissions'))
+const MobileAdmin = lazy(() => import('./screens/mobile-admin'))
 
 /**
- * Mobile route tree (#220). Built mobile screens render inside the MobileShell; every screen not yet
- * rebuilt for mobile FALLS BACK to its desktop page under the desktop shell (no regression), and
- * migrates to the MobileShell as its own issue lands (#221+). Auth is bespoke mobile (#228); the
- * landing + GitHub callback stay shared.
+ * Mobile route tree (#220). Every authenticated screen is now bespoke mobile under the MobileShell
+ * (#221-233 complete the parity); auth is bespoke mobile (#228); only the landing + GitHub callback
+ * stay shared with desktop.
  */
 export const mobileRouteConfig: RouteObject[] = [
   { path: '/', element: <LandingPage /> },
@@ -39,6 +38,7 @@ export const mobileRouteConfig: RouteObject[] = [
         children: [
           { path: '/app', element: <MobileHome /> },
           { path: '/app/account', element: <MobileAccount /> },
+          { path: '/app/admin', element: <MobileAdmin /> },
           { path: '/app/submissions', element: <MobileSubmissions /> },
           { path: '/app/projects/:id', element: <MobileProject /> },
           { path: '/app/projects/:id/m/:num', element: <MobileMilestone /> },
@@ -48,11 +48,6 @@ export const mobileRouteConfig: RouteObject[] = [
           { path: '/app/projects/:id/settings/people', element: <MobileSettingsPeople /> },
           { path: '/app/projects/:id/settings/visibility', element: <MobileSettingsVisibility /> },
         ],
-      },
-      {
-        // Not yet rebuilt for mobile -> desktop page under the desktop shell (responsive fallback).
-        element: <DesktopShellLayout />,
-        children: [{ path: '/app/admin', element: <AdminPage /> }],
       },
     ],
   },
