@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui'
-import { NotificationBell } from '@/features/notifications'
 import { cn } from '@/lib/utils'
+// Deep import (not the ui barrel) to avoid a shell <-> ui barrel cycle (ui composers import from shell).
+import { MobileNotifications } from '../ui/mobile-notifications'
 
 /** Sticky top bar for a mobile screen: optional back button, a title, an optional trailing action. */
 export function ScreenHeader({
@@ -41,8 +42,8 @@ export function ScreenHeader({
         </Button>
       )}
       <h1 className='font-display text-ink min-w-0 flex-1 truncate text-lg font-semibold'>{title}</h1>
-      {/* The notification bell lives in every header, always top-right. */}
-      <NotificationBell />
+      {/* The notification bell lives in every header, always top-right (mobile sheet, #227). */}
+      <MobileNotifications />
       {action}
     </header>
   )

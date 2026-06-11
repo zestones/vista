@@ -6,8 +6,7 @@ import { useWorkspace } from '@/features/workspace'
 import type { ProjectSummary } from '@/services/projects'
 import { Button, Input } from '@/components/ui'
 import { Spinner } from '@/components/feedback'
-import { NotificationBell } from '@/features/notifications'
-import { MobileProjectCard } from '../ui'
+import { MobileNotifications, MobileProjectCard } from '../ui'
 
 const MobileNewProject = lazy(() => import('../ui/mobile-new-project').then((m) => ({ default: m.MobileNewProject })))
 
@@ -41,7 +40,7 @@ export default function MobileHome() {
             <h1 className='font-display text-ink text-[26px] font-semibold tracking-[-0.02em]'>{t('m.nav.home')}</h1>
           )}
         </div>
-        <NotificationBell />
+        <MobileNotifications />
       </header>
 
       {isLoading ? (
