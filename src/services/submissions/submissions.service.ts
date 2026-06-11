@@ -1,5 +1,5 @@
 import { env } from '@/config/env'
-import { mockDb } from '@/lib/mock'
+import { mockDb, type NotificationRow } from '@/lib/mock'
 import { supabase } from '@/lib/supabase/client'
 import { auth } from '@/services/auth'
 import {
@@ -34,6 +34,34 @@ export interface SubmissionsApi {
 
 let seq = 0
 let msgSeq = 0
+let notifSeq = 0
+
+// Mock mirror of the DB notify() trigger (#250): insert a notification for the recipient, skip self/null.
+function mockNotify(userId: string | null, projectId: string, kind: NotificationRow['kind'], title: string, link: string) {
+  const db = mockDb()
+  const me = auth.currentUser()
+  if (userId === null || userId === me?.id) return
+  const project = db.projects.find((p) => p.id === projectId)?.name ?? ''
+  db.notifications.push({
+    id: `notif-mock-${String((notifSeq += 1))}`,
+    user_id: userId,
+    project_id: projectId,
+    kind,
+    data: { project, title },
+    link,
+    read_at: null,
+    created_at: new Date().toISOString(),
+  })
+}
+
+const STATUS_NOTIF: Partial<Record<SubmissionStatus, NotificationRow['kind']>> = {
+  under_review: 'submission_under_review',
+  needs_info: 'submission_needs_info',
+  planned: 'submission_approved',
+  in_progress: 'submission_in_progress',
+  delivered: 'submission_delivered',
+  declined: 'submission_denied',
+}
 
 const mock: SubmissionsApi = {
   listSubmissions(projectId) {
@@ -70,7 +98,11 @@ const mock: SubmissionsApi = {
   },
   setStatus(submissionId, status) {
     const sub = mockDb().submissions.find((s) => s.id === submissionId)
-    if (sub) sub.status = status
+    if (sub) {
+      sub.status = status
+      const kind = STATUS_NOTIF[status]
+      if (kind) mockNotify(sub.submitted_by, sub.project_id, kind, sub.title, `/app/projects/${sub.project_id}?tab=requests`)
+    }
     return Promise.resolve()
   },
   approveSubmission(submissionId) {
@@ -78,6 +110,7 @@ const mock: SubmissionsApi = {
     if (sub) {
       sub.status = 'planned'
       sub.github_issue_number = 1000 + Math.floor(Math.random() * 9000) // simulate the GitHub write-back
+      mockNotify(sub.submitted_by, sub.project_id, 'submission_approved', sub.title, `/app/projects/${sub.project_id}?tab=requests`)
     }
     return Promise.resolve()
   },
@@ -89,6 +122,7 @@ const mock: SubmissionsApi = {
     )
   },
   postMessage(submissionId, body) {
+    const db = mockDb()
     const me = auth.currentUser()
     const row: SubmissionMessageRow = {
       id: `msg-${String((msgSeq += 1))}`,
@@ -99,7 +133,15 @@ const mock: SubmissionsApi = {
       body,
       created_at: new Date().toISOString(),
     }
-    mockDb().submissionMessages.push(row)
+    db.submissionMessages.push(row)
+    // Notify the other party (owner <-> submitter), like the DB trigger.
+    const sub = db.submissions.find((s) => s.id === submissionId)
+    if (sub) {
+      const owner = db.projects.find((p) => p.id === sub.project_id)?.owner_id ?? null
+      const recipient = me?.id === owner ? sub.submitted_by : owner
+      const link = recipient === owner ? `/app/projects/${sub.project_id}/submissions` : `/app/projects/${sub.project_id}?tab=requests`
+      mockNotify(recipient, sub.project_id, 'submission_message', sub.title, link)
+    }
     return Promise.resolve(row)
   },
 }

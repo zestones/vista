@@ -38,4 +38,20 @@ describe('request thread + status lifecycle (#249)', () => {
     const row = await submissions.createSubmission({ projectId: 'prj-apollo', type: 'feature', title: 'x' })
     expect(row.status).toBe('received')
   })
+
+  it('notifies the submitter on a new message and on status changes (#250)', async () => {
+    // A client submits a request.
+    await auth.signInWithEmail('newcomer@client.com')
+    const sub = await submissions.createSubmission({ projectId: 'prj-apollo', type: 'feature', title: 'Need X' })
+    // The owner replies and advances the status.
+    await auth.signInWithEmail('you@vista.app')
+    await submissions.postMessage(sub.id, 'on it')
+    await submissions.setStatus(sub.id, 'delivered')
+
+    const forClient = mockDb().notifications.filter((n) => n.user_id === 'newcomer@client.com')
+    expect(forClient.some((n) => n.kind === 'submission_message')).toBe(true)
+    expect(forClient.some((n) => n.kind === 'submission_delivered')).toBe(true)
+    // The owner never notifies themselves.
+    expect(mockDb().notifications.some((n) => n.user_id === 'you@vista.app' && n.kind === 'submission_message')).toBe(false)
+  })
 })

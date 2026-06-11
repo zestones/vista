@@ -774,6 +774,11 @@ export type Database = {
         | "submission_received"
         | "submission_approved"
         | "submission_denied"
+        | "submission_needs_info"
+        | "submission_delivered"
+        | "submission_message"
+        | "submission_under_review"
+        | "submission_in_progress"
         | "access_requested"
         | "access_approved"
         | "access_denied"
@@ -908,6 +913,11 @@ export const Constants = {
         "submission_received",
         "submission_approved",
         "submission_denied",
+        "submission_needs_info",
+        "submission_delivered",
+        "submission_message",
+        "submission_under_review",
+        "submission_in_progress",
         "access_requested",
         "access_approved",
         "access_denied",

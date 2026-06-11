@@ -14,6 +14,16 @@ export function submissionGroup(status: SubmissionStatus): SubmissionStatusGroup
   return ACCEPTED_STATUSES.includes(status) ? 'accepted' : 'review'
 }
 
+/** Finer lifecycle stages for the grouped inbox sections (#250 revamp). */
+export type SubmissionStage = 'review' | 'in_progress' | 'delivered' | 'declined'
+export const SUBMISSION_STAGES: SubmissionStage[] = ['review', 'in_progress', 'delivered', 'declined']
+export function submissionStage(status: SubmissionStatus): SubmissionStage {
+  if (status === 'declined') return 'declined'
+  if (status === 'delivered') return 'delivered'
+  if (status === 'planned' || status === 'in_progress') return 'in_progress'
+  return 'review'
+}
+
 /** A submission plus its project's name + color, for the owner's cross-project inbox (#145/#175). */
 export type OwnerInboxItem = SubmissionRow & { projectName: string; projectColor: string | null }
 

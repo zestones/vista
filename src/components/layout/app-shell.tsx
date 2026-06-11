@@ -11,6 +11,8 @@ import { NewProjectModal, useWorkspace } from '@/features/workspace'
 import { useOwnerInbox } from '@/features/project/moderation'
 import { publishState, type ProjectSummary } from '@/services/projects'
 import { CommentPanel } from '@/features/project/comments'
+import { SubmissionPanel } from '@/features/project/moderation'
+import { SubmissionDetailContext, type SubmissionTarget } from '@/contexts/submission-detail.context'
 import { Button } from '@/components/ui'
 import { useMembershipRealtime } from '@/hooks/use-membership-realtime'
 import { LangMenu } from './lang-toggle'
@@ -262,6 +264,16 @@ export function AppShell({ children }: { children: ReactNode }) {
     [commentTarget, openComments, closeComments, navigateToIssue, registerNavigator],
   )
 
+  // Request detail panel (#250): the moderation/my-requests lists open it; pushes content aside like comments.
+  const [subTarget, setSubTarget] = useState<SubmissionTarget | null>(null)
+  const openSub = useCallback((target: SubmissionTarget) => {
+    setSubTarget(target)
+  }, [])
+  const closeSub = useCallback(() => {
+    setSubTarget(null)
+  }, [])
+  const submissionDetail = useMemo(() => ({ target: subTarget, open: openSub, close: closeSub }), [subTarget, openSub, closeSub])
+
   // Premium coexistence (#219): on a tighter screen, opening a comment reclaims the sidebar's width so
   // the content isn't crushed; closing restores it — but only the collapse WE caused (manual toggles win).
   useEffect(() => {
@@ -283,6 +295,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <SidebarContext value={sidebar}>
       <PreviewContext value={preview}>
         <CommentPanelContext value={commentPanel}>
+         <SubmissionDetailContext value={submissionDetail}>
           {/* The page background carries the sidebar; the content sits on top as an inset panel. */}
           <div className='bg-surface-sunken relative flex h-screen overflow-hidden lg:gap-2 lg:p-2'>
             <aside
@@ -366,9 +379,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             {/* Comment panel (#92): pushes content aside on desktop (flex sibling), overlays on mobile. */}
             <CommentPanel />
+            {/* Request detail panel (#250): same push-aside pattern for the submission thread + status. */}
+            <SubmissionPanel />
 
             <NewProjectModal open={newOpen} onOpenChange={setNewOpen} />
           </div>
+         </SubmissionDetailContext>
         </CommentPanelContext>
       </PreviewContext>
     </SidebarContext>

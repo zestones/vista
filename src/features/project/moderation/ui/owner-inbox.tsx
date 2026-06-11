@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import { useAuth } from '@/contexts/auth.context'
+import { useSubmissionDetail } from '@/contexts/submission-detail.context'
 import { useRealtimeInvalidate } from '@/hooks/use-realtime-invalidate'
 import { submissionKeys } from '@/lib/query-keys/submission.keys'
 import type { OwnerInboxItem } from '@/services/submissions'
@@ -22,6 +23,7 @@ export function OwnerInbox() {
   const userId = user?.id ?? ''
   const inbox = useOwnerInbox(userId)
   const moderate = useModerateSubmission()
+  const { open: openDetail } = useSubmissionDetail()
   const [approving, setApproving] = useState<OwnerInboxItem | null>(null)
   // Live (#37): owner receives changes for their projects' submissions (RLS-scoped) -> refetch.
   useRealtimeInvalidate('submissions', undefined, submissionKeys.inbox(userId))
@@ -60,6 +62,7 @@ export function OwnerInbox() {
             disabled={moderate.isPending}
             onApprove={() => setApproving(s)}
             onDeny={() => deny(s.id)}
+            onOpen={() => openDetail({ submission: s, isOwner: true })}
           />
         ))}
       </div>
