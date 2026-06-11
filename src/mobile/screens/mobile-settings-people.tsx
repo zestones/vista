@@ -14,7 +14,7 @@ export default function MobileSettingsPeople() {
   if (isLoading) {
     return (
       <>
-        <ScreenHeader title={t('ps.tab.people')} back />
+        <ScreenHeader title={t('ps.tab.members')} back />
         <div className='grid flex-1 place-items-center py-16'>
           <Spinner />
         </div>
@@ -25,7 +25,7 @@ export default function MobileSettingsPeople() {
 
   return (
     <>
-      <ScreenHeader title={t('ps.tab.people')} back />
+      <ScreenHeader title={t('ps.tab.members')} back />
       <div className='p-4'>
         <PeopleTab projectId={id} />
       </div>

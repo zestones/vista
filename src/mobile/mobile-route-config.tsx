@@ -3,6 +3,7 @@ import { type RouteObject } from 'react-router-dom'
 import { GuestOnly, RequireAuth } from '@/routes/auth-guards'
 import { LandingPage } from '@/pages/landing/landing-page'
 import { GithubCallbackPage } from '@/pages/github/github-callback-page'
+import { PublicSharePage } from '@/pages/share'
 import { MobileShellLayout } from './shell'
 
 // Bespoke mobile screens are lazy so they ship as their own chunks, code-split from desktop (#220).
@@ -30,6 +31,8 @@ export const mobileRouteConfig: RouteObject[] = [
   { element: <GuestOnly />, children: [{ path: '/login', element: <MobileLogin /> }] },
   { path: '/github/callback', element: <GithubCallbackPage /> },
   { path: '/join/:token', element: <MobileJoin /> },
+  // Public read-only roadmap via a share token, no account (#193) — same page on both platforms.
+  { path: '/s/:token', element: <PublicSharePage /> },
   {
     element: <RequireAuth />,
     children: [

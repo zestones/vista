@@ -1,6 +1,6 @@
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ChevronRight, Eye, SlidersHorizontal, Users } from 'lucide-react'
+import { ChevronRight, Share2, SlidersHorizontal, Users } from 'lucide-react'
 import { Spinner } from '@/components/feedback'
 import { ScreenHeader } from '../shell'
 import { useOwnerProject } from './use-owner-project'
@@ -30,8 +30,8 @@ export default function MobileSettings() {
   const base = `/app/projects/${id}/settings`
   const rows = [
     { to: `${base}/general`, label: t('ps.tab.general'), Icon: SlidersHorizontal, count: undefined as number | undefined },
-    { to: `${base}/people`, label: t('ps.tab.people'), Icon: Users, count: data.activeMembers },
-    { to: `${base}/visibility`, label: t('ps.tab.visibility'), Icon: Eye, count: undefined },
+    { to: `${base}/visibility`, label: t('ps.tab.sharing'), Icon: Share2, count: undefined },
+    { to: `${base}/people`, label: t('ps.tab.members'), Icon: Users, count: data.activeMembers },
   ]
 
   return (

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
-import { Check, Copy, RefreshCw, Trash2, X } from 'lucide-react'
+import { Check, Trash2, X } from 'lucide-react'
 import type { MemberRole, MemberRow } from '@/services/members'
 import {
   Badge,
@@ -12,7 +12,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Input,
   Select,
   SelectContent,
   SelectItem,
@@ -22,7 +21,6 @@ import {
 } from '@/components/ui'
 import { Spinner } from '@/components/feedback'
 import { useMemberAction, useMembers, type MemberAction } from '../hooks/use-members'
-import { useInviteLink } from '../hooks/use-invite-link'
 
 const formatDate = (iso: string, lang: string) => new Date(iso).toLocaleDateString(lang, { day: 'numeric', month: 'short', year: 'numeric' })
 
@@ -35,7 +33,6 @@ export function PeopleTab({ projectId }: { projectId: string }) {
   const { t, i18n } = useTranslation()
   const { data, isLoading } = useMembers(projectId)
   const action = useMemberAction(projectId)
-  const invite = useInviteLink(projectId)
   // Granting comment access is gated by a confirmation (it exposes internal chatter); revoking is immediate.
   const [grantTarget, setGrantTarget] = useState<MemberRow | null>(null)
 
@@ -55,32 +52,8 @@ export function PeopleTab({ projectId }: { projectId: string }) {
       onError: (e) => toast.error(e instanceof Error && e.message ? e.message : t('ps.mem.error')),
     })
 
-  const copy = () => {
-    void navigator.clipboard
-      .writeText(invite.link)
-      .then(() => toast.success(t('ps.mem.copied')))
-      .catch(() => toast.error(t('ps.mem.error')))
-  }
-
   return (
     <div className='flex flex-col gap-6'>
-      <section className='border-hairline bg-card rounded-xl border p-5'>
-        <h3 className='text-ink font-medium'>{t('ps.inv.title')}</h3>
-        <p className='text-muted-ink mt-1 mb-3 text-sm'>{t('ps.mem.inviteHint')}</p>
-        {/* Link on its own line; the actions sit on a row below on mobile, inline on desktop (sm+). */}
-        <div className='flex flex-col gap-2 sm:flex-row'>
-          <Input readOnly value={invite.link} className='font-mono text-xs sm:flex-1' />
-          <div className='flex gap-2'>
-            <Button variant='outline' size='sm' className='flex-1 sm:flex-none' onClick={copy} disabled={!invite.link}>
-              <Copy /> {t('ps.mem.copy')}
-            </Button>
-            <Button variant='outline' size='sm' className='flex-1 sm:flex-none' onClick={() => invite.regenerate.mutate()} disabled={invite.regenerate.isPending}>
-              <RefreshCw /> {t('ps.mem.regenerate')}
-            </Button>
-          </div>
-        </div>
-      </section>
-
       {pending.length > 0 && (
         <section>
           <h3 className='text-ink mb-2 font-medium'>

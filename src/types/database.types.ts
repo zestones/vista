@@ -342,6 +342,47 @@ export type Database = {
           },
         ]
       }
+      project_share_links: {
+        Row: {
+          access_count: number
+          created_at: string
+          expires_at: string
+          id: string
+          last_accessed_at: string | null
+          project_id: string
+          revoked_at: string | null
+          token: string
+        }
+        Insert: {
+          access_count?: number
+          created_at?: string
+          expires_at: string
+          id?: string
+          last_accessed_at?: string | null
+          project_id: string
+          revoked_at?: string | null
+          token: string
+        }
+        Update: {
+          access_count?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          last_accessed_at?: string | null
+          project_id?: string
+          revoked_at?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_share_links_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_members: {
         Row: {
           can_view_comments: boolean
@@ -622,6 +663,21 @@ export type Database = {
         }[]
       }
       get_projects_for_user: { Args: never; Returns: Json }
+      get_public_roadmap: { Args: { p_token: string }; Returns: Json }
+      rotate_share_link: {
+        Args: { p_expires: string; p_project: string }
+        Returns: {
+          access_count: number
+          created_at: string
+          expires_at: string
+          id: string
+          last_accessed_at: string | null
+          project_id: string
+          revoked_at: string | null
+          token: string
+        }
+      }
+      revoke_share_link: { Args: { p_project: string }; Returns: undefined }
       has_role: {
         Args: {
           min_role: Database["public"]["Enums"]["member_role"]
