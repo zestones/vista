@@ -6,7 +6,6 @@ import { GithubCallbackPage } from '@/pages/github/github-callback-page'
 import { AdminPage } from '@/pages/app/admin/admin-page'
 import { SubmissionsInboxPage } from '@/pages/app/submissions/submissions-inbox-page'
 import { SubmissionsPage } from '@/pages/app/project/submissions-page'
-import { SettingsPage } from '@/pages/app/settings/settings-page'
 import { MobileShellLayout } from './shell'
 
 // Bespoke mobile screens are lazy so they ship as their own chunks, code-split from desktop (#220).
@@ -16,6 +15,10 @@ const MobileProject = lazy(() => import('./screens/mobile-project'))
 const MobileMilestone = lazy(() => import('./screens/mobile-milestone'))
 const MobileLogin = lazy(() => import('./screens/mobile-login'))
 const MobileJoin = lazy(() => import('./screens/mobile-join'))
+const MobileSettings = lazy(() => import('./screens/mobile-settings'))
+const MobileSettingsGeneral = lazy(() => import('./screens/mobile-settings-general'))
+const MobileSettingsPeople = lazy(() => import('./screens/mobile-settings-people'))
+const MobileSettingsVisibility = lazy(() => import('./screens/mobile-settings-visibility'))
 
 /**
  * Mobile route tree (#220). Built mobile screens render inside the MobileShell; every screen not yet
@@ -38,6 +41,10 @@ export const mobileRouteConfig: RouteObject[] = [
           { path: '/app/account', element: <MobileAccount /> },
           { path: '/app/projects/:id', element: <MobileProject /> },
           { path: '/app/projects/:id/m/:num', element: <MobileMilestone /> },
+          { path: '/app/projects/:id/settings', element: <MobileSettings /> },
+          { path: '/app/projects/:id/settings/general', element: <MobileSettingsGeneral /> },
+          { path: '/app/projects/:id/settings/people', element: <MobileSettingsPeople /> },
+          { path: '/app/projects/:id/settings/visibility', element: <MobileSettingsVisibility /> },
         ],
       },
       {
@@ -47,7 +54,6 @@ export const mobileRouteConfig: RouteObject[] = [
           { path: '/app/admin', element: <AdminPage /> },
           { path: '/app/submissions', element: <SubmissionsInboxPage /> },
           { path: '/app/projects/:id/submissions', element: <SubmissionsPage /> },
-          { path: '/app/projects/:id/settings', element: <SettingsPage /> },
         ],
       },
     ],

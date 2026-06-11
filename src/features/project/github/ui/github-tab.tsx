@@ -22,12 +22,12 @@ export function GithubTab({ projectId }: { projectId: string }) {
 
   return (
     <div className='flex flex-col gap-8'>
-      <section className='border-hairline bg-card flex items-center justify-between rounded-xl border p-6'>
+      <section className='border-hairline bg-card flex flex-col items-start gap-4 rounded-xl border p-6 sm:flex-row sm:items-center sm:justify-between'>
         <div>
           <h2 className='text-ink text-lg font-medium'>{t('ps.gh.title')}</h2>
           <p className='text-muted-ink mt-1 text-[13px]'>{t('ps.gh.hint')}</p>
         </div>
-        <Button variant='outline' size='sm' asChild>
+        <Button variant='outline' size='sm' className='shrink-0' asChild>
           <a href={GITHUB_INSTALL_URL} target='_blank' rel='noreferrer'>
             <GitHubMark size={15} /> {t('ps.gh.manage')} <ExternalLink size={13} />
           </a>

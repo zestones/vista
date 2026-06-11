@@ -40,7 +40,7 @@ export function SharePicker({ projectId }: { projectId: string }) {
 
   return (
     <div className='flex flex-col gap-6'>
-      <section className='flex items-start justify-between gap-4'>
+      <section className='flex flex-col items-start gap-4 sm:flex-row sm:justify-between'>
         <div>
           <h2 className='text-ink text-lg font-medium'>{t('share.title')}</h2>
           <p className='text-muted-ink mt-1 text-sm'>{t('share.subtitle')}</p>
@@ -152,8 +152,8 @@ export function SharePicker({ projectId }: { projectId: string }) {
           )}
         </div>
 
-        {/* Client preview (sticky) */}
-        <aside className='lg:sticky lg:top-20 lg:self-start'>
+        {/* Client preview (sticky). Hidden on mobile -- not useful on a phone, the curation is the point. */}
+        <aside className='hidden lg:sticky lg:top-20 lg:block lg:self-start'>
           <h3 className='text-muted-ink mb-2 text-[11px] font-semibold tracking-wide uppercase'>{t('share.preview')}</h3>
           {previewEmpty ? (
             <p className='border-hairline text-muted-ink rounded-xl border border-dashed p-4 text-sm'>{t('share.previewEmpty')}</p>
