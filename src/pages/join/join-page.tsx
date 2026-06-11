@@ -1,17 +1,13 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowRight, Check, Lock, Users } from 'lucide-react'
-import { useAuth } from '@/contexts/auth.context'
-import { invites } from '@/services/invites'
-import { inviteKeys } from '@/lib/query-keys/invites.keys'
-import { useMembershipRealtime } from '@/hooks/use-membership-realtime'
 import { MagicLinkForm } from '@/features/auth'
 import { Button } from '@/components/ui'
 import { Spinner } from '@/components/feedback'
 import { LangToggle } from '@/components/layout'
 import { VistaMark } from '@/components/brand'
 import { PENDING_JOIN_KEY } from './pending-join'
+import { useInviteJoin } from './use-invite-join'
 
 function InlineNote({ tone, title, body }: { tone: 'link' | 'success'; title: string; body: string }) {
   return (
@@ -28,23 +24,8 @@ function InlineNote({ tone, title, body }: { tone: 'link' | 'success'; title: st
 export function JoinPage() {
   const { t } = useTranslation()
   const { token = '' } = useParams()
-  const { user } = useAuth()
-  const email = user?.email ?? ''
   const navigate = useNavigate()
-  const qc = useQueryClient()
-  // The join page lives outside the AppShell, so it carries its own live-membership subscription:
-  // when the owner approves, the "Request sent" card flips to "Open project" without a refresh (#122).
-  useMembershipRealtime(user?.id ?? '')
-
-  const { data, isLoading } = useQuery({
-    queryKey: inviteKeys.byToken(token, email),
-    queryFn: () => invites.getProjectByToken(token, email),
-  })
-
-  const request = useMutation({
-    mutationFn: () => (user ? invites.requestAccess(token, user) : Promise.resolve({ status: 'invalid' as const })),
-    onSuccess: () => qc.invalidateQueries({ queryKey: inviteKeys.byToken(token, email) }),
-  })
+  const { user, data, isLoading, request } = useInviteJoin(token)
 
   return (
     <div className='bg-secondary flex min-h-screen flex-col'>
