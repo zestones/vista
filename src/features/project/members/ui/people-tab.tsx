@@ -67,14 +67,17 @@ export function PeopleTab({ projectId }: { projectId: string }) {
       <section className='border-hairline bg-card rounded-xl border p-5'>
         <h3 className='text-ink font-medium'>{t('ps.inv.title')}</h3>
         <p className='text-muted-ink mt-1 mb-3 text-sm'>{t('ps.mem.inviteHint')}</p>
-        <div className='flex gap-2'>
-          <Input readOnly value={invite.link} className='font-mono text-xs' />
-          <Button variant='outline' size='sm' className='shrink-0' onClick={copy} disabled={!invite.link}>
-            <Copy /> {t('ps.mem.copy')}
-          </Button>
-          <Button variant='outline' size='sm' className='shrink-0' onClick={() => invite.regenerate.mutate()} disabled={invite.regenerate.isPending}>
-            <RefreshCw /> {t('ps.mem.regenerate')}
-          </Button>
+        {/* Link on its own line; the actions sit on a row below on mobile, inline on desktop (sm+). */}
+        <div className='flex flex-col gap-2 sm:flex-row'>
+          <Input readOnly value={invite.link} className='font-mono text-xs sm:flex-1' />
+          <div className='flex gap-2'>
+            <Button variant='outline' size='sm' className='flex-1 sm:flex-none' onClick={copy} disabled={!invite.link}>
+              <Copy /> {t('ps.mem.copy')}
+            </Button>
+            <Button variant='outline' size='sm' className='flex-1 sm:flex-none' onClick={() => invite.regenerate.mutate()} disabled={invite.regenerate.isPending}>
+              <RefreshCw /> {t('ps.mem.regenerate')}
+            </Button>
+          </div>
         </div>
       </section>
 
