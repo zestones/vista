@@ -85,7 +85,9 @@ export function CommentPanel() {
   )
 }
 
-function CommentPanelBody({
+/** The thread (issue header + opening post + replies), reused by the desktop CommentPanel and the
+ * mobile comment sheet (#224). Read-only today; a composer is added when comment write-back lands. */
+export function CommentPanelBody({
   target,
   onClose,
   expanded,
