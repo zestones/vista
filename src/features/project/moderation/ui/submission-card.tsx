@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AnimatePresence, motion } from 'motion/react'
-import { Bug, Check, ChevronDown, HelpCircle, Sparkles, Tag, X, type LucideIcon } from 'lucide-react'
+import { Bug, Check, ChevronDown, ChevronRight, HelpCircle, Sparkles, Tag, X, type LucideIcon } from 'lucide-react'
 import { submissionGroup, type SubmissionRow, type SubmissionStatus, type SubmissionType } from '@/services/submissions'
 import { Badge, Button } from '@/components/ui'
 import { cn } from '@/lib/utils'
@@ -38,12 +38,15 @@ export function SubmissionCard({
   disabled = false,
   onApprove,
   onDeny,
+  onOpen,
 }: {
   sub: SubmissionRow
   project?: { name: string; color: string | null }
   disabled?: boolean
   onApprove?: () => void
   onDeny?: () => void
+  /** When set, tapping the row opens the detail panel/sheet (#250) instead of expanding the body inline. */
+  onOpen?: () => void
 }) {
   const { t, i18n } = useTranslation()
   const [open, setOpen] = useState(false)
@@ -60,12 +63,12 @@ export function SubmissionCard({
       <div className='flex flex-col gap-3 p-4 sm:flex-row sm:items-center'>
         <button
           type='button'
-          aria-expanded={open}
-          disabled={!hasBody}
-          onClick={() => setOpen((v) => !v)}
+          aria-expanded={onOpen ? undefined : open}
+          disabled={onOpen ? false : !hasBody}
+          onClick={onOpen ?? (() => setOpen((v) => !v))}
           className={cn(
             'flex min-w-0 flex-1 items-center gap-3 text-left',
-            hasBody && 'hover:bg-secondary/60 -m-2 cursor-pointer rounded-lg p-2 transition-colors',
+            (hasBody || onOpen) && 'hover:bg-secondary/60 -m-2 cursor-pointer rounded-lg p-2 transition-colors',
           )}
         >
           <span title={t(label)} className={`grid size-8 shrink-0 place-items-center rounded-lg ${chip}`}>
@@ -74,6 +77,9 @@ export function SubmissionCard({
           <span className='min-w-0 flex-1'>
             <span className='flex flex-wrap items-center gap-x-2 gap-y-0.5'>
               <span className='text-ink font-medium'>{sub.title}</span>
+              <span className={cn('inline-flex items-center rounded-sm px-1.5 py-0.5 text-[10px] font-semibold', STATUS_PILL[sub.status].cls)}>
+                {t(STATUS_PILL[sub.status].key)}
+              </span>
               {project && (
                 <Badge
                   className='border-transparent font-semibold'
@@ -88,8 +94,10 @@ export function SubmissionCard({
             </span>
             <span className='text-muted-ink mt-0.5 block truncate text-xs'>{meta}</span>
           </span>
-          {hasBody && (
-            <ChevronDown size={16} className={cn('text-muted-ink shrink-0 transition-transform duration-200', open && 'rotate-180')} />
+          {onOpen ? (
+            <ChevronRight size={16} className='text-muted-ink shrink-0' />
+          ) : (
+            hasBody && <ChevronDown size={16} className={cn('text-muted-ink shrink-0 transition-transform duration-200', open && 'rotate-180')} />
           )}
         </button>
 
@@ -104,15 +112,7 @@ export function SubmissionCard({
           </div>
         ) : (
           <div className='flex shrink-0 items-center justify-end gap-3'>
-            {/* Read-only rows (client view) carry an explicit status pill; moderation rows don't need
-                one for pending (the actions imply it) nor on the per-project page (tabs carry it). */}
-            {!(onApprove && onDeny) && (
-              <span
-                className={cn('inline-flex items-center rounded-sm px-2 py-0.5 text-[11px] font-semibold', STATUS_PILL[sub.status].cls)}
-              >
-                {t(STATUS_PILL[sub.status].key)}
-              </span>
-            )}
+            {/* The status pill now lives in the header for every card; here we keep the issue + decided date. */}
             <div className='text-muted-ink text-right text-xs'>
               {sub.github_issue_number != null && (
                 <div className='text-ink font-medium'>{t('mod.issue', { n: sub.github_issue_number })}</div>
@@ -124,7 +124,7 @@ export function SubmissionCard({
       </div>
 
       <AnimatePresence initial={false}>
-        {open && hasBody && (
+        {!onOpen && open && hasBody && (
           <motion.div
             key='body'
             initial={{ height: 0, opacity: 0 }}

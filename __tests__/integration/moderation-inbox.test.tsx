@@ -30,7 +30,7 @@ describe('moderation inbox (#6)', () => {
     // Approve opens the target-repo picker (#33); the sole repo is preselected.
     fireEvent.click(screen.getByRole('button', { name: /Approuver|Approve/ }))
 
-    // Confirm creates the issue -> the submission leaves the pending list.
+    // Confirm creates the issue -> the request becomes "planned" and leaves the active "To review" tab (#250).
     const confirm = await screen.findByRole('button', { name: /Créer|Create issue/ })
     fireEvent.click(confirm)
 

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
-import { submissionGroup, type SubmissionRow, type SubmissionStatusGroup } from '@/services/submissions'
-import { Segmented } from '@/components/ui'
+import type { SubmissionRow } from '@/services/submissions'
+import { useSubmissionDetail } from '@/contexts/submission-detail.context'
 import { Spinner } from '@/components/feedback'
 import { submissionKeys } from '@/lib/query-keys/submission.keys'
 import { useRealtimeInvalidate } from '@/hooks/use-realtime-invalidate'
@@ -10,15 +10,14 @@ import { useSubmissions } from '../hooks/use-submissions'
 import { useModerateSubmission } from '../hooks/use-moderate-submission'
 import { ApproveDialog } from './approve-dialog'
 import { SubmissionCard } from './submission-card'
-
-const GROUPS: SubmissionStatusGroup[] = ['review', 'accepted', 'declined']
+import { SubmissionTabs } from './submission-tabs'
 
 /** Owner moderation inbox (#6/#99) for one project: submissions grouped by lifecycle stage, approve/deny. */
 export function ModerationInbox({ projectId }: { projectId: string }) {
   const { t } = useTranslation()
   const { data, isLoading } = useSubmissions(projectId)
   const moderate = useModerateSubmission()
-  const [tab, setTab] = useState<SubmissionStatusGroup>('review')
+  const { open: openDetail } = useSubmissionDetail()
   // Approve opens a picker (target repo + optional milestone); deny is immediate.
   const [approving, setApproving] = useState<SubmissionRow | null>(null)
   // Live updates (#37): the inbox reflects new/decided submissions without a refresh.
@@ -32,9 +31,6 @@ export function ModerationInbox({ projectId }: { projectId: string }) {
     )
   }
 
-  const rows = data.filter((s) => submissionGroup(s.status) === tab)
-  const count = (g: SubmissionStatusGroup) => data.filter((r) => submissionGroup(r.status) === g).length
-
   const deny = (id: string) =>
     moderate.mutate(
       { decision: 'deny', id },
@@ -45,25 +41,21 @@ export function ModerationInbox({ projectId }: { projectId: string }) {
     )
 
   return (
-    <div className='flex flex-col gap-6'>
-      <Segmented<SubmissionStatusGroup>
-        aria-label={t('mod.title')}
-        value={tab}
-        onValueChange={setTab}
-        options={GROUPS.map((g) => ({ value: g, label: count(g) > 0 ? `${t(`mod.tab.${g}`)} ${String(count(g))}` : t(`mod.tab.${g}`) }))}
+    <div>
+      <SubmissionTabs
+        items={data}
+        empty={<p className='border-hairline text-muted-ink rounded-xl border border-dashed p-6 text-center text-sm'>{t('mod.empty')}</p>}
+        renderCard={(s) => (
+          <SubmissionCard
+            key={s.id}
+            sub={s}
+            disabled={moderate.isPending}
+            onApprove={() => setApproving(s)}
+            onDeny={() => deny(s.id)}
+            onOpen={() => openDetail({ submission: s, isOwner: true })}
+          />
+        )}
       />
-
-      {rows.length === 0 ? (
-        <p className='border-hairline text-muted-ink rounded-xl border border-dashed p-6 text-center text-sm'>
-          {tab === 'review' ? t('mod.empty') : t('mod.emptyOther')}
-        </p>
-      ) : (
-        <div className='flex flex-col gap-3'>
-          {rows.map((s) => (
-            <SubmissionCard key={s.id} sub={s} disabled={moderate.isPending} onApprove={() => setApproving(s)} onDeny={() => deny(s.id)} />
-          ))}
-        </div>
-      )}
 
       <ApproveDialog
         projectId={projectId}

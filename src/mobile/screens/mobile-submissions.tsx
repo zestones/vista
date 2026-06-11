@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import { Inbox, Search } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
+import { useSubmissionDetail } from '@/contexts/submission-detail.context'
 import { useRealtimeInvalidate } from '@/hooks/use-realtime-invalidate'
 import { submissionKeys } from '@/lib/query-keys/submission.keys'
 import { ApproveDialog, SubmissionCard, useModerateSubmission, useOwnerInbox } from '@/features/project/moderation'
@@ -23,6 +24,7 @@ export default function MobileSubmissions() {
   const userId = user?.id ?? ''
   const { data, isLoading } = useOwnerInbox(userId)
   const moderate = useModerateSubmission()
+  const { open: openDetail } = useSubmissionDetail()
   const [approving, setApproving] = useState<OwnerInboxItem | null>(null)
   const [q, setQ] = useState('')
   useRealtimeInvalidate('submissions', undefined, submissionKeys.inbox(userId))
@@ -92,7 +94,14 @@ export default function MobileSubmissions() {
                   <span className='text-muted-ink text-xs tabular-nums'>{g.items.length}</span>
                 </div>
                 {g.items.map((s) => (
-                  <SubmissionCard key={s.id} sub={s} disabled={moderate.isPending} onApprove={() => setApproving(s)} onDeny={() => deny(s.id)} />
+                  <SubmissionCard
+                    key={s.id}
+                    sub={s}
+                    disabled={moderate.isPending}
+                    onApprove={() => setApproving(s)}
+                    onDeny={() => deny(s.id)}
+                    onOpen={() => openDetail({ submission: s, isOwner: true })}
+                  />
                 ))}
               </section>
             ))
