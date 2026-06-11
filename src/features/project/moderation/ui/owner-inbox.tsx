@@ -35,7 +35,8 @@ export function OwnerInbox() {
       },
     )
 
-  if (inbox.isLoading || !inbox.data) {
+  // Spinner only while loading -- on error, fall through to the empty state instead of spinning forever.
+  if (inbox.isLoading) {
     return (
       <div className='grid place-items-center py-24'>
         <Spinner />
@@ -43,14 +44,15 @@ export function OwnerInbox() {
     )
   }
 
-  if (inbox.data.length === 0) {
+  const items = inbox.data ?? []
+  if (items.length === 0) {
     return <p className='border-hairline text-muted-ink rounded-xl border border-dashed p-12 text-center text-sm'>{t('mod.empty')}</p>
   }
 
   return (
     <>
       <div className='flex flex-col gap-3'>
-        {inbox.data.map((s) => (
+        {items.map((s) => (
           <SubmissionCard
             key={s.id}
             sub={s}

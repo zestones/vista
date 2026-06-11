@@ -49,7 +49,9 @@ Deno.serve(async (req) => {
   if (subErr) return jsonResponse({ error: 'submission lookup failed' }, 500)
   if (!sub) return jsonResponse({ error: 'submission not found' }, 404)
   if (sub.github_issue_number != null) return jsonResponse({ error: 'already created', github_issue_number: sub.github_issue_number }, 409)
-  if (sub.status !== 'pending') return jsonResponse({ error: 'submission is not pending' }, 409)
+  // "Undecided" = the review group of the lifecycle (#249); approve flips it to 'planned'.
+  const REVIEW = ['received', 'under_review', 'needs_info']
+  if (!REVIEW.includes(sub.status)) return jsonResponse({ error: 'submission is not awaiting a decision' }, 409)
 
   // Owner re-check (never trust the client).
   const { data: project } = await admin.from('projects').select('id').eq('id', sub.project_id).eq('owner_id', userId).maybeSingle()
@@ -73,13 +75,13 @@ Deno.serve(async (req) => {
     repo = repos[0]
   }
 
-  // Atomic claim: only one approval flips pending -> approved while the issue is still uncreated.
+  // Atomic claim: only one approval flips an undecided submission -> planned while still uncreated.
   const now = new Date().toISOString()
   const { data: claimed } = await admin
     .from('submissions')
-    .update({ status: 'approved', decided_by: userId, decided_at: now })
+    .update({ status: 'planned', decided_by: userId, decided_at: now })
     .eq('id', submissionId)
-    .eq('status', 'pending')
+    .in('status', REVIEW)
     .is('github_issue_number', null)
     .select('id')
     .maybeSingle()
@@ -101,7 +103,7 @@ Deno.serve(async (req) => {
     console.log(`create-issue ${repo.owner}/${repo.repo}#${issue.number} from submission ${submissionId}`)
     return jsonResponse({ github_issue_number: issue.number })
   } catch (e) {
-    await admin.from('submissions').update({ status: 'pending', decided_by: null, decided_at: null }).eq('id', submissionId)
+    await admin.from('submissions').update({ status: sub.status, decided_by: null, decided_at: null }).eq('id', submissionId)
     return jsonResponse({ error: e instanceof Error ? e.message : 'github create failed' }, 502)
   }
 })

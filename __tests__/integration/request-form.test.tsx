@@ -36,7 +36,7 @@ describe('request submission form (#53)', () => {
 
     const after = await submissions.listSubmissions('prj-apollo')
     expect(after.length).toBe(before + 1)
-    expect(after.at(-1)?.status).toBe('pending')
+    expect(after.at(-1)?.status).toBe('received')
     expect(after.at(-1)?.title).toBe('Dark mode please')
   })
 

@@ -10,6 +10,7 @@ export type MemberRow = Tables['project_members']['Row']
 export type SubmissionRow = Tables['submissions']['Row']
 export type NotificationRow = Tables['notifications']['Row']
 export type CommentRow = Tables['comments']['Row']
+export type SubmissionMessageRow = Tables['submission_messages']['Row']
 
 /** Public read-only share link (#193). Not a GitHub projection, so it lives outside database.types. */
 export interface ShareLinkRow {
@@ -34,6 +35,7 @@ export interface MockDb {
   notifications: NotificationRow[]
   comments: CommentRow[]
   shareLinks: ShareLinkRow[]
+  submissionMessages: SubmissionMessageRow[]
 }
 
 // ─── Seeded RNG (mulberry32) — deterministic per key ─────────────
@@ -178,6 +180,7 @@ export function buildSeed(): MockDb {
     notifications: [],
     comments: [],
     shareLinks: [],
+    submissionMessages: [],
   }
 
   PROJECT_DEFS.forEach((d, di) => {
@@ -285,7 +288,7 @@ export function buildSeed(): MockDb {
     submitted_by: null,
     submitter_name: 'Marie',
     submitter_email: 'marie@client.com',
-    status: 'pending',
+    status: 'received',
     github_issue_number: null,
     created_at: now,
     decided_at: null,
