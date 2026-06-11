@@ -26,4 +26,8 @@ export const moderation = {
   'mod.tab.denied': 'Refusées',
   'mod.emptyOther': 'Aucune soumission ici.',
   'mod.issue': 'Issue #{{n}}',
+  'mod.pendingCount': '{{count}} en attente',
+  'mod.searchPh': 'Rechercher une demande',
+  'mod.noResults': 'Aucune demande ne correspond.',
+  'mod.allCaughtUp': 'Tout est traité',
 }

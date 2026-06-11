@@ -8,11 +8,16 @@ import App from '@/App'
 import { AuthProvider } from '@/providers/auth.provider'
 import { ErrorBoundary } from '@/components/feedback'
 import { queryClient } from '@/lib/config/query-client.config'
+import { persistQueryCache, registerServiceWorker } from '@/lib/config/pwa.config'
 import '@/lib/i18n/i18n'
 import '@/styles/index.css'
 
 const root = document.getElementById('root')
 if (!root) throw new Error('Root element not found')
+
+// PWA (#235): offline service worker + persist the query cache so last-synced data reads offline.
+registerServiceWorker()
+persistQueryCache(queryClient)
 
 createRoot(root).render(
   <StrictMode>
