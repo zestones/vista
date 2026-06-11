@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronRight, Eye, SlidersHorizontal, Users } from 'lucide-react'
 import { Spinner } from '@/components/feedback'
 import { ScreenHeader } from '../shell'
-import { useSettingsAccess } from './use-settings-access'
+import { useOwnerProject } from './use-owner-project'
 
 /**
  * Mobile settings landing (#229-231): an owner-gated list of the three settings sections (General /
@@ -13,7 +13,7 @@ import { useSettingsAccess } from './use-settings-access'
 export default function MobileSettings() {
   const { t } = useTranslation()
   const { id = '' } = useParams()
-  const { isLoading, denied, data } = useSettingsAccess(id)
+  const { isLoading, denied, data } = useOwnerProject(id)
 
   if (isLoading) {
     return (

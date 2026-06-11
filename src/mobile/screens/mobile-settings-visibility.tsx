@@ -3,13 +3,13 @@ import { useTranslation } from 'react-i18next'
 import { Spinner } from '@/components/feedback'
 import { ClientVisibilityTab } from '@/features/project/settings'
 import { ScreenHeader } from '../shell'
-import { useSettingsAccess } from './use-settings-access'
+import { useOwnerProject } from './use-owner-project'
 
 /** Mobile Client-visibility settings (#231): publish toggle + share picker, reusing `ClientVisibilityTab`. */
 export default function MobileSettingsVisibility() {
   const { t } = useTranslation()
   const { id = '' } = useParams()
-  const { isLoading, denied, data } = useSettingsAccess(id)
+  const { isLoading, denied, data } = useOwnerProject(id)
 
   if (isLoading) {
     return (
