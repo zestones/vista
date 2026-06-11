@@ -78,7 +78,8 @@ export function SubmissionDetailBody({ target, onClose }: { target: SubmissionTa
           <h2 className='text-ink text-base leading-snug font-semibold'>{submission.title}</h2>
           <p className='text-muted-ink mt-0.5 text-xs'>
             {submission.submitter_name ?? submission.submitter_email ?? t('mod.anon')} · {fmtDate(submission.created_at, i18n.language)}
-            {hasIssue ? ` · ${t('mod.issue', { n: submission.github_issue_number })}` : ''}
+            {/* The GitHub issue number is owner-only — the repo is usually private, so it's noise/leak for a client. */}
+            {hasIssue && isOwner ? ` · ${t('mod.issue', { n: submission.github_issue_number })}` : ''}
           </p>
         </div>
         <button type='button' onClick={onClose} aria-label={t('form.close')} className='text-muted-ink hover:text-ink -mr-1 shrink-0'>
