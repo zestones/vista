@@ -2,15 +2,16 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff } from 'lucide-react'
 import { Switch } from '@/components/ui'
-import { SharePicker } from '@/features/project/sharing'
+import { PublicLinkSection, SharePicker } from '@/features/project/sharing'
+import { InviteLinkSection } from '@/features/project/members'
 import { publishState } from '@/services/projects'
 import type { ProjectRow } from '@/services/projects'
 import { useUpdateProject } from '../hooks/use-project-settings'
 
 /**
- * Client visibility (#139, part of #136): the project-level publish toggle and the per-item share
- * picker in one place — "is this visible to clients" and "which items", the two granularities of #107.
- * The toggle auto-saves on change (like the admin table); the share picker auto-saves per item.
+ * Sharing tab (#139 + IA cleanup): everything about giving clients access in one place — the publish
+ * toggle, the two share links side by side (public read-only vs invite-to-join), then the per-item
+ * allowlist. "Who's a member" lives in the Members tab. The toggle + share picker auto-save.
  */
 export function ClientVisibilityTab({ project }: { project: ProjectRow }) {
   const { t } = useTranslation()
@@ -31,6 +32,16 @@ export function ClientVisibilityTab({ project }: { project: ProjectRow }) {
           <p className='text-muted-ink mt-0.5 text-[13px]'>{t('ps.gen.accessHint')}</p>
         </div>
         <Switch checked={visible} disabled={update.isPending} onCheckedChange={setPublished} aria-label={t('ps.gen.access')} className='mt-0.5 shrink-0' />
+      </div>
+
+      {/* The two ways to share, side by side so the difference (read-only vs membership) is obvious. */}
+      <div>
+        <h2 className='text-muted-ink mb-2 px-1 text-[11px] font-semibold tracking-wide uppercase'>{t('ps.link.section')}</h2>
+        <div className='flex flex-col gap-3'>
+          {/* Invite (membership) is the default-visible primary; the public anonymous link is opt-in. */}
+          <InviteLinkSection projectId={project.id} />
+          <PublicLinkSection project={project} />
+        </div>
       </div>
 
       <SharePicker projectId={project.id} />

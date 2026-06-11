@@ -31,21 +31,21 @@ export function SettingsTabs({
     <Tabs value={tab} onValueChange={(v) => setParams(v === 'general' ? {} : { tab: v }, { replace: true })}>
       <TabsList variant='line'>
         <TabsTrigger value='general'>{t('ps.tab.general')}</TabsTrigger>
+        <TabsTrigger value='visibility'>{t('ps.tab.sharing')}</TabsTrigger>
         <TabsTrigger value='people'>
-          {t('ps.tab.people')} · {activeMembers}
+          {t('ps.tab.members')} · {activeMembers}
           {pendingMembers > 0 ? ` · ${String(pendingMembers)}` : ''}
         </TabsTrigger>
-        <TabsTrigger value='visibility'>{t('ps.tab.visibility')}</TabsTrigger>
       </TabsList>
 
       <TabsContent value='general' className='mt-6'>
         <GeneralTab project={project} />
       </TabsContent>
-      <TabsContent value='people' className='mt-6'>
-        <PeopleTab projectId={project.id} />
-      </TabsContent>
       <TabsContent value='visibility' className='mt-6'>
         <ClientVisibilityTab project={project} />
+      </TabsContent>
+      <TabsContent value='people' className='mt-6'>
+        <PeopleTab projectId={project.id} />
       </TabsContent>
     </Tabs>
   )

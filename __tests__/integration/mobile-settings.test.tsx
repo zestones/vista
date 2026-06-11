@@ -39,8 +39,8 @@ describe('mobile settings landing (#229-231)', () => {
 
     expect(await screen.findByText('Platform redesign')).toBeInTheDocument()
     expect(screen.getByText(/General|Général/)).toBeInTheDocument()
-    expect(screen.getByText(/People|Personnes/)).toBeInTheDocument()
-    expect(screen.getByText(/Client visibility|Visibilité client/)).toBeInTheDocument()
+    expect(screen.getByText(/Sharing|Partage/)).toBeInTheDocument()
+    expect(screen.getByText(/Members|Membres/)).toBeInTheDocument()
   })
 
   it('redirects a non-owner to the project hub', async () => {
@@ -48,6 +48,6 @@ describe('mobile settings landing (#229-231)', () => {
     renderSettings()
 
     expect(await screen.findByText('project hub')).toBeInTheDocument()
-    await waitFor(() => expect(screen.queryByText(/Client visibility|Visibilité client/)).toBeNull())
+    await waitFor(() => expect(screen.queryByText(/Sharing|Partage/)).toBeNull())
   })
 })
