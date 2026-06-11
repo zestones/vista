@@ -1,53 +1,63 @@
-# Milestone #12 — Mobile-first experience — audit
+# Milestone #12 — Mobile-first experience — audit (final, pre-PWA)
 
 > [!NOTE]
-> Refreshed after the settings trio (#229/#230/#231) shipped. Client journey, public auth, and owner settings are all mobile-native now. Evidence from the code at `main` (commit `d0d5c87`). "Inferred" is flagged where the exact scenario was not run.
+> Final audit before the closer. 14 of 15 sub-issues shipped; only #235 (PWA) remains, plus the epic #219 which closes when #235 lands. Evidence from `main` (commit `e4e315d`). "Inferred" is flagged where the exact scenario was not run.
 
-## Status snapshot
+## Sub-issue status (all verified shipped except #235)
 
-Shipped bespoke mobile surfaces: Home, Account, Project hub, Milestone, Submit composer, New-project composer, Comments sheet (#224), Notifications (#227), Login + Join (#228), Settings landing + General/People/Client-visibility (#229-231).
+| # | Title | State | Evidence it landed |
+|---|-------|-------|--------------------|
+| #220 | Platform split + MobileShell | closed | `mobile-route-config.tsx`, `MobileShell`/`ScreenStack` |
+| #221 | Home / projects list | closed | `mobile-home.tsx` |
+| #222 | Project Overview (vertical roadmap) | closed | `mobile-project.tsx` (hub) |
+| #223 | Milestone detail | closed | `mobile-milestone.tsx` |
+| #224 | Comments sheet | closed | `mobile-comment-sheet.tsx` (vaul) |
+| #225 | Submit a request | closed | `mobile-composer.tsx` + `MobileFormSheet` |
+| #226 | My requests / status | closed | Hub Requests tab (`<MyRequests>`); closed as done-in-hub |
+| #227 | Notifications | closed | `mobile-notifications.tsx` (sections + swipe-to-read) |
+| #228 | Auth (login + join) | closed | `mobile-login.tsx` / `mobile-join.tsx` + shared `useInviteJoin` |
+| #229/#230/#231 | Settings trio | closed | `mobile-settings*.tsx` + owner gate |
+| #232 | Moderation inbox | closed | `mobile-submissions.tsx` + `mobile-project-submissions.tsx`, `OwnerInbox` |
+| #233 | Admin console | closed | `mobile-admin.tsx` + bottom-nav tab |
+| #234 | Preview-as-client | closed | folded into #222 |
 
-Still falling back to the **desktop** shell/pages (`mobile-route-config.tsx`): `/app/admin`, `/app/submissions` (cross-project inbox), `/app/projects/:id/submissions` (per-project inbox).
+Every authenticated route is bespoke mobile under `MobileShellLayout` — the `DesktopShellLayout` fallback was removed from the mobile tree (#233). Headers are unified on the large-title style with auto-hide/reveal (post-#233 polish, PR #246).
 
-## Per-issue audit
+## #235 — PWA polish (the only open work)
 
-| # | Title | Claim check (evidence) | Verdict |
-|---|-------|------------------------|---------|
-| #226 | My requests / status | Already in the hub Requests tab (`<MyRequests>` + `useMySubmissions`). Unchanged. | **Done / confirm-only.** |
-| #232 | Moderation inbox | "triage submissions (approve/decline) **per project**" — **partly refuted/understated**. There are **two** owner moderation surfaces, both still desktop-fallback on mobile: (a) the **cross-project inbox** `SubmissionsInboxPage` (`/app/submissions`, owner bottom-nav) using `useOwnerInbox` + `SubmissionCard` + `ApproveDialog`; (b) the **per-project inbox** `SubmissionsPage` (`/app/projects/:id/submissions`, hub kebab) using `ModerationInbox`. `SubmissionCard` is already a collapsible mobile row (`submission-card.tsx`). | **Keep (build) — widen scope to BOTH surfaces.** Reuse `useOwnerInbox`/`ModerationInbox`/`SubmissionCard`/`ApproveDialog`; mobile-frame both. Owner-gate the per-project one (like settings). |
-| #233 | Admin console | Falls back to desktop `AdminPage` (a project-summaries table). Admin-only, lowest reach. Unchanged. | **Keep (build, late).** |
-| #235 | PWA polish | Acceptance still a copy-paste template that doesn't fit (PWA, not a screen). Real work = PNG/maskable icons, apple-touch-icon, install affordance, offline read, portrait manifest. | **Refine acceptance, keep last.** |
+| Claim (rewritten acceptance) | Verdict | Evidence |
+|---|---|---|
+| Service worker is wired | **Refuted** | `public/sw.js` exists but is **never registered** — no `serviceWorker.register` in `src/` or `index.html`. Offline does not work today. |
+| Icons cover PWA/iOS | **Refuted (partial)** | Only `public/icon.svg`; no PNG 192/512, no maskable PNG. iOS/Android home-screen need PNGs. |
+| Portrait-first manifest | **Refuted** | `manifest.webmanifest` has `orientation: "any"`. |
+| Offline read of last-synced data | **Refuted** | No query-cache persistence (`persistQueryClient` absent); SW caches the shell but data would be empty offline. |
+| Install affordance | **Unproven/absent** | No `beforeinstallprompt` handling found. |
 
-> [!WARNING]
-> - **#232** issue text ("per project") undersells it: the primary surface is the **cross-project** inbox in the bottom nav, plus a per-project inbox from the hub kebab. Build both for parity, or the bottom-nav Inbox tab stays a desktop page.
-> - **#235** acceptance must be rewritten before it's actionable.
+> [!IMPORTANT]
+> #235's acceptance was rewritten away from the templated "bespoke screen" wording to the real infra scope (icons, SW registration, portrait manifest, install affordance, offline data persistence). It is **actionable and accurate** now.
 
 ## Milestone synthesis
 
 ### Coherence
-Consistent. After #232, the only owner workflow left on desktop is the admin console (#233), then PWA polish (#235). #226 is already done.
+Fully coherent and essentially complete. The client journey, public auth, owner settings, moderation, and admin are all mobile-native; the header system is unified. #235 is the only remaining piece and is pure infra/polish.
 
 ### Dependency & order
 
 ```mermaid
-flowchart TD
-  Done["Shipped: client journey + auth + settings (#220-231)"]
-  Done --> MOD["#232 Moderation: cross-project inbox + per-project inbox"]
-  MOD --> ADM["#233 Admin console (project summaries)"]
-  ADM --> PWA["#235 PWA polish (LAST — after full parity)"]
-  P226["#226 My requests — already in hub; confirm-only"] -.-> MOD
+flowchart LR
+  Shipped["#220-234 shipped (client + auth + owner + admin + header polish)"] --> PWA["#235 PWA: icons, SW registration, portrait, install, offline persistence"]
+  PWA --> Epic["#219 epic closes"]
 ```
 
-No hard code dependencies; order is reach × premium-impact. PWA must be last (it certifies parity).
+PWA correctly comes last — it certifies parity. No remaining inter-issue dependencies.
 
 ### Gaps
-- Bottom-nav Inbox tab (`/app/submissions`) + hub kebab Submissions (`/app/projects/:id/submissions`) both still render desktop pages — #232 must replace both.
-- `#235` offline/install criteria under-specified.
-- `#226` needs only a visual confirm.
+- The only functional gap left in the milestone is the PWA layer (#235), itemized above.
+- After #235, **close the epic #219** (its checklist will be fully ticked).
 
 ### Duplicates / scope creep
-None across issues. The cross-project and per-project inboxes are distinct surfaces (global triage vs. one project), not duplicates — both reuse `SubmissionCard`/`ApproveDialog`.
+None. #226 was confirmed done-in-hub (not a duplicate, just already satisfied) and closed.
 
 ### Go / no-go
 > [!IMPORTANT]
-> **GO. Next: #232 Moderation** — build **both** the cross-project inbox (`/app/submissions`) and the per-project inbox (`/app/projects/:id/submissions`) as mobile screens, reusing the existing moderation hooks/components. The bottom-nav Inbox tab and the hub kebab both currently land on desktop pages; this closes them. No blockers.
+> **GO — build #235 as the finale.** Scope is accurate and self-contained: register `/sw.js`, add PNG/maskable icons + apple-touch-icon, set portrait manifest, add an install affordance, and persist the TanStack Query cache for offline reads. No blockers. On merge, close epic #219.
