@@ -1,18 +1,19 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Check, Globe, LogOut, Monitor } from 'lucide-react'
+import { Check, Download, Globe, LogOut, Monitor, Share } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { setPlatformOverride } from '@/platform'
 import { Button } from '@/components/ui'
-import { ScreenHeader, Sheet } from '../shell'
+import { ScreenHeader, Sheet, useInstallPrompt } from '../shell'
 
 const LANGS = ['fr', 'en'] as const
 
-/** Mobile account / "more" screen: language (in a sheet), the desktop-site override, and sign out. */
+/** Mobile account / "more" screen: install affordance, language (in a sheet), the desktop-site override, and sign out. */
 export default function MobileAccount() {
   const { t, i18n } = useTranslation()
   const { user, signOut } = useAuth()
+  const { canInstall, showIOSHint, promptInstall } = useInstallPrompt()
   const navigate = useNavigate()
   const [langOpen, setLangOpen] = useState(false)
   const current = i18n.resolvedLanguage ?? i18n.language
@@ -31,6 +32,29 @@ export default function MobileAccount() {
             <div className='text-muted-ink truncate text-sm'>{user?.email}</div>
           </div>
         </div>
+
+        {/* Install affordance (#235): native prompt on Android/Chrome, an Add-to-Home-Screen hint on iOS. */}
+        {canInstall && (
+          <div className='border-hairline bg-card flex items-start gap-3 rounded-xl border p-4'>
+            <Download size={18} className='text-muted-ink mt-0.5 shrink-0' />
+            <div className='min-w-0 flex-1'>
+              <div className='text-ink font-medium'>{t('m.install.title')}</div>
+              <p className='text-muted-ink mt-0.5 text-xs'>{t('m.install.hint')}</p>
+            </div>
+            <Button size='sm' className='shrink-0' onClick={promptInstall}>
+              {t('m.install.button')}
+            </Button>
+          </div>
+        )}
+        {!canInstall && showIOSHint && (
+          <div className='border-hairline bg-card flex items-start gap-3 rounded-xl border p-4'>
+            <Share size={18} className='text-muted-ink mt-0.5 shrink-0' />
+            <div className='min-w-0'>
+              <div className='text-ink font-medium'>{t('m.install.title')}</div>
+              <p className='text-muted-ink mt-0.5 text-xs'>{t('m.install.iosHint')}</p>
+            </div>
+          </div>
+        )}
 
         <div className='border-hairline bg-card overflow-hidden rounded-xl border'>
           <button
