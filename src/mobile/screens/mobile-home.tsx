@@ -6,7 +6,8 @@ import { useWorkspace } from '@/features/workspace'
 import type { ProjectSummary } from '@/services/projects'
 import { Button, Input } from '@/components/ui'
 import { Spinner } from '@/components/feedback'
-import { MobileNotifications, MobileProjectCard } from '../ui'
+import { MobileProjectCard } from '../ui'
+import { ScreenHeader } from '../shell'
 
 const MobileNewProject = lazy(() => import('../ui/mobile-new-project').then((m) => ({ default: m.MobileNewProject })))
 
@@ -28,20 +29,7 @@ export default function MobileHome() {
 
   return (
     <>
-      {/* Large-title home header: a quiet salutation over the name, with the avatar shortcut to Account. */}
-      <header className='flex items-start justify-between gap-3 px-5 pb-4' style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)' }}>
-        <div className='min-w-0'>
-          {firstName ? (
-            <>
-              <p className='text-muted-ink text-[13px]'>{t('m.home.hello')}</p>
-              <h1 className='font-display text-ink truncate text-[26px] leading-tight font-semibold tracking-[-0.02em]'>{firstName}</h1>
-            </>
-          ) : (
-            <h1 className='font-display text-ink text-[26px] font-semibold tracking-[-0.02em]'>{t('m.nav.home')}</h1>
-          )}
-        </div>
-        <MobileNotifications />
-      </header>
+      <ScreenHeader eyebrow={firstName !== '' ? t('m.home.hello') : undefined} title={firstName !== '' ? firstName : t('m.nav.home')} />
 
       {isLoading ? (
         <div className='grid place-items-center py-16'>

@@ -36,9 +36,11 @@ export function ScreenStack() {
         animate='center'
         exit='exit'
         transition={dir === 0 ? { duration: 0.18 } : { duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
-        className='absolute inset-0 overflow-y-auto'
+        className='absolute inset-0 overflow-hidden'
       >
-        {outlet}
+        {/* Scroll on a NON-transformed inner element: a `transform` on the scroll container itself
+            breaks `position: sticky` for the screen header (it would scroll away instead of pinning). */}
+        <div className='h-full overflow-y-auto'>{outlet}</div>
       </motion.div>
     </AnimatePresence>
   )
