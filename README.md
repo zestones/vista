@@ -1,5 +1,9 @@
 # Vista
 
+<p align="center">
+  <img src="./public/og.png" alt="Vista — a shared product roadmap, built on your GitHub" width="100%">
+</p>
+
 **A shared product roadmap, built on your GitHub.** Project owners connect a private GitHub repository; Vista turns its milestones and issues into a polished roadmap dashboard and decides, per project and per issue, what clients are allowed to see. Clients join through an invite or a read-only share link, follow progress, comment, and request features — without ever needing GitHub access to the private repo.
 
 [![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)](https://react.dev)
