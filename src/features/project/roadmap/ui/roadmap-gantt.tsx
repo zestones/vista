@@ -496,6 +496,7 @@ export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssue
                   if (e.key === 'Enter' && matches[0]) jumpTo(matches[0].g, matches[0].b)
                   if (e.key === 'Escape') setSearchOpen(false)
                 }}
+                aria-label={t('roadmap.search')}
                 placeholder={t('roadmap.search')}
                 style={inputStyle}
               />

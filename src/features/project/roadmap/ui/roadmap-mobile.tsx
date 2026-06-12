@@ -78,6 +78,7 @@ export function RoadmapMobile({ groups, onIssueClick }: { groups: Group[]; onIss
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            aria-label={t('roadmap.search')}
             placeholder={t('roadmap.search')}
             style={{
               height: 40,
