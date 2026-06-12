@@ -49,6 +49,27 @@ An owner installs the Vista GitHub App on a repository. Vista syncs that repo's 
 - Mobile-first shell with a dedicated touch UI, plus a full desktop layout — installable as a PWA with an offline app shell.
 - Editorial design system (see [`DESIGN.md`](./DESIGN.md)).
 
+## Owner onboarding
+
+From zero to a shared roadmap in five steps. Everything below happens in the hosted app — no GitHub access is ever shared with your clients.
+
+```mermaid
+flowchart LR
+  S1[Sign in] --> S2[Create a project]
+  S2 --> S3[Connect GitHub<br/>+ attach a repo]
+  S3 --> S4[Curate what's shared]
+  S4 --> S5[Invite a client]
+```
+
+1. **Sign in.** Use a magic link, Google, or GitHub. Signing in with different methods on the same verified email links to one account.
+2. **Create a project.** From the **Admin** console (or the sidebar), choose **New project** and name it.
+3. **Connect GitHub and attach a repo.** Open the project, then **Settings → General → GitHub**. Install the Vista GitHub App on the repository you want (the **Manage on GitHub** button takes you there), then attach that repo. Vista syncs its milestones and issues automatically — hourly, plus live on webhooks.
+4. **Curate what clients see.** In the **Admin** console, toggle the project's **availability on Vista** and its **sharing**. In **Settings → Sharing**, choose which issues are shared and write client-facing summaries. Owner-curated fields are never overwritten by sync.
+5. **Invite a client.** In **Settings → Members**, copy the invite link (rotate it any time). The client opens it, requests access, and you approve them under **access requests**. For a read-only audience with no account, use a public share link instead.
+
+> [!TIP]
+> If your repo is private and issues contain pasted/dragged images, connect image access once under **Account → Settings**. Vista then re-hosts those attachments so clients can see them without GitHub access to the repo.
+
 ## Architecture
 
 ```mermaid
@@ -170,7 +191,7 @@ Server-only secrets (service-role key, GitHub App ID and private key, webhook se
 
 ## Deployment
 
-The frontend deploys as a static SPA (Vercel, with `vercel.json` providing the SPA fallback rewrite). The backend is a hosted Supabase project: apply migrations, deploy the Edge Functions, configure the three GitHub apps and their secrets, and the `pg_cron` resync schedule. Self-authenticating functions (`sync-repo`, `github-webhook`) set `verify_jwt = false` in `supabase/config.toml` and authenticate via their own shared secret / HMAC.
+The frontend deploys as a static SPA (Vercel, with `vercel.json` providing the SPA fallback rewrite). The backend is a hosted Supabase project: apply migrations, deploy the Edge Functions, configure the three GitHub apps and their secrets, and the `pg_cron` resync schedule. Self-authenticating functions (`sync-repo`, `github-webhook`) set `verify_jwt = false` in `supabase/config.toml` and authenticate via their own shared secret / HMAC. Before exposing the app publicly, work through [`docs/security-checklist.md`](./docs/security-checklist.md).
 
 ## Tech stack
 
