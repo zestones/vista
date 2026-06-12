@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
       milestone: milestoneNumber ?? undefined,
     })
     await admin.from('submissions').update({ github_issue_number: issue.number }).eq('id', submissionId)
-    console.log(`create-issue ${repo.owner}/${repo.repo}#${issue.number} from submission ${submissionId}`)
+    console.log(`[create-issue] ${repo.owner}/${repo.repo}#${issue.number} from submission ${submissionId}`)
     return jsonResponse({ github_issue_number: issue.number })
   } catch (e) {
     // Roll back only the claim we made: guard on the 'planned' state (and still-uncreated) so a

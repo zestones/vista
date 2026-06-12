@@ -67,7 +67,7 @@ async function handleAttach(userId: string, body: Record<string, unknown>): Prom
   try {
     await syncRepo(admin, data.id)
   } catch (e) {
-    console.error('attach backfill failed', e instanceof Error ? e.message : e)
+    console.error('[connect-repos] attach backfill failed:', e instanceof Error ? e.message : e)
   }
   return jsonResponse({ projectRepo: data }, 201)
 }

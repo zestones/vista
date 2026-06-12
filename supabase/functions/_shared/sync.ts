@@ -53,7 +53,7 @@ export async function syncRepo(admin: SupabaseClient, projectRepoId: string): Pr
   if (stateErr) throw new Error(`sync_state upsert failed: ${stateErr.message}`)
 
   console.log(
-    `sync-repo ${repo.owner}/${repo.repo}: milestones=${milestonesUpserted} issues=${issuesUpserted} comments=${commentsUpserted} (304=${ms.notModified})`,
+    `[sync-repo] ${repo.owner}/${repo.repo}: milestones=${milestonesUpserted} issues=${issuesUpserted} comments=${commentsUpserted} (304=${ms.notModified})`,
   )
   return { milestonesUpserted, issuesUpserted, commentsUpserted, milestonesNotModified: ms.notModified }
 }
