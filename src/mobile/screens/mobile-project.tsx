@@ -1,11 +1,16 @@
 import { lazy, Suspense, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useQuery } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 import { ArrowUpDown, Check, Eye, Inbox, MessageSquarePlus, MoreVertical, Search, Settings } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { useProjectAccess } from '@/features/project/dashboard'
+import { connections } from '@/services/connections'
+import { connectionKeys } from '@/lib/query-keys/connections.keys'
 // Deep imports (not the roadmap barrel) so the base chunk doesn't pull the Gantt UI / mermaid.
 import { useRoadmap } from '@/features/project/roadmap/hooks/use-roadmap'
+import { useRoadmapRealtime } from '@/features/project/roadmap/hooks/use-roadmap-realtime'
 import { overallStats } from '@/features/project/roadmap/lib/roadmap.mappers'
 import { sortRoadmap, type MilestoneSort } from '@/features/project/roadmap/lib/roadmap.sort'
 import type { TranslationKey } from '@/lib/i18n/locales/en'
@@ -58,6 +63,11 @@ export default function MobileProject() {
   const isViewer = membership?.role === 'viewer'
 
   const roadmap = useRoadmap(id, isOwner && preview)
+  // Live roadmap (#273 parity with desktop): subscribe to the project's projection rows so a webhook
+  // reprojection / publish updates the roadmap without a refresh. Desktop mounted this; mobile didn't.
+  const repos = useQuery({ queryKey: connectionKeys.attached(id), queryFn: () => connections.getAttachedRepos(id), enabled: id !== '' })
+  const repoIds = (repos.data ?? []).map((r) => r.id)
+  useRoadmapRealtime(id, repoIds, user?.id ?? 'anon', () => toast(t('roadmap.liveUpdated'), { id: 'roadmap-live' }))
   const groups = roadmap.data?.groups ?? []
   const stats = overallStats(groups)
 
