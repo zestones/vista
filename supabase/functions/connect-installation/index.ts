@@ -10,8 +10,21 @@
 // Backfill is intentionally NOT triggered here: sync runs on project_repos, which are
 // created at repo-attach (#20). The sync kick lives in #20/#22.
 import { admin, requireUser, UnauthorizedError } from '../_shared/supabaseAdmin.ts'
-import { exchangeOAuthCode, getInstallation, userCanManageInstallation } from '../_shared/github.ts'
+import { exchangeOAuthCode, getInstallation, type OAuthToken, userCanManageInstallation } from '../_shared/github.ts'
 import { jsonResponse, preflight } from '../_shared/cors.ts'
+
+// Persist the installer's user token (encrypted, via the service-role-only RPC) so the sync can fetch
+// private-repo attachment images and re-host them (#262). Best-effort: a failure must NOT break linking
+// -- it only means re-host won't work until the next successful link/sync. Never log the token.
+async function persistOwnerToken(installationId: number, oauth: OAuthToken): Promise<void> {
+  const { error } = await admin.rpc('store_installation_token', {
+    p_installation_id: installationId,
+    p_token: oauth.token,
+    p_refresh: oauth.refreshToken,
+    p_expires: oauth.expiresAt,
+  })
+  if (error) console.error('[connect-installation] token store failed:', error.message)
+}
 
 Deno.serve(async (req) => {
   const pre = preflight(req)
@@ -38,10 +51,12 @@ Deno.serve(async (req) => {
   }
 
   // Prove the caller owns/administers this installation (#184): exchange the post-install OAuth code for
-  // their GitHub user token, then confirm the installation is one they can manage. Used once, not stored.
+  // their GitHub user token, then confirm the installation is one they can manage. The token is persisted
+  // (below, once the row exists) for attachment re-hosting (#262).
+  let oauth: OAuthToken
   try {
-    const userToken = await exchangeOAuthCode(code)
-    const allowed = await userCanManageInstallation(userToken, installationId)
+    oauth = await exchangeOAuthCode(code)
+    const allowed = await userCanManageInstallation(oauth.token, installationId)
     if (!allowed) return jsonResponse({ error: 'you do not have permission to link this installation' }, 403)
   } catch {
     return jsonResponse({ error: 'could not verify installation ownership' }, 403)
@@ -72,6 +87,7 @@ Deno.serve(async (req) => {
         .eq('installation_id', installationId)
         .single()
       if (existing && existing.installed_by === userId) {
+        await persistOwnerToken(installationId, oauth) // refresh the stored token on re-link
         const { installed_by: _omit, ...installation } = existing
         return jsonResponse({ installation, alreadyConnected: true })
       }
@@ -80,5 +96,6 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'failed to link installation' }, 500)
   }
 
+  await persistOwnerToken(installationId, oauth)
   return jsonResponse({ installation: data }, 201)
 })

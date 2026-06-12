@@ -93,13 +93,36 @@ export async function getInstallation(installationId: number): Promise<Installat
   return (await res.json()) as Installation
 }
 
+/** A GitHub user (user-to-server) token plus, if the App expires tokens, the rotating refresh token. */
+export interface OAuthToken {
+  token: string
+  refreshToken: string | null
+  expiresAt: string | null // ISO; null if the App does not expire user tokens
+}
+
+interface OAuthTokenResponse {
+  access_token?: string
+  refresh_token?: string
+  expires_in?: number // seconds
+  error?: string
+}
+
+function toOAuthToken(body: OAuthTokenResponse): OAuthToken {
+  if (!body.access_token) throw new Error(`oauth token response had no token${body.error ? `: ${body.error}` : ''}`)
+  return {
+    token: body.access_token,
+    refreshToken: body.refresh_token ?? null,
+    expiresAt: body.expires_in ? new Date(Date.now() + body.expires_in * 1000).toISOString() : null,
+  }
+}
+
 /**
  * Exchange a GitHub App OAuth `code` (from the post-install redirect, when "Request user authorization
- * during installation" is enabled) for a short-lived USER access token. Used by connect-installation
- * (#184) to prove who the caller is on GitHub. The token is used once to verify ownership and then
- * discarded -- it is never logged, returned to the browser, or stored.
+ * during installation" is enabled) for a USER access token. Used by connect-installation to prove who
+ * the caller is on GitHub (#184) and to persist the token for attachment re-hosting (#262). The token
+ * is never logged or returned to the browser.
  */
-export async function exchangeOAuthCode(code: string): Promise<string> {
+export async function exchangeOAuthCode(code: string): Promise<OAuthToken> {
   const res = await fetch('https://github.com/login/oauth/access_token', {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
@@ -107,9 +130,7 @@ export async function exchangeOAuthCode(code: string): Promise<string> {
   })
   if (!res.ok) throw new Error(`oauth code exchange failed: ${res.status}`)
   // GitHub returns 200 with an `error` field on a bad/expired code -- treat a missing token as failure.
-  const body = (await res.json()) as { access_token?: string; error?: string }
-  if (!body.access_token) throw new Error(`oauth code exchange returned no token${body.error ? `: ${body.error}` : ''}`)
-  return body.access_token
+  return toOAuthToken((await res.json()) as OAuthTokenResponse)
 }
 
 /**
