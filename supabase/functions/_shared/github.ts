@@ -8,6 +8,7 @@
 // Tokens are NEVER logged and NEVER returned to the browser: this module is
 // imported by Edge Functions only; nothing here is an HTTP endpoint.
 import { importPKCS8, SignJWT } from 'npm:jose@5'
+import { type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 
 const GITHUB_API = 'https://api.github.com'
 
@@ -134,6 +135,24 @@ export async function exchangeOAuthCode(code: string): Promise<OAuthToken> {
 }
 
 /**
+ * Exchange a CLASSIC OAuth App `code` (separate app from the GitHub App) for a user token (`gho_`).
+ * Unlike the GitHub App user-to-server token, a classic OAuth token with `repo` scope CAN download
+ * `user-attachments` assets -- which is why image re-hosting (#262) needs this credential, not the
+ * GitHub App's. Classic tokens don't expire by default (no refresh), so we store just the token.
+ */
+export async function exchangeOAuthAppCode(code: string): Promise<string> {
+  const res = await fetch('https://github.com/login/oauth/access_token', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ client_id: mustEnv('GITHUB_OAUTH_CLIENT_ID'), client_secret: mustEnv('GITHUB_OAUTH_CLIENT_SECRET'), code }),
+  })
+  if (!res.ok) throw new Error(`oauth app code exchange failed: ${res.status}`)
+  const body = (await res.json()) as { access_token?: string; error?: string }
+  if (!body.access_token) throw new Error(`oauth app exchange returned no token${body.error ? `: ${body.error}` : ''}`)
+  return body.access_token
+}
+
+/**
  * True if the user behind `userToken` can administer `installationId`. `/user/installations` lists the
  * App installations accessible to the authenticated user (their own account + orgs they belong to with
  * access), so a match means the caller is genuinely tied to that installation -- not an arbitrary Vista
@@ -149,6 +168,46 @@ export async function userCanManageInstallation(userToken: string, installationI
     url = nextLink(res.headers.get('link'))
   }
   return false
+}
+
+/** Exchange a rotating refresh token for a fresh user token (App expires user tokens at ~8h). (#262) */
+export async function refreshUserToken(refreshToken: string): Promise<OAuthToken> {
+  const res = await fetch('https://github.com/login/oauth/access_token', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      client_id: mustEnv('GITHUB_APP_CLIENT_ID'),
+      client_secret: mustEnv('GITHUB_APP_CLIENT_SECRET'),
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+    }),
+  })
+  if (!res.ok) throw new Error(`oauth token refresh failed: ${res.status}`)
+  return toOAuthToken((await res.json()) as OAuthTokenResponse)
+}
+
+/**
+ * A usable owner user token for `installationId`, refreshing first if it's near expiry and a refresh
+ * token is stored (and persisting the rotated token). Returns null if none was ever stored (owner never
+ * re-authorized) -> callers skip re-hosting and leave the original URLs (graceful, #261 placeholder). (#262)
+ */
+export async function getValidOwnerToken(admin: SupabaseClient, installationId: number): Promise<string | null> {
+  const { data, error } = await admin.rpc('get_installation_token', { p_installation_id: installationId })
+  if (error) throw new Error(`get_installation_token failed: ${error.message}`)
+  const row = (Array.isArray(data) ? data[0] : data) as { token: string; refresh_token: string | null; expires_at: string | null } | undefined
+  if (!row?.token) return null
+  const nearExpiry = row.expires_at != null && Date.parse(row.expires_at) - Date.now() < 5 * 60_000
+  if (nearExpiry && row.refresh_token) {
+    const fresh = await refreshUserToken(row.refresh_token)
+    await admin.rpc('store_installation_token', {
+      p_installation_id: installationId,
+      p_token: fresh.token,
+      p_refresh: fresh.refreshToken,
+      p_expires: fresh.expiresAt,
+    })
+    return fresh.token
+  }
+  return row.token
 }
 
 export interface InstallationRepo {

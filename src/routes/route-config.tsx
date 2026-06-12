@@ -9,7 +9,9 @@ import { SubmissionsInboxPage } from '@/pages/app/submissions/submissions-inbox-
 import { RoadmapPage } from '@/pages/app/project/roadmap-page'
 import { SubmissionsPage } from '@/pages/app/project/submissions-page'
 import { SettingsPage } from '@/pages/app/settings/settings-page'
+import { AccountSettingsPage } from '@/pages/app/settings/account-settings-page'
 import { GithubCallbackPage } from '@/pages/github/github-callback-page'
+import { ImageAccessCallbackPage } from '@/pages/github/image-access-callback-page'
 import { PublicSharePage } from '@/pages/share'
 
 export const routeConfig: RouteObject[] = [
@@ -17,6 +19,8 @@ export const routeConfig: RouteObject[] = [
   { element: <GuestOnly />, children: [{ path: '/login', element: <LoginPage /> }] },
   // Public: GitHub App post-install redirect target (#77). Handles auth itself.
   { path: '/github/callback', element: <GithubCallbackPage /> },
+  // Classic OAuth App image-access callback (#262): stores the token that can read private attachments.
+  { path: '/github/image-callback', element: <ImageAccessCallbackPage /> },
   // Public: an invitee must see the project + sign in before they're a member (#105).
   { path: '/join/:token', element: <JoinPage /> },
   // Public: read-only allowlist-scoped roadmap via a share token, no account (#193).
@@ -28,6 +32,7 @@ export const routeConfig: RouteObject[] = [
         element: <DesktopShellLayout />,
         children: [
           { path: '/app', element: <WorkspacePage /> },
+          { path: '/app/settings', element: <AccountSettingsPage /> },
           { path: '/app/admin', element: <AdminPage /> },
           { path: '/app/submissions', element: <SubmissionsInboxPage /> },
           { path: '/app/projects/:id', element: <RoadmapPage /> },

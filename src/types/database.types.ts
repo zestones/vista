@@ -5,6 +5,7 @@ export type Json =
   | null
   | { [key: string]: Json | undefined }
   | Json[]
+
 export type Database = {
   graphql_public: {
     Tables: {
@@ -84,6 +85,30 @@ export type Database = {
           },
         ]
       }
+      github_attachments: {
+        Row: {
+          asset_key: string
+          byte_size: number | null
+          content_type: string | null
+          created_at: string
+          storage_path: string
+        }
+        Insert: {
+          asset_key: string
+          byte_size?: number | null
+          content_type?: string | null
+          created_at?: string
+          storage_path: string
+        }
+        Update: {
+          asset_key?: string
+          byte_size?: number | null
+          content_type?: string | null
+          created_at?: string
+          storage_path?: string
+        }
+        Relationships: []
+      }
       github_installations: {
         Row: {
           account_login: string
@@ -91,6 +116,9 @@ export type Database = {
           id: string
           installation_id: number
           installed_by: string
+          refresh_token_encrypted: string | null
+          token_expires_at: string | null
+          user_token_encrypted: string | null
         }
         Insert: {
           account_login: string
@@ -98,6 +126,9 @@ export type Database = {
           id?: string
           installation_id: number
           installed_by: string
+          refresh_token_encrypted?: string | null
+          token_expires_at?: string | null
+          user_token_encrypted?: string | null
         }
         Update: {
           account_login?: string
@@ -105,6 +136,9 @@ export type Database = {
           id?: string
           installation_id?: number
           installed_by?: string
+          refresh_token_encrypted?: string | null
+          token_expires_at?: string | null
+          user_token_encrypted?: string | null
         }
         Relationships: [
           {
@@ -342,47 +376,6 @@ export type Database = {
           },
         ]
       }
-      project_share_links: {
-        Row: {
-          access_count: number
-          created_at: string
-          expires_at: string
-          id: string
-          last_accessed_at: string | null
-          project_id: string
-          revoked_at: string | null
-          token: string
-        }
-        Insert: {
-          access_count?: number
-          created_at?: string
-          expires_at: string
-          id?: string
-          last_accessed_at?: string | null
-          project_id: string
-          revoked_at?: string | null
-          token: string
-        }
-        Update: {
-          access_count?: number
-          created_at?: string
-          expires_at?: string
-          id?: string
-          last_accessed_at?: string | null
-          project_id?: string
-          revoked_at?: string | null
-          token?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "project_share_links_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       project_members: {
         Row: {
           can_view_comments: boolean
@@ -482,6 +475,47 @@ export type Database = {
           },
         ]
       }
+      project_share_links: {
+        Row: {
+          access_count: number
+          created_at: string
+          expires_at: string
+          id: string
+          last_accessed_at: string | null
+          project_id: string
+          revoked_at: string | null
+          token: string
+        }
+        Insert: {
+          access_count?: number
+          created_at?: string
+          expires_at: string
+          id?: string
+          last_accessed_at?: string | null
+          project_id: string
+          revoked_at?: string | null
+          token: string
+        }
+        Update: {
+          access_count?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          last_accessed_at?: string | null
+          project_id?: string
+          revoked_at?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_share_links_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           available_on_vista: boolean
@@ -552,6 +586,13 @@ export type Database = {
           submission_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "submission_messages_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "submission_messages_submission_id_fkey"
             columns: ["submission_id"]
@@ -690,6 +731,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_installation_token: {
+        Args: { p_installation_id: number }
+        Returns: {
+          expires_at: string
+          refresh_token: string
+          token: string
+        }[]
+      }
       get_project_by_token: {
         Args: { p_token: string }
         Returns: {
@@ -702,20 +751,6 @@ export type Database = {
       }
       get_projects_for_user: { Args: never; Returns: Json }
       get_public_roadmap: { Args: { p_token: string }; Returns: Json }
-      rotate_share_link: {
-        Args: { p_expires: string; p_project: string }
-        Returns: {
-          access_count: number
-          created_at: string
-          expires_at: string
-          id: string
-          last_accessed_at: string | null
-          project_id: string
-          revoked_at: string | null
-          token: string
-        }
-      }
-      revoke_share_link: { Args: { p_project: string }; Returns: undefined }
       has_role: {
         Args: {
           min_role: Database["public"]["Enums"]["member_role"]
@@ -740,8 +775,29 @@ export type Database = {
         }
         Returns: undefined
       }
+      owner_has_image_access: { Args: never; Returns: boolean }
       request_access: { Args: { p_token: string }; Returns: string }
       resync_all_repos: { Args: never; Returns: undefined }
+      revoke_share_link: { Args: { p_project: string }; Returns: undefined }
+      rotate_share_link: {
+        Args: { p_expires: string; p_project: string }
+        Returns: {
+          access_count: number
+          created_at: string
+          expires_at: string
+          id: string
+          last_accessed_at: string | null
+          project_id: string
+          revoked_at: string | null
+          token: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "project_share_links"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_issue_shared: {
         Args: { i: string; value: boolean }
         Returns: undefined
@@ -766,6 +822,15 @@ export type Database = {
         Args: { p: string; value: boolean }
         Returns: undefined
       }
+      store_installation_token: {
+        Args: {
+          p_expires: string
+          p_installation_id: number
+          p_refresh: string
+          p_token: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       member_role: "owner" | "editor" | "viewer"
@@ -774,16 +839,23 @@ export type Database = {
         | "submission_received"
         | "submission_approved"
         | "submission_denied"
+        | "access_requested"
+        | "access_approved"
+        | "access_denied"
         | "submission_needs_info"
         | "submission_delivered"
         | "submission_message"
         | "submission_under_review"
         | "submission_in_progress"
-        | "access_requested"
-        | "access_approved"
-        | "access_denied"
       project_visibility: "private" | "shared"
-      submission_status: "received" | "under_review" | "needs_info" | "planned" | "in_progress" | "delivered" | "declined"
+      submission_status:
+        | "received"
+        | "under_review"
+        | "needs_info"
+        | "planned"
+        | "in_progress"
+        | "delivered"
+        | "declined"
       submission_type: "feature" | "bug" | "question" | "other"
     }
     CompositeTypes: {
@@ -791,8 +863,11 @@ export type Database = {
     }
   }
 }
+
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
@@ -821,6 +896,7 @@ export type Tables<
       ? R
       : never
     : never
+
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
@@ -845,6 +921,7 @@ export type TablesInsert<
       ? I
       : never
     : never
+
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
@@ -869,6 +946,7 @@ export type TablesUpdate<
       ? U
       : never
     : never
+
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
@@ -885,6 +963,7 @@ export type Enums<
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
+
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
@@ -901,6 +980,7 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
+
 export const Constants = {
   graphql_public: {
     Enums: {},
@@ -913,18 +993,27 @@ export const Constants = {
         "submission_received",
         "submission_approved",
         "submission_denied",
+        "access_requested",
+        "access_approved",
+        "access_denied",
         "submission_needs_info",
         "submission_delivered",
         "submission_message",
         "submission_under_review",
         "submission_in_progress",
-        "access_requested",
-        "access_approved",
-        "access_denied",
       ],
       project_visibility: ["private", "shared"],
-      submission_status: ["received", "under_review", "needs_info", "planned", "in_progress", "delivered", "declined"],
+      submission_status: [
+        "received",
+        "under_review",
+        "needs_info",
+        "planned",
+        "in_progress",
+        "delivered",
+        "declined",
+      ],
       submission_type: ["feature", "bug", "question", "other"],
     },
   },
 } as const
+

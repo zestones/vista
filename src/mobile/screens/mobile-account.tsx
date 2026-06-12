@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Check, Download, Globe, LogOut, Monitor, Share } from 'lucide-react'
+import { Check, CircleCheck, Download, Globe, Image, LogOut, Monitor, Share } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { setPlatformOverride } from '@/platform'
+import { githubImageAuthorizeUrl } from '@/services/connections'
+import { useImageAccessStatus } from '@/features/project/github'
 import { Button } from '@/components/ui'
 import { ScreenHeader, Sheet, useInstallPrompt } from '../shell'
 
@@ -17,6 +19,9 @@ export default function MobileAccount() {
   const navigate = useNavigate()
   const [langOpen, setLangOpen] = useState(false)
   const current = i18n.resolvedLanguage ?? i18n.language
+  // GitHub image access (#262): account-wide grant so private-repo attachment images load for clients.
+  const imageAccess = useImageAccessStatus()
+  const imageAuthUrl = githubImageAuthorizeUrl()
   const initial = (user?.name ?? user?.email ?? '?').charAt(0).toUpperCase()
 
   return (
@@ -82,6 +87,29 @@ export default function MobileAccount() {
             </span>
           </button>
         </div>
+
+        {imageAuthUrl && (
+          <div className='border-hairline bg-card rounded-xl border p-4'>
+            <div className='text-ink font-medium'>{t('settings.imageAccess')}</div>
+            <p className='text-muted-ink mt-0.5 text-xs'>{t('settings.imageAccessHint')}</p>
+            <div className='mt-3'>
+              {imageAccess.data ? (
+                <div className='flex flex-wrap items-center gap-2'>
+                  <span className='text-success inline-flex items-center gap-1.5 text-sm font-medium'>
+                    <CircleCheck size={15} /> {t('ps.gh.imageConnected')}
+                  </span>
+                  <Button variant='outline' size='sm' onClick={() => (window.location.href = imageAuthUrl)}>
+                    {t('ps.gh.imageReconnect')}
+                  </Button>
+                </div>
+              ) : (
+                <Button variant='outline' size='sm' onClick={() => (window.location.href = imageAuthUrl)}>
+                  <Image size={15} /> {t('ps.gh.imageAccess')}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
 
         <Button
           variant='outline'

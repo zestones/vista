@@ -45,9 +45,11 @@ function Lightbox({ src, alt, onClose }: { src: string; alt: string; onClose: ()
   }, [onClose])
 
   // Closes via ESC (above) and the explicit X button; no backdrop-click handler since the zoom/pan
-  // surface fills the overlay (a backdrop click would conflict with panning anyway).
+  // surface fills the overlay (a backdrop click would conflict with panning anyway). The overlay is a
+  // plain full-screen block (not a centering grid) so TransformComponent's !h-full/!w-full actually
+  // fill the viewport; the image is then centered inside the content layer.
   return (
-    <div role='dialog' aria-modal='true' aria-label={alt || t('md.viewImage')} className='fixed inset-0 z-[60] grid place-items-center bg-black/80 p-4'>
+    <div role='dialog' aria-modal='true' aria-label={alt || t('md.viewImage')} className='fixed inset-0 z-[60] bg-black/80'>
       <TransformWrapper centerOnInit doubleClick={{ mode: 'toggle' }}>
         {({ zoomIn, zoomOut, resetTransform }) => (
           <>
@@ -65,8 +67,8 @@ function Lightbox({ src, alt, onClose }: { src: string; alt: string; onClose: ()
                 <X size={16} />
               </LightboxBtn>
             </div>
-            <TransformComponent wrapperClass='!h-full !w-full' contentClass='!h-full !w-full grid place-items-center'>
-              <img src={src} alt={alt} className='max-h-[90vh] max-w-[90vw] object-contain' />
+            <TransformComponent wrapperClass='!h-full !w-full' contentClass='!flex !h-full !w-full !items-center !justify-center'>
+              <img src={src} alt={alt} className='max-h-[92vh] max-w-[92vw] object-contain' />
             </TransformComponent>
           </>
         )}

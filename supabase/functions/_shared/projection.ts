@@ -7,6 +7,11 @@
 // See "Cache de projection & synchronisation".
 import { type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { type GhComment, type GhIssue, type GhMilestone, issueNumberFromUrl } from './github.ts'
+import { rewriteBody } from './attachments.ts'
+
+// Re-host map (#262): asset key -> public Storage URL, applied to body AT WRITE TIME so the rewrite
+// survives every sync (the upsert would otherwise re-introduce the auth-gated GitHub URLs). Empty = no-op.
+type AssetMap = Map<string, string>
 
 export function toMilestoneRow(projectRepoId: string, m: GhMilestone, now: string) {
   return {
@@ -22,12 +27,12 @@ export function toMilestoneRow(projectRepoId: string, m: GhMilestone, now: strin
   }
 }
 
-export function toIssueRow(projectRepoId: string, i: GhIssue, milestoneId: string | null, now: string) {
+export function toIssueRow(projectRepoId: string, i: GhIssue, milestoneId: string | null, now: string, assetMap: AssetMap = new Map()) {
   return {
     project_repo_id: projectRepoId,
     number: i.number,
     title: i.title,
-    body: i.body ?? null,
+    body: rewriteBody(i.body ?? null, assetMap),
     state: i.state,
     labels: i.labels.map((l) => (typeof l === 'string' ? l : l.name)),
     author_login: i.user?.login ?? null,
@@ -57,10 +62,10 @@ export async function upsertMilestones(admin: SupabaseClient, projectRepoId: str
 }
 
 /** Upsert issues by (project_repo_id, number); resolves milestone linkage; omits `shared`. */
-export async function upsertIssues(admin: SupabaseClient, projectRepoId: string, issues: GhIssue[], now: string): Promise<number> {
+export async function upsertIssues(admin: SupabaseClient, projectRepoId: string, issues: GhIssue[], now: string, assetMap: AssetMap = new Map()): Promise<number> {
   if (issues.length === 0) return 0
   const byNumber = await milestoneIdByNumber(admin, projectRepoId)
-  const rows = issues.map((i) => toIssueRow(projectRepoId, i, i.milestone ? (byNumber.get(i.milestone.number) ?? null) : null, now))
+  const rows = issues.map((i) => toIssueRow(projectRepoId, i, i.milestone ? (byNumber.get(i.milestone.number) ?? null) : null, now, assetMap))
   const { error } = await admin.from('issues').upsert(rows, { onConflict: 'project_repo_id,number' })
   if (error) throw new Error(`issue upsert: ${error.message}`)
   return rows.length
@@ -73,14 +78,14 @@ export async function issueIdByNumber(admin: SupabaseClient, projectRepoId: stri
   return new Map(rows.map((i) => [i.number, i.id]))
 }
 
-export function toCommentRow(projectRepoId: string, issueId: string, c: GhComment) {
+export function toCommentRow(projectRepoId: string, issueId: string, c: GhComment, assetMap: AssetMap = new Map()) {
   return {
     project_repo_id: projectRepoId,
     issue_id: issueId,
     github_comment_id: c.id,
     author_login: c.user?.login ?? null,
     author_avatar_url: c.user?.avatar_url ?? null,
-    body: c.body,
+    body: rewriteBody(c.body, assetMap),
     created_at: c.created_at,
     updated_at: c.updated_at,
   }
@@ -91,14 +96,14 @@ export function toCommentRow(projectRepoId: string, issueId: string, c: GhCommen
  * issue via `issue_url`; a comment whose parent is NOT in our `issues` projection is dropped -- this is
  * what excludes PR comments (we never project PRs) and orphan comments. Returns the count upserted.
  */
-export async function upsertComments(admin: SupabaseClient, projectRepoId: string, comments: GhComment[], _now: string): Promise<number> {
+export async function upsertComments(admin: SupabaseClient, projectRepoId: string, comments: GhComment[], _now: string, assetMap: AssetMap = new Map()): Promise<number> {
   if (comments.length === 0) return 0
   const byNumber = await issueIdByNumber(admin, projectRepoId)
   const rows = comments
     .map((c) => {
       const n = issueNumberFromUrl(c.issue_url)
       const issueId = n != null ? byNumber.get(n) : undefined
-      return issueId ? toCommentRow(projectRepoId, issueId, c) : null
+      return issueId ? toCommentRow(projectRepoId, issueId, c, assetMap) : null
     })
     .filter((r): r is NonNullable<typeof r> => r !== null)
   if (rows.length === 0) return 0

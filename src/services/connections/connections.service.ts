@@ -6,6 +6,18 @@ import type { AttachRepoInput, AvailableRepo, InstallationLink, ProjectRepoRow }
 // Dev GitHub App install URL. Prod uses its own slug -- revisit when the prod App is registered (Phase 6).
 export const GITHUB_INSTALL_URL = 'https://github.com/apps/vista-local-dev/installations/new'
 
+// Classic OAuth App authorize URL for image-access (#262): grants a `repo`-scoped token that can read
+// private user-attachments (the GitHub App token cannot). Empty client id => caller hides the button.
+export function githubImageAuthorizeUrl(): string | null {
+  if (!env.githubOauthClientId) return null
+  const params = new URLSearchParams({
+    client_id: env.githubOauthClientId,
+    scope: 'repo',
+    redirect_uri: `${window.location.origin}/github/image-callback`,
+  })
+  return `https://github.com/login/oauth/authorize?${params.toString()}`
+}
+
 export interface ConnectionsApi {
   /** Repos available to attach across the owner's installation(s). */
   listInstallationRepos(): Promise<AvailableRepo[]>
@@ -18,6 +30,11 @@ export interface ConnectionsApi {
    * actually owns the installation (#184).
    */
   connectInstallation(installationId: number, code: string): Promise<InstallationLink>
+  /** Store the owner's classic OAuth App token (from the image-access authorize flow) so the sync can
+   * re-host private-repo attachment images (#262). */
+  connectImageAccess(code: string): Promise<{ ok: boolean }>
+  /** Whether the owner has already granted image access (account-wide; #262). */
+  hasImageAccess(): Promise<boolean>
 }
 
 const MOCK_INSTALLATION_ID = 1
@@ -62,6 +79,12 @@ const mock: ConnectionsApi = {
     // Mock has no real installations (and no code to verify); return a stub so the callback flow works.
     return Promise.resolve({ id: crypto.randomUUID(), installation_id: installationId, account_login: 'mock-org' })
   },
+  connectImageAccess() {
+    return Promise.resolve({ ok: true })
+  },
+  hasImageAccess() {
+    return Promise.resolve(false)
+  },
 }
 
 // Supabase: writes go through the connect-repos Edge function (service role, validated);
@@ -103,6 +126,14 @@ const supabaseApi: ConnectionsApi = {
   async connectInstallation(installationId, code) {
     return (await invoke<{ installation: InstallationLink }>('connect-installation', { installation_id: installationId, code }))
       .installation
+  },
+  async connectImageAccess(code) {
+    return invoke<{ ok: boolean }>('connect-image-access', { code })
+  },
+  async hasImageAccess() {
+    const { data, error } = await supabase.rpc('owner_has_image_access')
+    if (error) throw error
+    return data
   },
 }
 

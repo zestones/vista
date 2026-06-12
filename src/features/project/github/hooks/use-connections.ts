@@ -20,6 +20,14 @@ export function useAttachedRepos(projectId: string) {
   })
 }
 
+/** Whether the owner has already granted image access (account-wide; #262) — drives the GitHub tab state. */
+export function useImageAccessStatus() {
+  return useQuery({
+    queryKey: connectionKeys.imageAccess(),
+    queryFn: (): Promise<boolean> => connections.hasImageAccess(),
+  })
+}
+
 export function useAttachRepo(projectId: string) {
   const qc = useQueryClient()
   return useMutation({

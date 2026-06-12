@@ -30,4 +30,6 @@ export const env = {
   appUrl: import.meta.env.VITE_APP_URL ?? window.location.origin,
   /** mock | supabase — lets the data layer swap without touching the UI. */
   backend: import.meta.env.VITE_BACKEND ?? 'mock',
+  /** Classic OAuth App client id for owner image-access authorization (#262). Public; empty hides the button. */
+  githubOauthClientId: import.meta.env.VITE_GITHUB_OAUTH_CLIENT_ID ?? '',
 } as const
