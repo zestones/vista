@@ -1,0 +1,51 @@
+# Production deploy (#45) — STUB, inert until prod is provisioned.
+#
+# This does NOT run until you opt in by setting the repo variable DEPLOY_ENABLED=true
+# (Settings > Secrets and variables > Actions > Variables). Until then every job skips,
+# so merging this file changes nothing.
+#
+# Required secrets before enabling (Settings > Secrets and variables > Actions > Secrets):
+#   SUPABASE_ACCESS_TOKEN   - personal access token (supabase.com/dashboard/account/tokens)
+#   SUPABASE_PROJECT_REF    - the prod project ref
+#   SUPABASE_DB_PASSWORD    - prod db password (for `db push`)
+# Edge function secrets (set once on the project, not here): APP_ORIGIN, SYNC_TRIGGER_SECRET,
+#   GITHUB_WEBHOOK_SECRET, GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY_BASE64, and (for #184)
+#   GITHUB_APP_CLIENT_ID / GITHUB_APP_CLIENT_SECRET. See the #44 checklist.
+#
+# Frontend (SPA) deploy is handled by Vercel's native GitHub integration (no step needed here);
+# add a vercel-cli step below only if you prefer CI-driven frontend deploys.
+
+name: Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  supabase:
+    name: db push + functions deploy
+    runs-on: ubuntu-latest
+    # Inert until you flip this on. A skipped job is neutral (does not fail the run).
+    if: ${{ vars.DEPLOY_ENABLED == 'true' }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link project
+        run: supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+
+      - name: Apply migrations
+        run: supabase db push --password "${{ secrets.SUPABASE_DB_PASSWORD }}"
+
+      - name: Deploy edge functions
+        run: supabase functions deploy
