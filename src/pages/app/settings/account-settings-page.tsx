@@ -28,7 +28,7 @@ export function AccountSettingsPage() {
   return (
     <div>
       <PageHeader title={t('settings.title')} />
-      <div className='mx-auto flex max-w-2xl flex-col gap-6 px-6 py-8'>
+      <div className='flex flex-col gap-6 px-6 py-8'>
         {/* Profile */}
         <section className='border-hairline bg-card rounded-xl border p-6'>
           <h2 className='text-ink text-sm font-semibold'>{t('settings.profile')}</h2>

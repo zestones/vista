@@ -28,5 +28,5 @@ export const common = {
   'settings.title': 'Settings',
   'settings.profile': 'Profile',
   'settings.imageAccess': 'GitHub image access',
-  'settings.imageAccessHint': 'Grant a one-time GitHub authorization so private-repo attachment images load for your clients. Account-wide — covers all your projects.',
+  'settings.imageAccessHint': 'Grant a one-time GitHub authorization so private-repo attachment images load for your clients. Account-wide — covers all your projects. Note: GitHub only offers a broad “repo” scope for this; Vista uses the token solely to fetch attachment images.',
 }
