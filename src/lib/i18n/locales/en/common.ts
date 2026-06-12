@@ -23,4 +23,6 @@ export const common = {
   'status.private': 'Private',
   'status.clientVisible': 'Visible to clients',
   'status.clientHidden': 'Hidden from clients',
+  'md.imageUnavailable': 'Image unavailable',
+  'md.viewImage': 'View image',
 }

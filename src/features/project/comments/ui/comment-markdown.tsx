@@ -1,8 +1,12 @@
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
+import rehypeRaw from 'rehype-raw'
+import rehypeSanitize from 'rehype-sanitize'
 import { remarkAlert } from 'remark-github-blockquote-alert'
 import { MermaidDiagram } from '@/components/markdown/mermaid-diagram'
+import { MarkdownImage } from '@/components/markdown/markdown-image'
+import { markdownSanitizeSchema } from '@/components/markdown/sanitize-schema'
 import { remarkIssueMentions } from '../lib/remark-issue-mentions'
 import 'highlight.js/styles/github.css'
 
@@ -22,8 +26,10 @@ function nodeText(node: HastNode | undefined): string {
 /**
  * Rich, sanitized comment rendering (#116). GFM + GitHub callouts (remarkAlert) + clickable issue
  * mentions; code is syntax-highlighted (rehype-highlight, GitHub theme), ```mermaid renders as a
- * zoomable diagram. NO rehype-raw -> raw HTML stays escaped; `ignoreMissing` leaves `mermaid` (an
- * unknown language) as raw text so we can grab its source.
+ * zoomable diagram. Raw HTML is parsed (rehype-raw) then sanitized (rehype-sanitize, custom schema)
+ * so HTML `<img>` renders while scripts/event handlers are stripped (#261); highlight runs AFTER
+ * sanitize so its classes are trusted. `ignoreMissing` leaves `mermaid` (an unknown language) as raw
+ * text so we can grab its source.
  */
 export default function CommentMarkdown({ children, onIssueRef }: { children: string; onIssueRef?: (issueNumber: number) => void }) {
   const components: Components = {
@@ -61,13 +67,14 @@ export default function CommentMarkdown({ children, onIssueRef }: { children: st
         </a>
       )
     },
+    img: ({ src, alt, title }) => <MarkdownImage src={typeof src === 'string' ? src : undefined} alt={alt} title={title} />,
   }
 
   return (
     <div className='cmt-md'>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkAlert, remarkIssueMentions]}
-        rehypePlugins={[[rehypeHighlight, { ignoreMissing: true }]]}
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, markdownSanitizeSchema], [rehypeHighlight, { ignoreMissing: true }]]}
         components={components}
       >
         {children}

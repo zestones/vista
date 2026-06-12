@@ -1,8 +1,12 @@
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
+import rehypeRaw from 'rehype-raw'
+import rehypeSanitize from 'rehype-sanitize'
 import { remarkAlert } from 'remark-github-blockquote-alert'
 import { MermaidDiagram } from './mermaid-diagram'
+import { MarkdownImage } from './markdown-image'
+import { markdownSanitizeSchema } from './sanitize-schema'
 import 'highlight.js/styles/github.css'
 
 interface HastNode {
@@ -42,17 +46,24 @@ const components: Components = {
       {children}
     </a>
   ),
+  img: ({ src, alt, title }) => <MarkdownImage src={typeof src === 'string' ? src : undefined} alt={alt} title={title} />,
 }
 
 /**
  * Shared sanitized markdown (#147/#149): GFM + GitHub callouts + syntax-highlighted code + zoomable
- * ```mermaid diagrams — same pipeline as comments, minus the issue-mention plugin. No raw HTML (no
- * rehype-raw). Default export so callers can lazy-load it (keeps react-markdown out of the main bundle).
+ * ```mermaid diagrams — same pipeline as comments, minus the issue-mention plugin. Raw HTML is parsed
+ * (rehype-raw) then sanitized (rehype-sanitize, custom schema) so HTML `<img>` renders while scripts/
+ * event handlers are stripped (#261); highlight runs AFTER sanitize so its classes are trusted. Default
+ * export so callers can lazy-load it (keeps react-markdown out of the main bundle).
  */
 export default function Markdown({ children }: { children: string }) {
   return (
     <div className='md'>
-      <ReactMarkdown remarkPlugins={[remarkGfm, remarkAlert]} rehypePlugins={[[rehypeHighlight, { ignoreMissing: true }]]} components={components}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkAlert]}
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, markdownSanitizeSchema], [rehypeHighlight, { ignoreMissing: true }]]}
+        components={components}
+      >
         {children}
       </ReactMarkdown>
     </div>
