@@ -1,6 +1,8 @@
 import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
 import { CommentPanelContext, type CommentTarget } from '@/contexts/comment-panel.context'
 import { SubmissionDetailContext, type SubmissionTarget } from '@/contexts/submission-detail.context'
+import { useAuth } from '@/contexts/auth.context'
+import { useMembershipRealtime } from '@/hooks/use-membership-realtime'
 import { MobileShell } from './mobile-shell'
 import { ScreenStack } from './screen-stack'
 
@@ -14,6 +16,11 @@ const MobileSubmissionSheet = lazy(() => import('../ui/mobile-submission-sheet')
  * the shared comment + request-detail sheets. Nested under the pure RequireAuth in the mobile route config.
  */
 export function MobileShellLayout() {
+  // Live membership (#273): mirror the desktop AppShell so role/comment-access/approval changes reach
+  // mobile members without a reopen (desktop mounted this; mobile didn't).
+  const { user } = useAuth()
+  useMembershipRealtime(user?.id ?? '')
+
   const [commentTarget, setCommentTarget] = useState<CommentTarget | null>(null)
   const [sheetMounted, setSheetMounted] = useState(false)
   if (commentTarget !== null && !sheetMounted) setSheetMounted(true)
