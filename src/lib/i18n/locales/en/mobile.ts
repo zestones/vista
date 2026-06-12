@@ -15,4 +15,7 @@ export const mobile = {
   'm.searchMs': 'Search milestones',
   'm.home.noResults': 'No projects match.',
   'm.home.empty': 'No projects yet.',
+  'm.organize.title': 'Organize projects',
+  'm.organize.done': 'Done',
+  'm.organize.hint': 'Drag the handle to reorder · tap the pin to pin (max 5).',
 }
