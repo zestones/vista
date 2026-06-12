@@ -71,12 +71,21 @@ export function WorkspacePage() {
   const { data, isLoading } = useWorkspace(user?.id ?? '')
   const [open, setOpen] = useState(false)
 
-  // Resume a GitHub install link stashed before a login round-trip (#77).
+  // Resume a GitHub install link stashed before a login round-trip (#77). Carries the OAuth code too,
+  // so ownership can still be verified on resume (#184).
   useEffect(() => {
     const pending = sessionStorage.getItem(PENDING_INSTALL_KEY)
     if (user && pending) {
       sessionStorage.removeItem(PENDING_INSTALL_KEY)
-      void navigate(`/github/callback?installation_id=${pending}`, { replace: true })
+      try {
+        const { installationId, code } = JSON.parse(pending) as { installationId: number; code: string }
+        if (installationId && code) {
+          const qs = new URLSearchParams({ installation_id: String(installationId), code })
+          void navigate(`/github/callback?${qs.toString()}`, { replace: true })
+        }
+      } catch {
+        // Malformed/legacy stash -- drop it; the owner can re-trigger the install.
+      }
     }
   }, [user, navigate])
 

@@ -93,6 +93,43 @@ export async function getInstallation(installationId: number): Promise<Installat
   return (await res.json()) as Installation
 }
 
+/**
+ * Exchange a GitHub App OAuth `code` (from the post-install redirect, when "Request user authorization
+ * during installation" is enabled) for a short-lived USER access token. Used by connect-installation
+ * (#184) to prove who the caller is on GitHub. The token is used once to verify ownership and then
+ * discarded -- it is never logged, returned to the browser, or stored.
+ */
+export async function exchangeOAuthCode(code: string): Promise<string> {
+  const res = await fetch('https://github.com/login/oauth/access_token', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ client_id: mustEnv('GITHUB_APP_CLIENT_ID'), client_secret: mustEnv('GITHUB_APP_CLIENT_SECRET'), code }),
+  })
+  if (!res.ok) throw new Error(`oauth code exchange failed: ${res.status}`)
+  // GitHub returns 200 with an `error` field on a bad/expired code -- treat a missing token as failure.
+  const body = (await res.json()) as { access_token?: string; error?: string }
+  if (!body.access_token) throw new Error(`oauth code exchange returned no token${body.error ? `: ${body.error}` : ''}`)
+  return body.access_token
+}
+
+/**
+ * True if the user behind `userToken` can administer `installationId`. `/user/installations` lists the
+ * App installations accessible to the authenticated user (their own account + orgs they belong to with
+ * access), so a match means the caller is genuinely tied to that installation -- not an arbitrary Vista
+ * user claiming someone else's install (#184). Paginates defensively.
+ */
+export async function userCanManageInstallation(userToken: string, installationId: number): Promise<boolean> {
+  let url: string | null = `${GITHUB_API}/user/installations?per_page=100`
+  while (url) {
+    const res: Response = await fetch(url, { headers: ghHeaders(userToken) })
+    if (!res.ok) throw new Error(`list user installations failed: ${res.status}`)
+    const body = (await res.json()) as { installations: { id: number }[] }
+    if (body.installations.some((i) => i.id === installationId)) return true
+    url = nextLink(res.headers.get('link'))
+  }
+  return false
+}
+
 export interface InstallationRepo {
   id: number
   name: string
