@@ -76,7 +76,7 @@ export function MobileOrganizeProjects({ owned }: { owned: ProjectSummary[] }) {
   }
 
   return (
-    <div className='flex flex-col gap-4 px-5 pb-4'>
+    <div className='flex flex-col gap-4'>
       {pinned.length > 0 && (
         <section className='flex flex-col gap-2'>
           <Label>{t('side.pinned')}</Label>

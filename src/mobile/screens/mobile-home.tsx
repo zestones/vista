@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FolderPlus, Search } from 'lucide-react'
+import { FolderPlus, Search, SlidersHorizontal } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { useWorkspace } from '@/features/workspace'
 import type { ProjectSummary } from '@/services/projects'
@@ -31,22 +31,7 @@ export default function MobileHome() {
 
   return (
     <>
-      {/* iOS-style: the screen header carries the Edit/Done action (#275); Done while organizing. */}
-      <ScreenHeader
-        eyebrow={organizing ? undefined : firstName !== '' ? t('m.home.hello') : undefined}
-        title={organizing ? t('m.organize.title') : firstName !== '' ? firstName : t('m.nav.home')}
-        action={
-          organizing ? (
-            <Button size='sm' onClick={() => setOrganizing(false)}>
-              {t('m.organize.done')}
-            </Button>
-          ) : (data?.owned.length ?? 0) > 1 ? (
-            <Button variant='ghost' size='sm' onClick={() => setOrganizing(true)}>
-              {t('m.organize.cta')}
-            </Button>
-          ) : undefined
-        }
-      />
+      <ScreenHeader eyebrow={firstName !== '' ? t('m.home.hello') : undefined} title={firstName !== '' ? firstName : t('m.nav.home')} />
 
       {isLoading ? (
         <div className='grid place-items-center py-16'>
@@ -54,55 +39,76 @@ export default function MobileHome() {
         </div>
       ) : isEmpty ? (
         <p className='text-muted-ink px-6 py-10 text-center text-sm'>{t('m.home.empty')}</p>
-      ) : organizing ? (
-        <Suspense fallback={null}>
-          <MobileOrganizeProjects owned={data?.owned ?? []} />
-        </Suspense>
       ) : (
         <div className='flex flex-col gap-5 px-5 pb-4'>
-          <div className='relative'>
-            <Search size={16} className='text-muted-ink pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2' />
-            <Input
-              value={q}
-              onChange={(e) => {
-                setQ(e.target.value)
-              }}
-              placeholder={t('m.home.searchPh')}
-              aria-label={t('m.home.searchPh')}
-              className='bg-secondary h-11 rounded-xl border-transparent pl-10'
-            />
+          {/* Search + organize toggle (#275): kept next to the search; the button flips to "Done" while organizing. */}
+          <div className='flex items-center gap-2'>
+            {organizing ? (
+              <span className='font-display text-ink flex-1 text-base font-semibold'>{t('m.organize.title')}</span>
+            ) : (
+              <div className='relative flex-1'>
+                <Search size={16} className='text-muted-ink pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2' />
+                <Input
+                  value={q}
+                  onChange={(e) => {
+                    setQ(e.target.value)
+                  }}
+                  placeholder={t('m.home.searchPh')}
+                  aria-label={t('m.home.searchPh')}
+                  className='bg-secondary h-11 rounded-xl border-transparent pl-10'
+                />
+              </div>
+            )}
+            {(data?.owned.length ?? 0) > 1 &&
+              (organizing ? (
+                <Button size='sm' className='h-11 shrink-0 rounded-xl' onClick={() => setOrganizing(false)}>
+                  {t('m.organize.done')}
+                </Button>
+              ) : (
+                <Button variant='outline' size='icon' className='size-11 shrink-0 rounded-xl' aria-label={t('m.organize.cta')} onClick={() => setOrganizing(true)}>
+                  <SlidersHorizontal size={18} />
+                </Button>
+              ))}
           </div>
 
-          {noResults && <p className='text-muted-ink py-8 text-center text-sm'>{t('m.home.noResults')}</p>}
+          {organizing ? (
+            <Suspense fallback={null}>
+              <MobileOrganizeProjects owned={data?.owned ?? []} />
+            </Suspense>
+          ) : (
+            <>
+              {noResults && <p className='text-muted-ink py-8 text-center text-sm'>{t('m.home.noResults')}</p>}
 
-          {/* Pinned first (#275) — owned is already pinned/position-ordered by stableOrder. */}
-          {owned.some((s) => s.project.pinned) && (
-            <section className='flex flex-col gap-2.5'>
-              <h2 className='text-muted-ink px-0.5 text-[11px] font-semibold tracking-wide uppercase'>{t('side.pinned')}</h2>
-              {owned
-                .filter((s) => s.project.pinned)
-                .map((s) => (
-                  <MobileProjectCard key={s.project.id} summary={s} isOwner />
-                ))}
-            </section>
-          )}
-          {owned.some((s) => !s.project.pinned) && (
-            <section className='flex flex-col gap-2.5'>
-              <h2 className='text-muted-ink px-0.5 text-[11px] font-semibold tracking-wide uppercase'>{t('ws.owned')}</h2>
-              {owned
-                .filter((s) => !s.project.pinned)
-                .map((s) => (
-                  <MobileProjectCard key={s.project.id} summary={s} isOwner />
-                ))}
-            </section>
-          )}
-          {joined.length > 0 && (
-            <section className='flex flex-col gap-2.5'>
-              <h2 className='text-muted-ink px-0.5 text-[11px] font-semibold tracking-wide uppercase'>{t('ws.joined')}</h2>
-              {joined.map((s) => (
-                <MobileProjectCard key={s.project.id} summary={s} isOwner={false} />
-              ))}
-            </section>
+              {/* Pinned first (#275) — owned is already pinned/position-ordered by stableOrder. */}
+              {owned.some((s) => s.project.pinned) && (
+                <section className='flex flex-col gap-2.5'>
+                  <h2 className='text-muted-ink px-0.5 text-[11px] font-semibold tracking-wide uppercase'>{t('side.pinned')}</h2>
+                  {owned
+                    .filter((s) => s.project.pinned)
+                    .map((s) => (
+                      <MobileProjectCard key={s.project.id} summary={s} isOwner />
+                    ))}
+                </section>
+              )}
+              {owned.some((s) => !s.project.pinned) && (
+                <section className='flex flex-col gap-2.5'>
+                  <h2 className='text-muted-ink px-0.5 text-[11px] font-semibold tracking-wide uppercase'>{t('ws.owned')}</h2>
+                  {owned
+                    .filter((s) => !s.project.pinned)
+                    .map((s) => (
+                      <MobileProjectCard key={s.project.id} summary={s} isOwner />
+                    ))}
+                </section>
+              )}
+              {joined.length > 0 && (
+                <section className='flex flex-col gap-2.5'>
+                  <h2 className='text-muted-ink px-0.5 text-[11px] font-semibold tracking-wide uppercase'>{t('ws.joined')}</h2>
+                  {joined.map((s) => (
+                    <MobileProjectCard key={s.project.id} summary={s} isOwner={false} />
+                  ))}
+                </section>
+              )}
+            </>
           )}
         </div>
       )}
