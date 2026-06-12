@@ -19,4 +19,12 @@ void i18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
 })
 
+// Keep <html lang> in sync with the active language so screen readers announce content in the right
+// language and pronunciation (WCAG 3.1.1/3.1.2). index.html ships a static lang for first paint.
+const syncHtmlLang = (lng: string) => {
+  if (typeof document !== 'undefined') document.documentElement.lang = lng
+}
+syncHtmlLang(i18n.language)
+i18n.on('languageChanged', syncHtmlLang)
+
 export default i18n
