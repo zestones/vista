@@ -25,4 +25,8 @@ export const common = {
   'status.clientHidden': 'Masqué des clients',
   'md.imageUnavailable': 'Image indisponible',
   'md.viewImage': 'Voir l’image',
+  'settings.title': 'Réglages',
+  'settings.profile': 'Profil',
+  'settings.imageAccess': 'Accès aux images GitHub',
+  'settings.imageAccessHint': 'Accordez une autorisation GitHub unique pour que les images des pièces jointes des dépôts privés s’affichent chez vos clients. Au niveau du compte — couvre tous vos projets.',
 }

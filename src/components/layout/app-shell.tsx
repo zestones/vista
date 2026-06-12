@@ -189,13 +189,21 @@ function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; 
 
       <div className='border-hairline mt-auto border-t pt-3'>
         <div className='flex items-center gap-2 px-1 py-1.5'>
-          <span className='bg-ink font-display grid size-8 shrink-0 place-items-center rounded-full text-[13px] font-semibold text-white'>
-            {initial}
-          </span>
-          <div className='min-w-0 flex-1'>
-            <div className='text-ink truncate text-[13px] font-medium'>{user?.name}</div>
-            <div className='text-muted-ink truncate text-[11px]'>{user?.email}</div>
-          </div>
+          {/* Profile -> account settings (#262 follow-up). */}
+          <Link
+            to='/app/settings'
+            onClick={onNavigate}
+            title={t('settings.title')}
+            className='hover:bg-background/70 -mx-1 flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1 transition-colors'
+          >
+            <span className='bg-ink font-display grid size-8 shrink-0 place-items-center rounded-full text-[13px] font-semibold text-white'>
+              {initial}
+            </span>
+            <span className='min-w-0 flex-1'>
+              <span className='text-ink block truncate text-[13px] font-medium'>{user?.name}</span>
+              <span className='text-muted-ink block truncate text-[11px]'>{user?.email}</span>
+            </span>
+          </Link>
           <button
             type='button'
             title={t('side.logout')}

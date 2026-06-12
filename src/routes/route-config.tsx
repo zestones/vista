@@ -9,6 +9,7 @@ import { SubmissionsInboxPage } from '@/pages/app/submissions/submissions-inbox-
 import { RoadmapPage } from '@/pages/app/project/roadmap-page'
 import { SubmissionsPage } from '@/pages/app/project/submissions-page'
 import { SettingsPage } from '@/pages/app/settings/settings-page'
+import { AccountSettingsPage } from '@/pages/app/settings/account-settings-page'
 import { GithubCallbackPage } from '@/pages/github/github-callback-page'
 import { ImageAccessCallbackPage } from '@/pages/github/image-access-callback-page'
 import { PublicSharePage } from '@/pages/share'
@@ -31,6 +32,7 @@ export const routeConfig: RouteObject[] = [
         element: <DesktopShellLayout />,
         children: [
           { path: '/app', element: <WorkspacePage /> },
+          { path: '/app/settings', element: <AccountSettingsPage /> },
           { path: '/app/admin', element: <AdminPage /> },
           { path: '/app/submissions', element: <SubmissionsInboxPage /> },
           { path: '/app/projects/:id', element: <RoadmapPage /> },

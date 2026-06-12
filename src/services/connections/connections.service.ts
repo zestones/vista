@@ -33,6 +33,8 @@ export interface ConnectionsApi {
   /** Store the owner's classic OAuth App token (from the image-access authorize flow) so the sync can
    * re-host private-repo attachment images (#262). */
   connectImageAccess(code: string): Promise<{ ok: boolean }>
+  /** Whether the owner has already granted image access (account-wide; #262). */
+  hasImageAccess(): Promise<boolean>
 }
 
 const MOCK_INSTALLATION_ID = 1
@@ -80,6 +82,9 @@ const mock: ConnectionsApi = {
   connectImageAccess() {
     return Promise.resolve({ ok: true })
   },
+  hasImageAccess() {
+    return Promise.resolve(false)
+  },
 }
 
 // Supabase: writes go through the connect-repos Edge function (service role, validated);
@@ -124,6 +129,11 @@ const supabaseApi: ConnectionsApi = {
   },
   async connectImageAccess(code) {
     return invoke<{ ok: boolean }>('connect-image-access', { code })
+  },
+  async hasImageAccess() {
+    const { data, error } = await supabase.rpc('owner_has_image_access')
+    if (error) throw error
+    return data
   },
 }
 
