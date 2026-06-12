@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
     }
     // else: acknowledged, no-op (ping, installation.created, *.added, other actions).
   } catch (e) {
-    console.log(`github-webhook ${event}/${payload.action ?? ''} failed: ${e instanceof Error ? e.message : 'error'}`)
+    console.error(`[github-webhook] ${event}/${payload.action ?? ''} failed: ${e instanceof Error ? e.message : 'error'}`)
     return new Response('processing error', { status: 500 })
   }
 
