@@ -1,193 +1,184 @@
-# Vista — a shared product roadmap
+# Vista
 
-A multi-tenant roadmap platform built around **GitHub milestones and issues**.
-A public landing page presents the product; project **owners** sign up, create
-projects, and decide which ones are **available on Vista** and which to **share**.
-**Clients** join a shared project through an **invite link**, request access, and —
-once approved — follow a polished **roadmap dashboard**.
+**A shared product roadmap, built on your GitHub.** Project owners connect a private GitHub repository; Vista turns its milestones and issues into a polished roadmap dashboard and decides, per project and per issue, what clients are allowed to see. Clients join through an invite or a read-only share link, follow progress, comment, and request features — without ever needing GitHub access to the private repo.
+
+[![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white)](https://vite.dev)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20Edge-3FCF8E?logo=supabase&logoColor=white)](https://supabase.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-black)](./LICENSE)
 
 > [!NOTE]
-> There is **no real backend yet**. Auth and data are mocked (in `localStorage`,
-> seeded with demo content) so the entire app is testable end to end. The modules
-> are written with a real backend in mind — see
-> [Swapping in a real backend](#swapping-in-a-real-backend).
+> Vista runs against a **mock backend by default** (`VITE_BACKEND=mock`) — the whole app is testable end to end with no accounts and no cloud setup. Point it at a real Supabase project (`VITE_BACKEND=supabase`) to enable GitHub sync, auth, storage, and realtime.
+
+## How it works
 
 ```mermaid
 flowchart LR
-  L["Landing<br/>#/"] -->|Sign up / Log in| WS["Workspace<br/>#/app"]
-  L -->|View on GitHub| GH[("GitHub repo")]
-  WS --> AD["Admin console<br/>#/app/admin"]
-  WS --> PD["Project dashboard<br/>(Gantt + milestones)"]
-  PD --> PS["Project settings<br/>(members, invites)"]
-  JL["Invite link<br/>#/join/:token"] -->|Request access| PD
+  Owner([Owner]) -->|installs GitHub App| Vista
+  Client([Client]) -->|invite or share link| Vista
+  Vista <-->|sync issues & milestones| GH[(GitHub repo<br/>private)]
+  Vista -->|requested features become issues| GH
+  GH -->|webhooks| Vista
 ```
+
+An owner installs the Vista GitHub App on a repository. Vista syncs that repo's milestones and issues into a read-cache, and the owner curates which project is **available on Vista**, which issues are **shared**, and writes client-facing summaries. Clients see only the curated roadmap. When a client requests a feature, it lands in a moderation inbox; once approved, Vista writes it back as a labelled GitHub issue.
 
 ## Features
 
-**Platform**
+**For owners**
 
-- Landing page presenting Vista, with a "View on GitHub" link to the product repo.
-- Sign up / log in, then a workspace listing the projects you own or that are shared with you.
-- Admin console to toggle, per project, its **availability on Vista** and its **sharing**, with live counts of members and pending requests.
-- Project settings: members and roles, access-request review (approve or deny), invite link (copy or rotate), visibility, and deletion.
-- Join-by-link flow: open an invite link, request access, the owner approves.
-- Bilingual FR / EN toggle with localized dates.
-- Editorial design system (see [`DESIGN.md`](./DESIGN.md)): white canvas, dark ink, signature cards. Icons come from `lucide-react`.
-- Installable **PWA** with offline app shell (see [PWA](#pwa)).
+- Connect a private GitHub repo through a GitHub App; milestones and issues sync automatically (hourly cron + live webhooks).
+- Per-project availability and per-issue sharing, with owner-written client summaries — owner-curated columns are never clobbered by sync.
+- Members and roles, invite links (copy or rotate), and an access-request review queue.
+- A moderation inbox for client-submitted feature requests, written back to GitHub on approval.
+- Private attachment images are re-hosted so clients can see them without repo access.
 
-**Roadmap (the Gantt)**
+**For clients**
 
-- Two-tier time header (months plus day or week dates) with weekend shading.
-- Zoom by Month / Week / Day, or **Ctrl/Cmd + wheel** anchored on the cursor.
-- **Grab to pan** the chart in both axes; native scroll still works.
-- Collapsible milestones with progress fill, due-date markers, and an overdue indicator.
-- Issues as bars with status icons and the author's avatar; click an issue in the list to scroll and center it.
-- Search and jump to any issue; sort milestones (default, due date, name, progress) and issues (chronological, status, number).
-- A dedicated, list-based mobile view (no horizontal timeline) that swaps in automatically on phones.
+- A polished roadmap dashboard: a zoomable Gantt timeline of milestones and issues, with progress, due dates, and overdue markers.
+- Join by invite link (request access, owner approves) or open a read-only, token-scoped public share link with no account.
+- Comment on shared issues and submit feature requests.
+- Realtime updates across desktop and mobile.
 
-## Quick start
+**Across the product**
 
-```bash
-npm install
-npm run dev        # http://localhost:5173
-```
-
-That is enough: the app runs against the mock backend with no configuration.
-Sign up with any email and password, and the demo data seeds itself.
-
-> [!TIP]
-> Reset the demo at any time by clearing these `localStorage` keys:
-> `vista-session`, `vista-accounts`, `vista-db`, `vista-lang`.
+- Authentication via magic link, Google, or GitHub (identities auto-link by verified email).
+- Bilingual FR / EN with localized dates.
+- Mobile-first shell with a dedicated touch UI, plus a full desktop layout — installable as a PWA with an offline app shell.
+- Editorial design system (see [`DESIGN.md`](./DESIGN.md)).
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-  subgraph UI["React UI (src/components)"]
-    Landing
-    AuthScreen["Auth"]
-    Shell["AppShell + sidebar"]
-    Dash["Project dashboard / Gantt"]
-    Admin["Admin console"]
-    Settings["Project settings"]
+  subgraph Client["Single-page app (React 19 + Vite)"]
+    Desktop["Desktop shell"]
+    Mobile["Mobile shell + PWA"]
+    DAL["Data layer (mock | supabase)"]
+    Desktop --> DAL
+    Mobile --> DAL
   end
 
-  subgraph Lib["src/lib"]
-    authmod["auth.js (mock session)"]
-    apimod["api.js (mock backend)"]
-    seed["mockData.js (seed + generator)"]
-    gh["github.js (REST reads)"]
-    store["store.js (refresh signal)"]
-    i18n["i18n.js"]
-    router["router.js (hash routes)"]
+  subgraph Supabase
+    Auth["Auth<br/>magic link · Google · GitHub"]
+    DB[("Postgres<br/>RLS deny-all + policies")]
+    Storage["Storage<br/>re-hosted attachments"]
+    Edge["Edge Functions (Deno)"]
+    Cron["pg_cron<br/>scheduled resync"]
   end
 
-  UI --> Lib
-  authmod --> LS[("localStorage")]
-  apimod --> LS
-  apimod --> seed
-  apimod -->|GitHub-backed projects| gh
-  gh --> GHAPI[("GitHub REST API")]
-  Settings -. future .-> fn["api/create-issue.js<br/>(serverless)"]
-  fn -. future .-> GHAPI
+  GHApp["GitHub App<br/>sync · install · webhooks"]
+  GHOAuth["OAuth Apps<br/>login · image access"]
+
+  DAL --> Auth
+  DAL --> DB
+  DAL --> Storage
+  DAL --> Edge
+  Auth --- GHOAuth
+  Edge <-->|REST + webhooks| GHApp
+  Cron --> Edge
+  Edge --> DB
+  Edge --> Storage
 ```
 
 > [!IMPORTANT]
-> The mock boundary is intentional. `auth.js` and `api.js` expose `async`
-> methods shaped like a real API; only their bodies talk to `localStorage`
-> today. Reads of public GitHub data run client-side through `github.js`.
+> The data layer is an adapter, selected per domain by `VITE_BACKEND`. The `mock` adapter is backed by `localStorage` with seeded demo data; the `supabase` adapter talks to Postgres, Auth, Storage, and Edge Functions. Both implement the same service interfaces, so UI code never branches on the backend.
 
-## App structure
+GitHub integration spans three distinct apps, by design:
 
-Client-side hash routes (no router dependency — see `src/lib/router.js`):
-
-| Route | Screen | Access |
+| App | Type | Purpose |
 |---|---|---|
-| `#/` | Landing page (marketing) | public |
-| `#/login`, `#/signup` | Auth (mocked) | public |
-| `#/join/:token` | Join a shared project (request access) | requires sign-in |
-| `#/app` | Workspace (your projects) | requires sign-in |
-| `#/app/admin` | Admin console (availability and sharing) | requires sign-in |
-| `#/app/projects/:id` | Project dashboard (roadmap) | members only |
-| `#/app/projects/:id/settings` | Project management | owner only |
+| Vista Roadmap | GitHub App | Install on a repo, sync issues/milestones, receive webhooks |
+| Vista Login | OAuth App | Sign in with GitHub (identity only) |
+| Vista Image Access | OAuth App | Owner-granted repo-scoped token to re-host private attachment images |
 
-Authed screens share an app shell with a sidebar (`src/components/app/AppShell.jsx`).
-Visiting a protected route while signed out redirects to `#/login` and returns you to
-the original link after sign-in (for example, an invite link).
+The frontend lives in `src/` and the backend in `supabase/`:
 
-### Access-request flow
+```text
+src/
+  components/   shared UI, layout, markdown, motion primitives
+  features/     admin, auth, notifications, project, workspace
+  mobile/       mobile-first shell, screens, and touch UI
+  pages/        route-level screens (landing, auth, app, join, share)
+  routes/       react-router config + auth guards
+  services/     the data layer — one folder per domain, mock | supabase adapters
+  lib/          i18n (FR/EN), supabase client, query keys, utilities
 
-```mermaid
-sequenceDiagram
-  actor Client
-  participant API as api.js (mock)
-  actor Owner
-
-  Client->>API: Open invite link, request access
-  API->>API: Add pending member (localStorage)
-  Owner->>API: Settings, Access requests, Approve
-  API->>API: Member status set to active
-  Owner-->>Client: Access granted
-  Client->>API: Open the project dashboard
+supabase/
+  functions/    Edge Functions (Deno): sync-repo, github-webhook,
+                connect-installation, connect-repos, connect-image-access, create-issue
+  migrations/   schema, RLS policies, RPCs, cron
+  tests/        pgTAP policy tests
 ```
 
-> [!TIP]
-> The seed already adds **pending requests** to the demo projects, so the
-> approval side is testable from a single account: open a project, then
-> Settings, then Access requests.
-
-## PWA
-
-Vista ships as an installable Progressive Web App.
-
-- `public/manifest.webmanifest` — name, standalone display, theme color, icon.
-- `public/icon.svg` — maskable app icon.
-- `public/sw.js` — service worker: offline app shell plus runtime caching. It
-  bypasses `/api/` routes and the cross-origin GitHub API so live data is never stale.
-- Registered from `src/main.jsx` in production builds only.
+## Getting started
 
 > [!NOTE]
-> The service worker is active in builds, not in `npm run dev`. Test it with
-> `npm run build && npm run preview`, then use the browser's install action and
-> DevTools, under Application, to inspect the manifest and service worker.
+> Prerequisites: Node.js and npm. The mock backend needs nothing else. The full local stack additionally needs Docker (for Supabase) and the Supabase CLI (installed as a dev dependency).
 
-> [!TIP]
-> Icons are SVG, which installs on recent Chromium browsers. For best results on
-> iOS, add PNG icons (180, 192, 512) and reference them from the manifest and the
-> `apple-touch-icon` link.
+```bash
+make install     # npm install
+make web         # Vite dev server on http://localhost:5173 (mock backend)
+```
+
+That is enough to explore the whole app: sign up with any email, and the demo data seeds itself.
+
+### Full local stack
+
+To run against a real local Supabase (Postgres + Auth + Storage + Edge Functions):
+
+```bash
+cp .env.example .env                              # set VITE_BACKEND=supabase + Supabase URL/anon key
+cp supabase/functions/.env.example supabase/functions/.env
+make dev                                          # Supabase + edge functions + web + webhook relay
+```
+
+`make dev` starts everything in one command and prints the local service URLs (Studio, mail, API). See [Configuration](#configuration) for the environment variables, and [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md) for code conventions.
+
+### Common commands
+
+| Command | What it does |
+|---|---|
+| `make dev` | Full stack: Supabase + edge functions + web + webhook relay |
+| `make web` | Vite dev server only |
+| `make supabase` / `make stop` | Start / stop the local Supabase stack |
+| `make migrate` | Apply pending migrations (additive) |
+| `make types` | Regenerate `src/types/database.types.ts` from the local DB |
+| `make db-test` | Run the pgTAP RLS/policy tests |
+| `make check` | Every gate: lint + typecheck + tests + pgTAP |
+
+Run `make help` to list all targets.
 
 ## Configuration
 
-All variables are optional; the mock app needs none of them.
+All client variables are prefixed `VITE_` and bundled into the browser — never put a secret there. The mock app needs none of them.
 
-| Variable | Where | Purpose |
+| Variable | Scope | Purpose |
 |---|---|---|
-| `VITE_VISTA_GITHUB` | client | Vista's own repo, used by the landing and footer "View on GitHub" link. |
-| `VITE_GITHUB_OWNER`, `VITE_GITHUB_REPO` | client | Default GitHub source for GitHub-backed projects (public). |
-| `VITE_GITHUB_TOKEN` | client | Optional, local dev only. Read token for GitHub-backed projects. |
-| `GITHUB_TOKEN`, `GITHUB_OWNER`, `GITHUB_REPO` | server | Used only by the future real backend (`api/create-issue.js`). |
+| `VITE_BACKEND` | client | Data layer: `mock` (default) or `supabase` |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | client | Supabase project (anon key is safe client-side; RLS protects data) |
+| `VITE_APP_URL` | client | Base URL used to build invite links; defaults to the window origin |
+| `VITE_GITHUB_APP_SLUG` | client | GitHub App slug for install/manage links |
+| `VITE_GITHUB_OAUTH_CLIENT_ID` | client | Image-access OAuth App client id (empty hides the button) |
+
+Server-only secrets (service-role key, GitHub App ID and private key, webhook secret, OAuth app secrets) live in Supabase Edge secrets and `supabase/functions/.env` — see [`supabase/functions/.env.example`](./supabase/functions/.env.example). They are never exposed to the browser.
 
 > [!WARNING]
-> Anything prefixed `VITE_` is bundled into the browser. Never ship a real token
-> that way on a public deployment — leave `VITE_GITHUB_TOKEN` empty in production.
+> Anything prefixed `VITE_` ends up in the client bundle. Keep tokens and secrets server-side, in Supabase Edge secrets or `supabase/functions/.env` (both gitignored).
 
-## Swapping in a real backend
+## Deployment
 
-Everything is mocked behind two modules. Replace their bodies and keep the
-signatures:
+The frontend deploys as a static SPA (Vercel, with `vercel.json` providing the SPA fallback rewrite). The backend is a hosted Supabase project: apply migrations, deploy the Edge Functions, configure the three GitHub apps and their secrets, and the `pg_cron` resync schedule. Self-authenticating functions (`sync-repo`, `github-webhook`) set `verify_jwt = false` in `supabase/config.toml` and authenticate via their own shared secret / HMAC.
 
-- `src/lib/auth.js` — `login`, `signup`, `logout` (currently `localStorage`).
-- `src/lib/api.js` — projects, members, access requests, invites, and `createRequest`
-  (currently `localStorage` plus seeded demo data). Every method is already `async`.
+## Tech stack
 
-`api/create-issue.js` is a ready-made serverless function (Vercel-style) showing how
-`createRequest` would create a real GitHub issue: the title is prefixed by type, a
-`via:vista` label is added, and the submitter is noted in the body. It is not called by
-the mock app yet.
+- **Frontend** — React 19, TypeScript (strict), Vite 7, Tailwind CSS v4, react-router-dom, TanStack Query, `motion`, radix-ui, react-i18next.
+- **Backend** — Supabase: Postgres with row-level security, Auth, Storage, and Edge Functions (Deno), with `pg_cron` and `pg_net` for scheduled sync.
+- **Content** — react-markdown with remark/rehype (GitHub-flavoured markdown, sanitized), mermaid, tiptap.
+- **Quality** — ESLint, Prettier, Vitest (unit + integration), pgTAP for database policies.
 
-## Stack
+## License
 
-- Vite and React 18, no UI framework (vanilla CSS tokens from `DESIGN.md`).
-- `lucide-react` for icons.
-- GitHub REST API v3 for reading public milestones and issues.
-- Inter and Inter Tight (a Haas Grotesk substitute).
+Released under the [MIT License](./LICENSE).

@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useAutoAnimate } from '@formkit/auto-animate/react'
-import { Globe, Inbox, LayoutGrid, LogOut, Menu, Plus, Shield, Smartphone } from 'lucide-react'
+import { Inbox, LayoutGrid, LogOut, Menu, Plus, Shield, Smartphone } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { SidebarContext } from '@/contexts/sidebar.context'
 import { PreviewContext } from '@/contexts/preview.context'
 import { CommentPanelContext, type CommentTarget } from '@/contexts/comment-panel.context'
 import { NewProjectModal, useWorkspace } from '@/features/workspace'
 import { useOwnerInbox } from '@/features/project/moderation'
-import { publishState, type ProjectSummary } from '@/services/projects'
+import { SidebarProjects } from './sidebar-projects'
 import { CommentPanel } from '@/features/project/comments'
 import { SubmissionPanel } from '@/features/project/moderation'
 import { SubmissionDetailContext, type SubmissionTarget } from '@/contexts/submission-detail.context'
@@ -65,48 +64,6 @@ function NavItem({
 }
 
 /** A labelled group of projects in the sidebar. `owned` items flag the ones not visible to clients (#107). */
-function ProjectGroup({
-  label,
-  items,
-  pathname,
-  owned,
-  onNavigate,
-}: {
-  label: string
-  items: ProjectSummary[]
-  pathname: string
-  owned: boolean
-  onNavigate: () => void
-}) {
-  const { t } = useTranslation()
-  const [listRef] = useAutoAnimate<HTMLDivElement>()
-  if (items.length === 0) return null
-  return (
-    <div>
-      <div className='text-muted-ink mb-1 px-3 text-[10px] font-semibold tracking-wide uppercase'>{label}</div>
-      <div ref={listRef} className='flex flex-col gap-0.5'>
-        {items.map((s) => (
-          <NavItem
-            key={s.project.id}
-            to={`/app/projects/${s.project.id}`}
-            active={pathname.startsWith(`/app/projects/${s.project.id}`)}
-            dot={s.project.color ?? 'var(--color-ink)'}
-            label={s.project.name}
-            trailing={
-              owned && publishState(s.project).published ? (
-                <span title={t('status.clientVisible')} className='flex shrink-0'>
-                  <Globe size={13} className='text-success' aria-label={t('status.clientVisible')} />
-                </span>
-              ) : undefined
-            }
-            onNavigate={onNavigate}
-          />
-        ))}
-      </div>
-    </div>
-  )
-}
-
 function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; onNewProject: () => void }) {
   const { t } = useTranslation()
   const { user, signOut } = useAuth()
@@ -182,8 +139,7 @@ function SidebarContent({ onNavigate, onNewProject }: { onNavigate: () => void; 
         </div>
         <div aria-hidden className='via-ink/15 mx-3 mb-2.5 h-px shrink-0 bg-gradient-to-r from-transparent to-transparent' />
         <div className='flex flex-col gap-3 overflow-y-auto'>
-          <ProjectGroup label={t('ws.owned')} items={owned} pathname={pathname} owned onNavigate={onNavigate} />
-          <ProjectGroup label={t('ws.joined')} items={joined} pathname={pathname} owned={false} onNavigate={onNavigate} />
+          <SidebarProjects owned={owned} joined={joined} pathname={pathname} onNavigate={onNavigate} />
         </div>
       </div>
 

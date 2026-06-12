@@ -40,6 +40,10 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: latest
+        env:
+          # Authenticate the GitHub-release lookup so it isn't rate-limited (the anon API limit failed a
+          # prior deploy at "resolve latest Supabase CLI release: rate limit exceeded").
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Link project
         run: supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"

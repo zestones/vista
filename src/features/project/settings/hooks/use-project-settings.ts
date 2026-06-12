@@ -17,3 +17,12 @@ export function useDeleteProject() {
     onSuccess: () => qc.invalidateQueries({ queryKey: projectKeys.all }),
   })
 }
+
+/** Persist a new project display order (#275). The caller holds optimistic local order during the drag. */
+export function useReorderProjects() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (orderedIds: string[]) => projects.reorderProjects(orderedIds),
+    onSuccess: () => qc.invalidateQueries({ queryKey: projectKeys.all }),
+  })
+}

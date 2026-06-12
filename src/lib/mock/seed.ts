@@ -192,6 +192,8 @@ export function buildSeed(): MockDb {
       color: PROJECT_PALETTE[di % PROJECT_PALETTE.length],
       visibility: d.visibility,
       available_on_vista: d.visibility === 'shared',
+      pinned: false,
+      position: null,
       created_at: now,
     })
     db.members.push({

@@ -30,8 +30,8 @@ export interface ProjectSummary {
   repos: { owner: string; repo: string }[]
 }
 
-/** Fields the owner can edit from the admin console / settings. */
-export type ProjectUpdate = Partial<Pick<ProjectRow, 'name' | 'description' | 'color' | 'visibility' | 'available_on_vista'>>
+/** Fields the owner can edit from the admin console / settings. `pinned`/`position` drive sidebar org (#275). */
+export type ProjectUpdate = Partial<Pick<ProjectRow, 'name' | 'description' | 'color' | 'visibility' | 'available_on_vista' | 'pinned' | 'position'>>
 
 export interface OwnedJoinedProjects {
   owned: ProjectSummary[]

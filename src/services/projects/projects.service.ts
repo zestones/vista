@@ -10,6 +10,8 @@ export interface ProjectsApi {
   getProjectAccess(id: string, userId: string): Promise<ProjectAccess | null>
   createProject(input: NewProjectInput, owner: AuthUser): Promise<ProjectRow>
   updateProject(id: string, patch: ProjectUpdate): Promise<ProjectRow>
+  /** Persist a new display order for the owner's projects (#275); ids in desired order. */
+  reorderProjects(orderedIds: string[]): Promise<void>
   deleteProject(id: string): Promise<void>
 }
 
@@ -35,7 +37,20 @@ function summarize(db: MockDb, project: ProjectRow): ProjectSummary {
  */
 function stableOrder(r: OwnedJoinedProjects): OwnedJoinedProjects {
   const byCreated = (a: ProjectSummary, b: ProjectSummary) => a.project.created_at.localeCompare(b.project.created_at)
-  return { owned: [...r.owned].sort(byCreated), joined: [...r.joined].sort(byCreated) }
+  // Owned list honors the owner's org (#275): pinned first, then manual `position`, then created_at.
+  // pinned/position are the OWNER's settings, so they don't apply to `joined` (someone else's projects).
+  const byOwnerOrg = (a: ProjectSummary, b: ProjectSummary) => {
+    const pa = a.project
+    const pb = b.project
+    if (pa.pinned !== pb.pinned) return pa.pinned ? -1 : 1
+    const oa = pa.position
+    const ob = pb.position
+    if (oa != null && ob != null && oa !== ob) return oa - ob
+    if (oa != null && ob == null) return -1
+    if (oa == null && ob != null) return 1
+    return byCreated(a, b)
+  }
+  return { owned: [...r.owned].sort(byOwnerOrg), joined: [...r.joined].sort(byCreated) }
 }
 
 const mock: ProjectsApi = {
@@ -82,6 +97,8 @@ const mock: ProjectsApi = {
       color: PROJECT_PALETTE[db.projects.length % PROJECT_PALETTE.length],
       visibility: input.visibility,
       available_on_vista: input.availableOnVista,
+      pinned: false,
+      position: null,
       created_at: now,
     }
     db.projects.push(project)
@@ -106,6 +123,14 @@ const mock: ProjectsApi = {
     if (!project) throw new Error(`Unknown project: ${id}`)
     Object.assign(project, patch)
     return Promise.resolve(project)
+  },
+  reorderProjects(orderedIds) {
+    const db = mockDb()
+    orderedIds.forEach((id, i) => {
+      const project = db.projects.find((p) => p.id === id)
+      if (project) project.position = i
+    })
+    return Promise.resolve()
   },
   deleteProject(id) {
     const db = mockDb()
@@ -163,6 +188,10 @@ const supabaseApi: ProjectsApi = {
     const { data, error } = await supabase.from('projects').update(patch).eq('id', id).select().single()
     if (error) throw error
     return data
+  },
+  async reorderProjects(orderedIds) {
+    const { error } = await supabase.rpc('reorder_projects', { p_ids: orderedIds })
+    if (error) throw error
   },
   async deleteProject(id) {
     const { error } = await supabase.from('projects').delete().eq('id', id)
