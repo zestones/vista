@@ -6,6 +6,7 @@ interface ImportMetaEnv {
   readonly VITE_APP_URL?: string
   readonly VITE_BACKEND?: 'mock' | 'supabase'
   readonly VITE_GITHUB_OAUTH_CLIENT_ID?: string
+  readonly VITE_GITHUB_APP_SLUG?: string
 }
 
 interface ImportMeta {

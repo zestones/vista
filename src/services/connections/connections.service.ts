@@ -3,8 +3,10 @@ import { genRepo, mockDb } from '@/lib/mock'
 import { supabase } from '@/lib/supabase/client'
 import type { AttachRepoInput, AvailableRepo, InstallationLink, ProjectRepoRow } from './connections.dto'
 
-// Dev GitHub App install URL. Prod uses its own slug -- revisit when the prod App is registered (Phase 6).
-export const GITHUB_INSTALL_URL = 'https://github.com/apps/vista-local-dev/installations/new'
+// GitHub App install URL. The slug is env-configurable (#45) so prod points at its own App; defaults to
+// the dev App for local. Set VITE_GITHUB_APP_SLUG in prod (e.g. on Vercel) to the registered App slug.
+const GITHUB_APP_SLUG = import.meta.env.VITE_GITHUB_APP_SLUG ?? 'vista-local-dev'
+export const GITHUB_INSTALL_URL = `https://github.com/apps/${GITHUB_APP_SLUG}/installations/new`
 
 // Classic OAuth App authorize URL for image-access (#262): grants a `repo`-scoped token that can read
 // private user-attachments (the GitHub App token cannot). Empty client id => caller hides the button.
