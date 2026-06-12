@@ -13,8 +13,12 @@ export function useRealtimeInvalidate(table: string, filter: string | undefined,
   const key = JSON.stringify(queryKey)
   useEffect(() => {
     if (env.backend !== 'supabase') return
+    // Unique topic per subscription: two components on the same table+filter (the notification bell +
+    // the mobile notifications screen, plus the per-screen mobile header that remounts on navigation)
+    // must NOT share a channel — supabase-js reuses a channel by topic, so the second `.on()` lands on
+    // an already-subscribed channel and throws ("cannot add postgres_changes callbacks after subscribe").
     const channel = supabase
-      .channel(`rt:${table}:${filter ?? 'all'}`)
+      .channel(`rt:${table}:${filter ?? 'all'}:${crypto.randomUUID()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table, filter }, () => {
         void qc.invalidateQueries({ queryKey: JSON.parse(key) as QueryKey })
       })
