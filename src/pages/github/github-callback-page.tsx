@@ -21,32 +21,39 @@ export function GithubCallbackPage() {
   const done = useRef(false)
 
   const installationId = Number(params.get('installation_id'))
+  // The OAuth code proves the installer's identity (#184); GitHub appends it when "Request user
+  // authorization during installation" is enabled. Without it the backend can't verify ownership.
+  const code = params.get('code') ?? ''
 
   useEffect(() => {
     if (loading || done.current) return
     done.current = true
 
-    if (!Number.isInteger(installationId) || installationId <= 0) {
+    if (!Number.isInteger(installationId) || installationId <= 0 || code === '') {
       toast.error(t('gh.cb.invalid'))
       void navigate('/app', { replace: true })
       return
     }
     if (!user) {
-      sessionStorage.setItem(PENDING_INSTALL_KEY, String(installationId))
+      // Stash both: the code must survive the login round-trip to verify ownership on resume.
+      sessionStorage.setItem(PENDING_INSTALL_KEY, JSON.stringify({ installationId, code }))
       void navigate('/login', { replace: true })
       return
     }
-    connect.mutate(installationId, {
-      onSuccess: (inst) => {
-        toast.success(t('gh.cb.connected', { account: inst.account_login }))
-        void navigate('/app', { replace: true })
+    connect.mutate(
+      { installationId, code },
+      {
+        onSuccess: (inst) => {
+          toast.success(t('gh.cb.connected', { account: inst.account_login }))
+          void navigate('/app', { replace: true })
+        },
+        onError: () => {
+          toast.error(t('gh.cb.failed'))
+          void navigate('/app', { replace: true })
+        },
       },
-      onError: () => {
-        toast.error(t('gh.cb.failed'))
-        void navigate('/app', { replace: true })
-      },
-    })
-  }, [loading, user, installationId, connect, navigate, t])
+    )
+  }, [loading, user, installationId, code, connect, navigate, t])
 
   return (
     <div className='grid min-h-screen place-items-center'>

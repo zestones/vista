@@ -12,8 +12,12 @@ export interface ConnectionsApi {
   getAttachedRepos(projectId: string): Promise<ProjectRepoRow[]>
   attachRepo(input: AttachRepoInput): Promise<ProjectRepoRow>
   detachRepo(projectRepoId: string): Promise<void>
-  /** Link a GitHub App installation to the current owner (post-install callback, #77). */
-  connectInstallation(installationId: number): Promise<InstallationLink>
+  /**
+   * Link a GitHub App installation to the current owner (post-install callback, #77). `code` is the
+   * GitHub App OAuth code from the post-install redirect; the backend exchanges it to verify the caller
+   * actually owns the installation (#184).
+   */
+  connectInstallation(installationId: number, code: string): Promise<InstallationLink>
 }
 
 const MOCK_INSTALLATION_ID = 1
@@ -55,7 +59,7 @@ const mock: ConnectionsApi = {
     return Promise.resolve()
   },
   connectInstallation(installationId) {
-    // Mock has no real installations; return a stub so the callback flow works under mock.
+    // Mock has no real installations (and no code to verify); return a stub so the callback flow works.
     return Promise.resolve({ id: crypto.randomUUID(), installation_id: installationId, account_login: 'mock-org' })
   },
 }
@@ -96,8 +100,8 @@ const supabaseApi: ConnectionsApi = {
   async detachRepo(projectRepoId) {
     await invoke<{ ok: true }>('connect-repos', { action: 'detach', project_repo_id: projectRepoId })
   },
-  async connectInstallation(installationId) {
-    return (await invoke<{ installation: InstallationLink }>('connect-installation', { installation_id: installationId }))
+  async connectInstallation(installationId, code) {
+    return (await invoke<{ installation: InstallationLink }>('connect-installation', { installation_id: installationId, code }))
       .installation
   },
 }

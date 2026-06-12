@@ -1,13 +1,16 @@
-// connect-installation (#19): link a GitHub App installation to the authenticated owner.
+// connect-installation (#19, #184): link a GitHub App installation to the authenticated owner.
 //
-// The owner's browser POSTs `{ installation_id }` with their Supabase JWT after the
-// post-install redirect. We verify the install exists via the App JWT (#21), then write
-// the github_installations row (service role -- the projection is deny-all under RLS).
+// The owner's browser POSTs `{ installation_id, code }` with their Supabase JWT after the post-install
+// redirect. `code` is the GitHub App OAuth code from that redirect; we exchange it for the caller's
+// GitHub user token and verify they can administer this installation (#184) -- otherwise any logged-in
+// Vista user could link (and then read the private repos of) an installation they don't own. We also
+// confirm the install exists via the App JWT (#21), then write the github_installations row (service
+// role -- the projection is deny-all under RLS). The user token is used once for the check and discarded.
 //
 // Backfill is intentionally NOT triggered here: sync runs on project_repos, which are
 // created at repo-attach (#20). The sync kick lives in #20/#22.
 import { admin, requireUser, UnauthorizedError } from '../_shared/supabaseAdmin.ts'
-import { getInstallation } from '../_shared/github.ts'
+import { exchangeOAuthCode, getInstallation, userCanManageInstallation } from '../_shared/github.ts'
 import { jsonResponse, preflight } from '../_shared/cors.ts'
 
 Deno.serve(async (req) => {
@@ -23,12 +26,25 @@ Deno.serve(async (req) => {
   }
 
   let installationId: number
+  let code: string
   try {
-    const body = (await req.json()) as { installation_id?: unknown }
+    const body = (await req.json()) as { installation_id?: unknown; code?: unknown }
     installationId = Number(body.installation_id)
     if (!Number.isInteger(installationId) || installationId <= 0) throw new Error('bad id')
+    code = typeof body.code === 'string' ? body.code.trim() : ''
+    if (code === '') throw new Error('missing code')
   } catch {
-    return jsonResponse({ error: 'installation_id (positive integer) required' }, 400)
+    return jsonResponse({ error: 'installation_id (positive integer) and code required' }, 400)
+  }
+
+  // Prove the caller owns/administers this installation (#184): exchange the post-install OAuth code for
+  // their GitHub user token, then confirm the installation is one they can manage. Used once, not stored.
+  try {
+    const userToken = await exchangeOAuthCode(code)
+    const allowed = await userCanManageInstallation(userToken, installationId)
+    if (!allowed) return jsonResponse({ error: 'you do not have permission to link this installation' }, 403)
+  } catch {
+    return jsonResponse({ error: 'could not verify installation ownership' }, 403)
   }
 
   // Verify the installation exists and read the account it targets (App JWT auth).
