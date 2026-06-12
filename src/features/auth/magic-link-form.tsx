@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { MailCheck } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { auth } from '@/services/auth'
+import { GitHubMark } from '@/components/brand'
 import { Button, Input, Label } from '@/components/ui'
 
 const COOLDOWN = 60
@@ -16,7 +17,7 @@ const COOLDOWN = 60
  */
 export function MagicLinkForm({ submitLabel, hint, onBeforeSignIn }: { submitLabel: string; hint?: string; onBeforeSignIn?: () => void }) {
   const { t } = useTranslation()
-  const { signInWithEmail, signInWithGoogle } = useAuth()
+  const { signInWithEmail, signInWithGoogle, signInWithGithub } = useAuth()
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState(false)
@@ -132,6 +133,17 @@ export function MagicLinkForm({ submitLabel, hint, onBeforeSignIn }: { submitLab
         }}
       >
         {t('auth.withGoogle')}
+      </Button>
+      <Button
+        type='button'
+        variant='outline'
+        className='w-full'
+        disabled={busy}
+        onClick={() => {
+          run(signInWithGithub())
+        }}
+      >
+        <GitHubMark size={16} /> {t('auth.withGithub')}
       </Button>
     </div>
   )

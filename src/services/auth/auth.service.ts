@@ -14,6 +14,8 @@ export interface AuthApi {
   signInWithEmail(email: string): Promise<void>
   /** Google OAuth. Mock signs into the demo account; Supabase redirects to Google. */
   signInWithGoogle(): Promise<void>
+  /** GitHub OAuth (identity only — NOT the repo-scoped image-access grant #262). */
+  signInWithGithub(): Promise<void>
   signOut(): Promise<void>
 }
 
@@ -59,6 +61,10 @@ const mock: AuthApi = {
     mockEmit(persist({ id: 'you@vista.app', email: 'you@vista.app', name: 'You' }))
     return Promise.resolve()
   },
+  signInWithGithub() {
+    mockEmit(persist({ id: 'you@vista.app', email: 'you@vista.app', name: 'You' }))
+    return Promise.resolve()
+  },
   signOut() {
     localStorage.removeItem(SESSION_KEY)
     mockEmit(null)
@@ -91,6 +97,11 @@ const supabaseApi: AuthApi = {
   },
   async signInWithGoogle() {
     const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: env.appUrl } })
+    if (error) throw error
+  },
+  async signInWithGithub() {
+    // Identity only — no `scopes`, so this never requests repo access (that's the separate #262 grant).
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'github', options: { redirectTo: env.appUrl } })
     if (error) throw error
   },
   async signOut() {

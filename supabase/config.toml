@@ -344,6 +344,14 @@ secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
 # Required for local sign in with Google auth.
 skip_nonce_check = true
 
+# Sign in with GitHub (#267) — IDENTITY ONLY. This is a SEPARATE OAuth App from the image-access
+# OAuth App (#262); never request `repo` here. Register an OAuth App with callback
+# <supabase-url>/auth/v1/callback. Creds via a local, gitignored env file (see .env.example).
+[auth.external.github]
+enabled = true
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET)"
+
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.
 [auth.web3.solana]
