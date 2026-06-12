@@ -5,7 +5,6 @@ import { Reorder, useDragControls } from 'motion/react'
 import { GripVertical, Pin } from 'lucide-react'
 import type { ProjectSummary } from '@/services/projects'
 import { useReorderProjects, useUpdateProject } from '@/features/project/settings'
-import { Button } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
 const PIN_CAP = 5
@@ -49,8 +48,8 @@ function OrganizeRow({ s, canPin, onTogglePin }: { s: ProjectSummary; canPin: bo
 }
 
 /** iOS-style "organize projects" mode (#275): pinned + others sections, each drag-reorderable, with a
- * pin toggle per row (max 5). Lives over the mobile home; "Done" exits back to the cards. */
-export function MobileOrganizeProjects({ owned, onDone }: { owned: ProjectSummary[]; onDone: () => void }) {
+ * pin toggle per row (max 5). The screen header carries the title + Done; this is just the editable list. */
+export function MobileOrganizeProjects({ owned }: { owned: ProjectSummary[] }) {
   const { t } = useTranslation()
   const update = useUpdateProject()
   const reorder = useReorderProjects()
@@ -78,13 +77,6 @@ export function MobileOrganizeProjects({ owned, onDone }: { owned: ProjectSummar
 
   return (
     <div className='flex flex-col gap-4 px-5 pb-4'>
-      <div className='flex items-center justify-between'>
-        <h1 className='font-display text-ink text-lg font-semibold'>{t('m.organize.title')}</h1>
-        <Button size='sm' onClick={onDone}>
-          {t('m.organize.done')}
-        </Button>
-      </div>
-
       {pinned.length > 0 && (
         <section className='flex flex-col gap-2'>
           <Label>{t('side.pinned')}</Label>

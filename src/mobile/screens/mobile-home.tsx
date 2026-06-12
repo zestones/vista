@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowUpDown, FolderPlus, Search } from 'lucide-react'
+import { FolderPlus, Search } from 'lucide-react'
 import { useAuth } from '@/contexts/auth.context'
 import { useWorkspace } from '@/features/workspace'
 import type { ProjectSummary } from '@/services/projects'
@@ -31,7 +31,22 @@ export default function MobileHome() {
 
   return (
     <>
-      <ScreenHeader eyebrow={firstName !== '' ? t('m.home.hello') : undefined} title={firstName !== '' ? firstName : t('m.nav.home')} />
+      {/* iOS-style: the screen header carries the Edit/Done action (#275); Done while organizing. */}
+      <ScreenHeader
+        eyebrow={organizing ? undefined : firstName !== '' ? t('m.home.hello') : undefined}
+        title={organizing ? t('m.organize.title') : firstName !== '' ? firstName : t('m.nav.home')}
+        action={
+          organizing ? (
+            <Button size='sm' onClick={() => setOrganizing(false)}>
+              {t('m.organize.done')}
+            </Button>
+          ) : (data?.owned.length ?? 0) > 1 ? (
+            <Button variant='ghost' size='sm' onClick={() => setOrganizing(true)}>
+              {t('m.organize.cta')}
+            </Button>
+          ) : undefined
+        }
+      />
 
       {isLoading ? (
         <div className='grid place-items-center py-16'>
@@ -41,28 +56,21 @@ export default function MobileHome() {
         <p className='text-muted-ink px-6 py-10 text-center text-sm'>{t('m.home.empty')}</p>
       ) : organizing ? (
         <Suspense fallback={null}>
-          <MobileOrganizeProjects owned={data?.owned ?? []} onDone={() => setOrganizing(false)} />
+          <MobileOrganizeProjects owned={data?.owned ?? []} />
         </Suspense>
       ) : (
         <div className='flex flex-col gap-5 px-5 pb-4'>
-          <div className='flex items-center gap-2'>
-            <div className='relative flex-1'>
-              <Search size={16} className='text-muted-ink pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2' />
-              <Input
-                value={q}
-                onChange={(e) => {
-                  setQ(e.target.value)
-                }}
-                placeholder={t('m.home.searchPh')}
-                aria-label={t('m.home.searchPh')}
-                className='bg-secondary h-11 rounded-xl border-transparent pl-10'
-              />
-            </div>
-            {(data?.owned.length ?? 0) > 1 && norm === '' && (
-              <Button variant='outline' size='icon' className='size-11 shrink-0 rounded-xl' aria-label={t('m.organize.title')} onClick={() => setOrganizing(true)}>
-                <ArrowUpDown size={18} />
-              </Button>
-            )}
+          <div className='relative'>
+            <Search size={16} className='text-muted-ink pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2' />
+            <Input
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value)
+              }}
+              placeholder={t('m.home.searchPh')}
+              aria-label={t('m.home.searchPh')}
+              className='bg-secondary h-11 rounded-xl border-transparent pl-10'
+            />
           </div>
 
           {noResults && <p className='text-muted-ink py-8 text-center text-sm'>{t('m.home.noResults')}</p>}

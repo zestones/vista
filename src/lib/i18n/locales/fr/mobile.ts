@@ -16,6 +16,7 @@ export const mobile = {
   'm.home.noResults': 'Aucun projet ne correspond.',
   'm.home.empty': 'Aucun projet pour le moment.',
   'm.organize.title': 'Organiser les projets',
+  'm.organize.cta': 'Organiser',
   'm.organize.done': 'OK',
   'm.organize.hint': 'Glissez la poignée pour réordonner · touchez l’épingle pour épingler (max 5).',
 }
