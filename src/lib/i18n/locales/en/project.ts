@@ -58,6 +58,8 @@ export const project = {
   'share.sharedIssues': 'shared issues',
   'ps.gen.secIdentity': 'Identity',
   'ps.gen.secIdentityHint': 'The name and description shown to your clients.',
+  'ps.gen.secColor': 'Color',
+  'ps.gen.secColorHint': 'The accent used for this project across the app.',
   'ps.gen.name': 'Project name',
   'ps.gen.desc': 'Description',
   'ps.gen.access': 'Client access',

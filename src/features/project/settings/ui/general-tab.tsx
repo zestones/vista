@@ -5,6 +5,7 @@ import { Check, Trash2 } from 'lucide-react'
 import { Button, Input, Label, Textarea } from '@/components/ui'
 import { GithubTab } from '@/features/project/github'
 import { useDeleteProject, useUpdateProject } from '../hooks/use-project-settings'
+import { ColorSwatches } from './color-swatches'
 import type { ProjectRow } from '@/services/projects'
 
 /** One settings row: a label column (title + hint) beside its controls -- fills the width while keeping inputs readable. */
@@ -78,6 +79,11 @@ export function GeneralTab({ project }: { project: ProjectRow }) {
               }}
             />
           </div>
+        </Row>
+
+        {/* Color applies instantly (#275), like the rest of the page below identity. */}
+        <Row title={t('ps.gen.secColor')} hint={t('ps.gen.secColorHint')}>
+          <ColorSwatches value={project.color} onChange={(color) => update.mutate({ id: project.id, patch: { color } })} />
         </Row>
 
         <div className='bg-surface-soft flex items-center justify-end gap-3 px-6 py-4'>

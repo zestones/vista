@@ -54,12 +54,25 @@ export default function MobileHome() {
 
           {noResults && <p className='text-muted-ink py-8 text-center text-sm'>{t('m.home.noResults')}</p>}
 
-          {owned.length > 0 && (
+          {/* Pinned first (#275) — owned is already pinned/position-ordered by stableOrder. */}
+          {owned.some((s) => s.project.pinned) && (
+            <section className='flex flex-col gap-2.5'>
+              <h2 className='text-muted-ink px-0.5 text-[11px] font-semibold tracking-wide uppercase'>{t('side.pinned')}</h2>
+              {owned
+                .filter((s) => s.project.pinned)
+                .map((s) => (
+                  <MobileProjectCard key={s.project.id} summary={s} isOwner />
+                ))}
+            </section>
+          )}
+          {owned.some((s) => !s.project.pinned) && (
             <section className='flex flex-col gap-2.5'>
               <h2 className='text-muted-ink px-0.5 text-[11px] font-semibold tracking-wide uppercase'>{t('ws.owned')}</h2>
-              {owned.map((s) => (
-                <MobileProjectCard key={s.project.id} summary={s} isOwner />
-              ))}
+              {owned
+                .filter((s) => !s.project.pinned)
+                .map((s) => (
+                  <MobileProjectCard key={s.project.id} summary={s} isOwner />
+                ))}
             </section>
           )}
           {joined.length > 0 && (

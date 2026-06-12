@@ -525,6 +525,8 @@ export type Database = {
           id: string
           name: string
           owner_id: string
+          pinned: boolean
+          position: number | null
           visibility: Database["public"]["Enums"]["project_visibility"]
         }
         Insert: {
@@ -535,6 +537,8 @@ export type Database = {
           id?: string
           name: string
           owner_id: string
+          pinned?: boolean
+          position?: number | null
           visibility?: Database["public"]["Enums"]["project_visibility"]
         }
         Update: {
@@ -545,6 +549,8 @@ export type Database = {
           id?: string
           name?: string
           owner_id?: string
+          pinned?: boolean
+          position?: number | null
           visibility?: Database["public"]["Enums"]["project_visibility"]
         }
         Relationships: [
@@ -722,6 +728,8 @@ export type Database = {
           id: string
           name: string
           owner_id: string
+          pinned: boolean
+          position: number | null
           visibility: Database["public"]["Enums"]["project_visibility"]
         }
         SetofOptions: {
@@ -776,6 +784,7 @@ export type Database = {
         Returns: undefined
       }
       owner_has_image_access: { Args: never; Returns: boolean }
+      reorder_projects: { Args: { p_ids: string[] }; Returns: undefined }
       request_access: { Args: { p_token: string }; Returns: string }
       resync_all_repos: { Args: never; Returns: undefined }
       revoke_share_link: { Args: { p_project: string }; Returns: undefined }
