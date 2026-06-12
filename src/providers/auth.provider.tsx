@@ -26,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       signInWithEmail: (email: string) => auth.signInWithEmail(email),
       signInWithGoogle: () => auth.signInWithGoogle(),
+      signInWithGithub: () => auth.signInWithGithub(),
       signOut: () => {
         void auth.signOut()
       },

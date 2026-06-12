@@ -36,4 +36,5 @@ export const auth = {
   'join.home': 'Retour à l’accueil',
   'auth.login': 'Se connecter',
   'auth.withGoogle': 'Continuer avec Google',
+  'auth.withGithub': 'Continuer avec GitHub',
 }

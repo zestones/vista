@@ -8,6 +8,7 @@ export interface AuthState {
   loading: boolean
   signInWithEmail: (email: string) => Promise<void>
   signInWithGoogle: () => Promise<void>
+  signInWithGithub: () => Promise<void>
   signOut: () => void
 }
 
