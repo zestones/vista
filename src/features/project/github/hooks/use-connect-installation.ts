@@ -23,3 +23,10 @@ export function useConnectInstallation() {
     },
   })
 }
+
+/** Store the owner's classic OAuth App token so the sync can re-host attachment images (#262 callback). */
+export function useConnectImageAccess() {
+  return useMutation({
+    mutationFn: (code: string): Promise<{ ok: boolean }> => connections.connectImageAccess(code),
+  })
+}

@@ -7,6 +7,7 @@
 import { type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { installationToken, listIssueComments, listIssues, listMilestones } from './github.ts'
 import { upsertComments, upsertIssues, upsertMilestones } from './projection.ts'
+import { rehostBodies } from './attachments.ts'
 
 export class RepoNotFoundError extends Error {}
 
@@ -39,13 +40,18 @@ export async function syncRepo(admin: SupabaseClient, projectRepoId: string): Pr
   const ms = await listMilestones(token, repo.owner, repo.repo, state?.last_etag ?? null)
   const issues = await listIssues(token, repo.owner, repo.repo, state?.last_synced_at ?? null)
   const comments = await listIssueComments(token, repo.owner, repo.repo, state?.last_synced_at ?? null)
+  // Re-host private-repo attachment images so clients can load them (#262): fetch with the owner token,
+  // upload to Storage, and feed the key->URL map into the upserts so bodies are rewritten at write time.
+  // Empty map (no attachments / no owner token) => bodies written unchanged.
+  const assetMap = await rehostBodies(admin, repo.installation_id, [...issues.map((i) => i.body), ...comments.map((c) => c.body)])
+
   let milestonesUpserted = 0
   let issuesUpserted = 0
   // Upsert milestones first so upsertIssues can resolve milestone linkage; then issues so upsertComments
   // can resolve issue linkage. All omit `shared`; comments have no `shared` column.
   if (!ms.notModified) milestonesUpserted = await upsertMilestones(admin, projectRepoId, ms.milestones, startedAt)
-  issuesUpserted = await upsertIssues(admin, projectRepoId, issues, startedAt)
-  const commentsUpserted = await upsertComments(admin, projectRepoId, comments, startedAt)
+  issuesUpserted = await upsertIssues(admin, projectRepoId, issues, startedAt, assetMap)
+  const commentsUpserted = await upsertComments(admin, projectRepoId, comments, startedAt, assetMap)
 
   const { error: stateErr } = await admin
     .from('sync_state')

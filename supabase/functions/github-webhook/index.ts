@@ -7,6 +7,7 @@
 // A repo can be attached to several projects, so we fan out to every matching project_repo.
 import { admin } from '../_shared/supabaseAdmin.ts'
 import { upsertComments, upsertIssues, upsertMilestones } from '../_shared/projection.ts'
+import { rehostBodies } from '../_shared/attachments.ts'
 import { type GhComment, type GhIssue, type GhMilestone } from '../_shared/github.ts'
 
 const encoder = new TextEncoder()
@@ -71,21 +72,30 @@ Deno.serve(async (req) => {
   try {
     if (event === 'issues' && payload.issue) {
       const issue = payload.issue
-      for (const prId of await projectReposFor(payload)) {
+      const prIds = await projectReposFor(payload)
+      // Re-host attachment images once (same body across project_repos); #262.
+      const assetMap = payload.action !== 'deleted' && !issue.pull_request && payload.installation
+        ? await rehostBodies(admin, payload.installation.id, [issue.body])
+        : new Map<string, string>()
+      for (const prId of prIds) {
         if (payload.action === 'deleted') {
           await admin.from('issues').delete().eq('project_repo_id', prId).eq('number', issue.number)
         } else if (!issue.pull_request) {
-          await upsertIssues(admin, prId, [issue], now)
+          await upsertIssues(admin, prId, [issue], now, assetMap)
         }
       }
     } else if (event === 'issue_comment' && payload.comment) {
       const comment = payload.comment
-      for (const prId of await projectReposFor(payload)) {
+      const prIds = await projectReposFor(payload)
+      const assetMap = payload.action !== 'deleted' && payload.installation
+        ? await rehostBodies(admin, payload.installation.id, [comment.body])
+        : new Map<string, string>()
+      for (const prId of prIds) {
         if (payload.action === 'deleted') {
           await admin.from('comments').delete().eq('project_repo_id', prId).eq('github_comment_id', comment.id)
         } else {
           // created/edited: upsertComments links via issue_url and self-excludes PR/orphan comments.
-          await upsertComments(admin, prId, [comment], now)
+          await upsertComments(admin, prId, [comment], now, assetMap)
         }
       }
     } else if (event === 'milestone' && payload.milestone) {

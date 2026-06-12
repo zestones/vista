@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ExternalLink, Plus, X } from 'lucide-react'
+import { ExternalLink, Image, Plus, X } from 'lucide-react'
 import { Badge, Button, Input } from '@/components/ui'
 import { GitHubMark } from '@/components/brand'
-import { GITHUB_INSTALL_URL, type AvailableRepo } from '@/services/connections'
+import { GITHUB_INSTALL_URL, githubImageAuthorizeUrl, type AvailableRepo } from '@/services/connections'
 import { useAttachRepo, useAttachedRepos, useDetachRepo, useInstallationRepos } from '../hooks/use-connections'
 
 export function GithubTab({ projectId }: { projectId: string }) {
@@ -19,6 +19,7 @@ export function GithubTab({ projectId }: { projectId: string }) {
   const visible = toAttach.filter((r) => `${r.owner}/${r.repo}`.toLowerCase().includes(query.trim().toLowerCase()))
 
   const attachOne = (r: AvailableRepo) => attach.mutate({ projectId, installationId: r.installation_id, owner: r.owner, repo: r.repo })
+  const imageAuthUrl = githubImageAuthorizeUrl()
 
   return (
     <div className='flex flex-col gap-8'>
@@ -27,11 +28,19 @@ export function GithubTab({ projectId }: { projectId: string }) {
           <h2 className='text-ink text-lg font-medium'>{t('ps.gh.title')}</h2>
           <p className='text-muted-ink mt-1 text-[13px]'>{t('ps.gh.hint')}</p>
         </div>
-        <Button variant='outline' size='sm' className='shrink-0' asChild>
-          <a href={GITHUB_INSTALL_URL} target='_blank' rel='noreferrer'>
-            <GitHubMark size={15} /> {t('ps.gh.manage')} <ExternalLink size={13} />
-          </a>
-        </Button>
+        <div className='flex shrink-0 flex-wrap gap-2'>
+          {/* Owner grants a classic OAuth token so private-repo attachment images load for clients (#262). */}
+          {imageAuthUrl && (
+            <Button variant='outline' size='sm' onClick={() => (window.location.href = imageAuthUrl)}>
+              <Image size={15} /> {t('ps.gh.imageAccess')}
+            </Button>
+          )}
+          <Button variant='outline' size='sm' asChild>
+            <a href={GITHUB_INSTALL_URL} target='_blank' rel='noreferrer'>
+              <GitHubMark size={15} /> {t('ps.gh.manage')} <ExternalLink size={13} />
+            </a>
+          </Button>
+        </div>
       </section>
 
       <section className='border-hairline bg-card overflow-hidden rounded-xl border'>
