@@ -35,7 +35,7 @@ export default function PublicSharePage() {
         <LangToggle />
       </header>
 
-      <main className='mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-8'>
+      <main className='w-full flex-1 px-4 py-6 sm:px-6 sm:py-8'>
         {isLoading ? (
           <div className='grid place-items-center py-24'>
             <Spinner />

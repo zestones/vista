@@ -1,5 +1,5 @@
 // Vista service worker — offline app shell + runtime caching.
-const CACHE = "vista-v1";
+const CACHE = "vista-v2";
 const SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon.svg"];
 
 self.addEventListener("install", (e) => {
@@ -29,7 +29,10 @@ self.addEventListener("fetch", (e) => {
     e.respondWith(
       fetch(request)
         .then((r) => {
-          caches.open(CACHE).then((c) => c.put("/index.html", r.clone()));
+          // Clone SYNCHRONOUSLY: caches.open() is async, so cloning inside its .then() runs after we've
+          // already returned `r` and the browser consumed the body -> "Response body is already used".
+          const copy = r.clone();
+          caches.open(CACHE).then((c) => c.put("/index.html", copy));
           return r;
         })
         .catch(() => caches.match("/index.html"))

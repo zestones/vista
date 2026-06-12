@@ -92,7 +92,7 @@ function RecentlyDelivered({ groups, lang }: { groups: Group[]; lang: string }) 
   const items = groups
     .flatMap((g) => g.bars.filter((b) => b.state === 'closed').map((b) => ({ b })))
     .sort((a, z) => z.b.end.getTime() - a.b.end.getTime())
-    .slice(0, 30)
+    .slice(0, 8) // a short "latest" feed — avoid a long internal scroll
   if (items.length === 0) return null
   // Group consecutive items by month label (already date-sorted).
   const months: { label: string; bars: Bar[] }[] = []
