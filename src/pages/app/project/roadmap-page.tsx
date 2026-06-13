@@ -60,7 +60,6 @@ export function RoadmapPage() {
   const setSummary = useSetClientSummary()
   const roadmap = useRoadmap(id, preview)
   const groups = roadmap.data?.groups ?? []
-  const unscheduled = roadmap.data?.unscheduled ?? []
 
   // Live updates (#131): subscribe to the project's projection rows so a webhook reprojection /
   // publish updates the Gantt without a refresh, with one coalesced toast. Backend realtime is #129.
@@ -75,26 +74,21 @@ export function RoadmapPage() {
       const data = roadmap.data
       const acc = access.data
       if (!data || !acc) return
+      // No-milestone issues live in the synthetic group, so a single groups scan finds every visible issue.
       let bar: Bar | undefined
       for (const g of data.groups) {
         bar = g.bars.find((b) => b.number === issueNumber)
         if (bar) break
       }
-      const unsched = data.unscheduled.find((i) => i.number === issueNumber)
-      const src =
-        bar ??
-        (unsched ? { id: unsched.id, number: unsched.number, title: unsched.title, state: unsched.state, url: unsched.html_url } : null)
-      if (!src) return
+      if (!bar) return
       openComments({
-        issue: { id: src.id, number: src.number, title: src.title, state: src.state, url: src.url },
+        issue: { id: bar.id, number: bar.number, title: bar.title, state: bar.state, url: bar.url },
         projectId: id,
         isOwner: acc.project.owner_id === user?.id,
         canViewComments: acc.membership?.can_view_comments ?? false,
       })
-      if (bar) {
-        setSearchParams({ tab: 'timeline' }, { replace: true }) // jump to the Timeline (Gantt) where the bar lives
-        setFocusBar({ id: bar.id, key: Date.now() })
-      }
+      setSearchParams({ tab: 'timeline' }, { replace: true }) // jump to the Timeline (Gantt) where the bar lives
+      setFocusBar({ id: bar.id, key: Date.now() })
     },
     [roadmap.data, access.data, user?.id, id, openComments, setSearchParams],
   )
@@ -254,7 +248,6 @@ export function RoadmapPage() {
           ) : view === 'overview' ? (
             <RoadmapOverview
               groups={groups}
-              unscheduled={unscheduled}
               description={project.description}
               onIssueClick={openIssue}
               canComment={isOwner || canViewComments}

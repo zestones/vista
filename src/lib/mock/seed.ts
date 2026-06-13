@@ -141,6 +141,37 @@ export function genRepo(projectRepoId: string, seedKey: string): { milestones: M
     })
   }
 
+  // A handful of issues with NO milestone — Vista gathers these into a synthetic "No milestone" group
+  // so they still appear on the roadmap and count in the KPIs (just like GitHub's "no milestone" bucket).
+  const nLoose = 2 + Math.floor(r() * 2)
+  for (let i = 0; i < nLoose; i++) {
+    const createdAt = now - (10 + Math.floor(r() * 40)) * DAY
+    const isClosed = r() < 0.4
+    let looseClosedAt: number | null = null
+    if (isClosed) {
+      looseClosedAt = createdAt + (2 + Math.floor(r() * 10)) * DAY
+      if (looseClosedAt > now) looseClosedAt = now - DAY
+    }
+    const num = issueNo++
+    issues.push({
+      id: `${projectRepoId}-iss-${String(num)}`,
+      project_repo_id: projectRepoId,
+      milestone_id: null,
+      number: num,
+      title: ISSUE_TITLES[num % ISSUE_TITLES.length],
+      body: null,
+      state: isClosed ? 'closed' : 'open',
+      labels: [],
+      author_login: AUTHORS[Math.floor(r() * AUTHORS.length)],
+      author_avatar_url: null,
+      html_url: null,
+      created_at: new Date(createdAt).toISOString(),
+      closed_at: looseClosedAt === null ? null : new Date(looseClosedAt).toISOString(),
+      shared: false,
+      updated_at: new Date(now).toISOString(),
+    })
+  }
+
   return { milestones, issues }
 }
 

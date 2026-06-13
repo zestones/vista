@@ -23,7 +23,7 @@ export default function PublicSharePage() {
     enabled: token !== '',
   })
 
-  const view = data ? buildGanttData({ milestones: data.milestones, issues: data.issues }) : null
+  const view = data ? buildGanttData({ milestones: data.milestones, issues: data.issues }, t('roadmap.noMilestone')) : null
 
   return (
     <div className='bg-secondary flex min-h-screen flex-col'>
@@ -55,7 +55,7 @@ export default function PublicSharePage() {
               <h1 className='font-display text-ink min-w-0 flex-1 truncate text-2xl font-semibold tracking-[-0.02em]'>{data.project.name}</h1>
               <span className='border-hairline text-muted-ink shrink-0 rounded-full border px-2.5 py-1 text-xs'>{t('pub.readonly')}</span>
             </div>
-            <RoadmapOverview groups={view.groups} unscheduled={view.unscheduled} description={data.project.description} />
+            <RoadmapOverview groups={view.groups} description={data.project.description} />
           </>
         )}
       </main>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildGanttData, overallStats, sortRoadmap } from '@/features/project/roadmap'
+import { buildGanttData, NO_MILESTONE_ID, overallStats, sortRoadmap } from '@/features/project/roadmap'
 import type { IssueRow, MilestoneRow, RoadmapData } from '@/services/roadmap'
 
 function ms(id: string, repo: string, number: number, due: string): MilestoneRow {
@@ -48,14 +48,25 @@ const data: RoadmapData = {
 describe('buildGanttData (#54)', () => {
   it('keys issues by milestone id, not number (no cross-repo collision)', () => {
     const { groups } = buildGanttData(data)
-    expect(groups).toHaveLength(2)
+    // two real milestones + the synthetic "No milestone" group (i3 has no milestone)
+    expect(groups).toHaveLength(3)
     expect(groups.find((g) => g.id === 'm-a')?.bars.map((b) => b.id)).toEqual(['i1'])
     expect(groups.find((g) => g.id === 'm-b')?.bars.map((b) => b.id)).toEqual(['i2'])
   })
 
-  it('splits out issues with no milestone into unscheduled', () => {
-    const { unscheduled } = buildGanttData(data)
-    expect(unscheduled.map((i) => i.id)).toEqual(['i3'])
+  it('gathers issues with no milestone into the synthetic "No milestone" group', () => {
+    const { groups } = buildGanttData(data, 'No milestone')
+    const none = groups.find((g) => g.id === NO_MILESTONE_ID)
+    expect(none?.title).toBe('No milestone')
+    expect(none?.bars.map((b) => b.id)).toEqual(['i3'])
+  })
+
+  it('adds no synthetic group when every issue has a milestone', () => {
+    const { groups } = buildGanttData({
+      milestones: [ms('m-a', 'repoA', 1, '2026-03-01T00:00:00.000Z')],
+      issues: [iss('i1', 'repoA', 'm-a', 1, 'open')],
+    })
+    expect(groups.some((g) => g.id === NO_MILESTONE_ID)).toBe(false)
   })
 
   it('computes progress per milestone', () => {
@@ -70,24 +81,24 @@ describe('buildGanttData (#54)', () => {
     expect(groups[0].bars).toHaveLength(0)
   })
 
-  it('overallStats aggregates across groups', () => {
+  it('overallStats aggregates across groups (incl. no-milestone issues in the KPIs)', () => {
     const { groups } = buildGanttData(data)
     const stats = overallStats(groups)
-    expect(stats.total).toBe(2)
+    expect(stats.total).toBe(3) // i1 + i2 + i3 (i3 now counts via the synthetic group)
     expect(stats.closed).toBe(1)
-    expect(stats.milestones).toBe(2)
+    expect(stats.milestones).toBe(3)
   })
 })
 
 describe('sortRoadmap (#54)', () => {
-  it('sorts milestones by due date', () => {
+  it('sorts milestones by due date, pinning the synthetic group last', () => {
     const { groups } = buildGanttData(data)
-    expect(sortRoadmap(groups, 'due').map((g) => g.id)).toEqual(['m-a', 'm-b'])
+    expect(sortRoadmap(groups, 'due').map((g) => g.id)).toEqual(['m-a', 'm-b', NO_MILESTONE_ID])
   })
 
-  it('sorts milestones by name', () => {
-    const { groups } = buildGanttData(data)
-    const ids = sortRoadmap(groups, 'name').map((g) => g.title)
-    expect(ids).toEqual([...ids].sort((a, b) => a.localeCompare(b)))
+  it('keeps the synthetic "No milestone" group last regardless of sort', () => {
+    const { groups } = buildGanttData(data, 'No milestone')
+    expect(sortRoadmap(groups, 'name').at(-1)?.id).toBe(NO_MILESTONE_ID)
+    expect(sortRoadmap(groups, 'progress').at(-1)?.id).toBe(NO_MILESTONE_ID)
   })
 })
