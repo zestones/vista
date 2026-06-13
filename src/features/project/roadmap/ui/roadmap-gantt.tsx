@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { Segmented } from '@/components/ui'
 import { addDays, daysBetween, fmtFull, fmtMonth, fmtShort } from '../lib/roadmap.dates'
+import { NO_MILESTONE_ID } from '../lib/roadmap.mappers'
 import { type IssueSort, type MilestoneSort, sortRoadmap } from '../lib/roadmap.sort'
 import type { Bar, Group } from '../types'
 import { RoadmapAvatar } from './roadmap-avatar'
@@ -62,9 +63,12 @@ interface Props {
   focusBar?: { id: string; key: number } | null
 }
 
-export function RoadmapGantt({ groups, embedded = true, maxHeight = 560, onIssueClick, focusBar }: Props) {
+export function RoadmapGantt({ groups: allGroups, embedded = true, maxHeight = 560, onIssueClick, focusBar }: Props) {
   const { t, i18n } = useTranslation()
   const lang = i18n.language
+  // The synthetic "No milestone" group lives in the Overview/KPIs and the share-picker, but never on
+  // the Gantt timeline: it has no real schedule, so its bars would lay out arbitrarily.
+  const groups = useMemo(() => allGroups.filter((g) => g.id !== NO_MILESTONE_ID), [allGroups])
   const [filter, setFilter] = useState<Filter>('all')
   // Continuous zoom: the user's chosen px/day (clamped to [fit floor, MAX]). 0 -> Fit (whole project).
   const [userW, setUserW] = useState(DEFAULT_DAY_W)
