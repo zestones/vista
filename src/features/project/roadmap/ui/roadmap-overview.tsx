@@ -3,9 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { AnimatePresence, motion } from 'motion/react'
 import { ChevronDown, Circle, CircleCheck, MessageSquare, Pencil, Search } from 'lucide-react'
 import { fmtFull, fmtMonth } from '../lib/roadmap.dates'
-import { overallStats } from '../lib/roadmap.mappers'
+import { NO_MILESTONE_ID, overallStats } from '../lib/roadmap.mappers'
 import type { Bar, Group } from '../types'
-import type { IssueRow } from '@/services/roadmap'
 import { Button, Input, Segmented } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
@@ -311,7 +310,6 @@ function MilestoneRow({
  */
 export function RoadmapOverview({
   groups,
-  unscheduled,
   description,
   onIssueClick,
   canComment = false,
@@ -319,7 +317,6 @@ export function RoadmapOverview({
   onSaveSummary,
 }: {
   groups: Group[]
-  unscheduled: IssueRow[]
   description?: string | null
   /** Opens an issue's comment panel; wired only when the viewer can view comments (#202). */
   onIssueClick?: (bar: Bar) => void
@@ -433,7 +430,7 @@ export function RoadmapOverview({
               lang={lang}
               autoOpen={searching}
               onIssueClick={canComment ? onIssueClick : undefined}
-              editable={editable}
+              editable={editable && g.id !== NO_MILESTONE_ID}
               onSaveSummary={onSaveSummary}
             />
           ))}
@@ -442,10 +439,6 @@ export function RoadmapOverview({
         <p className='border-hairline text-muted-ink rounded-xl border border-dashed p-8 text-center text-sm'>
           {groups.length === 0 ? t('ov.noMilestones') : t('roadmap.noResults')}
         </p>
-      )}
-
-      {unscheduled.length > 0 && (
-        <p className='text-muted-ink mt-3 text-xs'>{`${String(unscheduled.length)} ${t('roadmap.unscheduled')}`}</p>
       )}
     </section>
   )

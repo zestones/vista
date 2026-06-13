@@ -35,6 +35,7 @@ export const roadmap = {
   'milestones.due': 'Échéance',
   'milestones.noDue': "Pas d'échéance",
   'roadmap.unscheduled': 'issues non planifiées',
+  'roadmap.noMilestone': 'Sans jalon',
   'dash.completion': 'Avancement',
   'dash.tab.gantt': 'Gantt',
   'dash.tab.overview': "Vue d'ensemble",

@@ -1,4 +1,5 @@
 import { useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { filterShared, roadmap, type RoadmapData } from '@/services/roadmap'
 import { roadmapKeys } from '@/lib/query-keys/roadmap.keys'
@@ -17,7 +18,12 @@ import type { RoadmapView } from '../types'
 export function useRoadmap(projectId: string, preview = false) {
   // Scope the cache by viewer: `getRoadmap` filters by the current identity (allowlist #3).
   const { user } = useAuth()
-  const select = useCallback((data: RoadmapData): RoadmapView => buildGanttData(preview ? filterShared(data) : data), [preview])
+  // Re-run `select` on language change so the synthetic "No milestone" group's title follows the locale.
+  const noMilestoneLabel = useTranslation().t('roadmap.noMilestone')
+  const select = useCallback(
+    (data: RoadmapData): RoadmapView => buildGanttData(preview ? filterShared(data) : data, noMilestoneLabel),
+    [preview, noMilestoneLabel],
+  )
   return useQuery({
     queryKey: roadmapKeys.byProject(projectId, user?.id ?? 'anon'),
     queryFn: () => roadmap.getRoadmap(projectId),

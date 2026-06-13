@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CheckCheck, Info } from 'lucide-react'
 import { filterShared } from '@/services/roadmap'
-import { milestoneColor, useRoadmapData } from '@/features/project/roadmap'
+import { milestoneColor, NO_MILESTONE_COLOR, useRoadmapData } from '@/features/project/roadmap'
 import { Button, Switch } from '@/components/ui'
 import { Spinner } from '@/components/feedback'
 import { cn } from '@/lib/utils'
@@ -130,26 +130,48 @@ export function SharePicker({ projectId }: { projectId: string }) {
             )
           })}
 
-          {unscheduled.length > 0 && (
-            <div className='border-hairline border-b p-4 last:border-b-0'>
-              <div className='text-muted-ink mb-3 text-[11px] font-semibold tracking-wide uppercase'>{t('share.unscheduled')}</div>
-              <div className='flex flex-col gap-2'>
-                {unscheduled.map((i) => (
-                  <label key={i.id} className='flex w-fit max-w-full cursor-pointer items-center gap-2.5'>
+          {/* Issues with no GitHub milestone, curated as a proper (synthetic) milestone: a master switch
+              shares/unshares the whole group, mirroring the milestone blocks above. */}
+          {unscheduled.length > 0 &&
+            (() => {
+              const allUnschedShared = unscheduled.every((i) => i.shared)
+              return (
+                <div className='border-hairline border-b p-4 last:border-b-0'>
+                  <div className='flex items-center gap-3'>
                     <Switch
-                      size='sm'
-                      checked={i.shared}
-                      aria-label={i.title}
+                      checked={allUnschedShared}
+                      aria-label={t('share.unscheduled')}
+                      className={SWITCH_ON}
+                      style={onColor(NO_MILESTONE_COLOR)}
                       onCheckedChange={(v) => {
-                        setShared.mutate({ kind: 'issue', id: i.id, shared: v })
+                        unscheduled.forEach((i) => {
+                          if (i.shared !== v) setShared.mutate({ kind: 'issue', id: i.id, shared: v })
+                        })
                       }}
                     />
-                    <span className='text-body min-w-0 truncate text-sm'>{i.title}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
+                    <span className='size-2.5 shrink-0 rounded-[3px]' style={{ background: NO_MILESTONE_COLOR }} />
+                    <span className='text-ink min-w-0 flex-1 truncate font-medium'>{t('share.unscheduled')}</span>
+                  </div>
+                  <div className='mt-3 flex flex-col gap-2 pl-12'>
+                    {unscheduled.map((i) => (
+                      <label key={i.id} className='flex w-fit max-w-full cursor-pointer items-center gap-2.5'>
+                        <Switch
+                          size='sm'
+                          checked={i.shared}
+                          aria-label={i.title}
+                          className={SWITCH_ON}
+                          style={onColor(NO_MILESTONE_COLOR)}
+                          onCheckedChange={(v) => {
+                            setShared.mutate({ kind: 'issue', id: i.id, shared: v })
+                          }}
+                        />
+                        <span className='text-body min-w-0 truncate text-sm'>{i.title}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
         </div>
 
         {/* Client preview (sticky). Hidden on mobile -- not useful on a phone, the curation is the point. */}

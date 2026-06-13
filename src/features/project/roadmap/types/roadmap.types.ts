@@ -1,5 +1,3 @@
-import type { IssueRow } from '@/services/roadmap'
-
 /** A single issue rendered as a bar on the timeline. */
 export interface Bar {
   id: string
@@ -30,8 +28,7 @@ export interface Group {
   bars: Bar[]
 }
 
-/** Output of the mapper: timeline groups + issues with no milestone. */
+/** Output of the mapper: timeline groups (issues with no GitHub milestone become a synthetic group). */
 export interface RoadmapView {
   groups: Group[]
-  unscheduled: IssueRow[]
 }

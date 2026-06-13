@@ -45,24 +45,26 @@ const data: RoadmapData = {
   milestones: [ms('m-a', 1, '2026-03-01T00:00:00.000Z')],
   issues: [iss('i1', 'm-a', 1, 'closed'), iss('i2', 'm-a', 2, 'open'), iss('i3', null, 3, 'open')],
 }
-const { groups, unscheduled } = buildGanttData(data)
+const noMilestone = i18n.t('roadmap.noMilestone')
+const { groups } = buildGanttData(data, noMilestone)
 
 describe('RoadmapOverview (#56/#190)', () => {
-  it('renders the status hero, milestone cards and the unscheduled count', () => {
+  it('renders the status hero, milestone cards and the No-milestone group', () => {
     render(
       <I18nextProvider i18n={i18n}>
-        <RoadmapOverview groups={groups} unscheduled={unscheduled} description='Project blurb' />
+        <RoadmapOverview groups={groups} description='Project blurb' />
       </I18nextProvider>,
     )
-    // 1 of 2 visible issues closed -> 50%, in progress.
-    expect(screen.getByText('50%')).toBeTruthy()
-    // Unique status summary "1 of 2 … / 1 sur 2 …".
-    expect(screen.getByText(/1 (of|sur) 2/)).toBeTruthy()
+    // 1 of 3 issues closed (i3 now counts via the synthetic group) -> 33%.
+    expect(screen.getByText('33%')).toBeTruthy()
+    // Unique status summary "1 of 3 … / 1 sur 3 …".
+    expect(screen.getByText(/1 (of|sur) 3/)).toBeTruthy()
     // The milestone appears (in the focus card and the list -> use getAllByText).
     expect(screen.getAllByText('MS 1').length).toBeGreaterThan(0)
     expect(screen.getAllByText('A stage').length).toBeGreaterThan(0)
     // About block uses the description prop.
     expect(screen.getByText('Project blurb')).toBeTruthy()
-    expect(screen.getByText(/1 issues non planifiées|1 unscheduled issues/)).toBeTruthy()
+    // The no-milestone issue is now surfaced as its own (synthetic) milestone row.
+    expect(screen.getAllByText(noMilestone).length).toBeGreaterThan(0)
   })
 })
